@@ -1,0 +1,1687 @@
+{
+  "capturedAt": "2026-09-13T03:10:55.998Z",
+  "base": "1db7d8031ee552cffa0287fecb364d2dad0d9ed0",
+  "product": "588d49a",
+  "node": "v22.14.0",
+  "root-audit-before": {
+    "counts": {
+      "info": 0,
+      "low": 1,
+      "moderate": 3,
+      "high": 7,
+      "critical": 2,
+      "total": 13
+    },
+    "packages": [
+      {
+        "name": "@babel/core",
+        "severity": "low",
+        "nodes": [
+          "node_modules/@babel/core"
+        ],
+        "via": [
+          {
+            "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment",
+            "url": "https://github.com/advisories/GHSA-4x5r-pxfx-6jf8",
+            "range": "<=7.29.0"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "@humanfs/node",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@humanfs/node"
+        ],
+        "via": [
+          {
+            "title": "humanfs: Recursive copy follows symlinked files and copies data from outside the source tree",
+            "url": "https://github.com/advisories/GHSA-p498-v437-472g",
+            "range": "<0.16.8"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "@xmldom/xmldom",
+        "severity": "high",
+        "nodes": [
+          "node_modules/@xmldom/xmldom"
+        ],
+        "via": [
+          {
+            "title": "xmldom: XML fragment injection via invalid EntityReference.nodeName during requireWellFormed serialization",
+            "url": "https://github.com/advisories/GHSA-6gmq-8vp8-gcm6",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: HTML raw-text closing-tag case mismatch causes output amplification",
+            "url": "https://github.com/advisories/GHSA-6mj3-qw4j-hgrw",
+            "range": ">=0.9.0-beta.1 <=0.9.11"
+          },
+          {
+            "title": "xmldom PI grammar regex ReDoS: quadratic backtracking on unterminated processing instructions",
+            "url": "https://github.com/advisories/GHSA-g53g-w8rj-fmg7",
+            "range": ">=0.9.0-beta.9 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Element name injection via createElement() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-w2rr-34g9-rvrj",
+            "range": ">=0.9.0 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Attribute name injection via setAttribute() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-4w3w-2rp5-g8jm",
+            "range": ">=0.9.0 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Processing Instruction Target Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-c7q8-3ch8-vqpv",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: DocType `name` Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-27p8-2357-5qqv",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Creation-time XML Name/QName validation is bypassable via an embedded line terminator, allowing injection on the default serialization path",
+            "url": "https://github.com/advisories/GHSA-3px3-54cx-rmw9",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: requireWellFormed DocType publicId/systemId validation is bypassable via an embedded line terminator",
+            "url": "https://github.com/advisories/GHSA-vr34-hp96-76pp",
+            "range": ">=0.9.10 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Parser silently accepts a not-well-formed end tag whose name is followed by a line break and trailing content",
+            "url": "https://github.com/advisories/GHSA-6h8r-xr42-gp59",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-time attribute deduplication",
+            "url": "https://github.com/advisories/GHSA-8344-3jmq-59r6",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-memory consumption",
+            "url": "https://github.com/advisories/GHSA-965w-775f-mr7g",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-time parsing via the malformed-input recovery path — `parseElementStartPart` re-scan and `normalize()` adjacent-text merge",
+            "url": "https://github.com/advisories/GHSA-93r5-fhx6-vmg9",
+            "range": ">=0.9.0 <=0.9.11"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "baseline-browser-mapping",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/baseline-browser-mapping"
+        ],
+        "via": [
+          {
+            "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+            "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+            "range": ">=2.0.0 <2.11.0"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "brace-expansion",
+        "severity": "high",
+        "nodes": [
+          "node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion",
+          "node_modules/brace-expansion"
+        ],
+        "via": [
+          {
+            "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+            "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp",
+            "range": ">=2.0.0 <2.1.2"
+          },
+          {
+            "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+            "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp",
+            "range": "<1.1.16"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+            "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+            "range": "<1.1.17"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+            "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+            "range": ">=2.0.0 <2.1.3"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+            "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+            "range": ">=2.0.0 <2.1.4"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+            "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+            "range": "<1.1.18"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "browserslist",
+        "severity": "high",
+        "nodes": [
+          "node_modules/browserslist"
+        ],
+        "via": [
+          {
+            "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+            "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx",
+            "range": "<=4.28.6"
+          },
+          {
+            "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+            "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g",
+            "range": "<=4.28.6"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "js-yaml",
+        "severity": "high",
+        "nodes": [
+          "node_modules/js-yaml"
+        ],
+        "via": [
+          {
+            "title": "JS-YAML: Quadratic-complexity DoS in merge key handling via repeated aliases",
+            "url": "https://github.com/advisories/GHSA-h67p-54hq-rp68",
+            "range": ">=4.0.0 <=4.1.1"
+          },
+          {
+            "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+            "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m",
+            "range": ">=4.0.0 <4.3.0"
+          },
+          {
+            "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported",
+            "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+            "range": ">=4.0.0 <4.3.1"
+          },
+          {
+            "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+            "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh",
+            "range": ">=4.0.0 <4.3.2"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "nanoid",
+        "severity": "high",
+        "nodes": [
+          "node_modules/nanoid"
+        ],
+        "via": [
+          {
+            "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+            "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+            "range": "<3.3.16"
+          },
+          {
+            "title": "nanoid: custom generators can loop indefinitely when size is zero",
+            "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+            "range": "<3.3.18"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "next",
+        "severity": "critical",
+        "nodes": [
+          "node_modules/next"
+        ],
+        "via": [
+          {
+            "title": "Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale",
+            "url": "https://github.com/advisories/GHSA-6gpp-xcg3-4w24",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Denial of Service in App Router using Server Actions",
+            "url": "https://github.com/advisories/GHSA-m99w-x7hq-7vfj",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Server-Side Request Forgery in Server Actions on custom servers",
+            "url": "https://github.com/advisories/GHSA-89xv-2m56-2m9x",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Cache confusion of response bodies for requests with bodies",
+            "url": "https://github.com/advisories/GHSA-68g3-v927-f742",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences",
+            "url": "https://github.com/advisories/GHSA-4633-3j49-mh5q",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unbounded Server Action payload in Edge runtime",
+            "url": "https://github.com/advisories/GHSA-4c39-4ccg-62r3",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname",
+            "url": "https://github.com/advisories/GHSA-p9j2-gv94-2wf4",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Denial of Service in the Image Optimization API using SVGs",
+            "url": "https://github.com/advisories/GHSA-q8wf-6r8g-63ch",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unauthenticated disclosure of internal Server Function endpoints",
+            "url": "https://github.com/advisories/GHSA-955p-x3mx-jcvp",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unauthenticated Remote Code Execution on windows-hosted servers",
+            "url": "https://github.com/advisories/GHSA-p293-qw3h-jr36",
+            "range": ">=16.0.0 <16.3.3"
+          },
+          {
+            "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used",
+            "url": "https://github.com/advisories/GHSA-2xp9-vwfh-vxw4",
+            "range": ">=16.0.0 <16.3.3"
+          },
+          "postcss",
+          "sharp"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "postcss",
+        "severity": "high",
+        "nodes": [
+          "node_modules/next/node_modules/postcss",
+          "node_modules/postcss"
+        ],
+        "via": [
+          {
+            "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+            "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+            "range": "<8.5.10"
+          },
+          {
+            "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+            "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+            "range": "<=8.5.11"
+          },
+          {
+            "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+            "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+            "range": "<=8.5.22"
+          },
+          {
+            "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+            "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+            "range": "<=8.5.17"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "sharp",
+        "severity": "high",
+        "nodes": [
+          "node_modules/sharp"
+        ],
+        "via": [
+          {
+            "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591",
+            "url": "https://github.com/advisories/GHSA-f88m-g3jw-g9cj",
+            "range": "<0.35.0"
+          },
+          {
+            "title": "sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545",
+            "url": "https://github.com/advisories/GHSA-rgj7-g3m4-5g8c",
+            "range": "<0.35.4"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "supabase",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/supabase"
+        ],
+        "via": [
+          "tar"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "tar",
+        "severity": "critical",
+        "nodes": [
+          "node_modules/tar"
+        ],
+        "via": [
+          {
+            "title": "node-tar applies PAX size override to intermediary GNU long-name/long-link headers, causing tar parser interpretation differential (file smuggling)",
+            "url": "https://github.com/advisories/GHSA-vmf3-w455-68vh",
+            "range": "<=7.5.15"
+          },
+          {
+            "title": "node-tar: Process crash via PAX numeric path type confusion",
+            "url": "https://github.com/advisories/GHSA-w8wr-v893-vjvp",
+            "range": "<=7.5.17"
+          },
+          {
+            "title": "node-tar: Decompression/parse DoS via unlimited input",
+            "url": "https://github.com/advisories/GHSA-23hp-3jrh-7fpw",
+            "range": "<=7.5.18"
+          },
+          {
+            "title": "node-tar: Negative tar entry size causes infinite loop in archive replace",
+            "url": "https://github.com/advisories/GHSA-8x88-c5mf-7j5w",
+            "range": "<=7.5.17"
+          },
+          {
+            "title": "node-tar: Uncaught Exception DoS via NUL byte in PAX path/linkpath records",
+            "url": "https://github.com/advisories/GHSA-gvwx-54wh-qm9j",
+            "range": "<=7.5.16"
+          },
+          {
+            "title": "node-tar: Uncontrolled recursion in mapHas/filesFilter allows uncatchable stack-overflow DoS via crafted long-path tar with member selection",
+            "url": "https://github.com/advisories/GHSA-r292-9mhp-454m",
+            "range": "<=7.5.20"
+          }
+        ],
+        "fixAvailable": true
+      }
+    ]
+  },
+  "root-prod-before": {
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 1,
+      "high": 4,
+      "critical": 1,
+      "total": 6
+    },
+    "packages": [
+      {
+        "name": "@xmldom/xmldom",
+        "severity": "high",
+        "nodes": [
+          "node_modules/@xmldom/xmldom"
+        ],
+        "via": [
+          {
+            "title": "xmldom: XML fragment injection via invalid EntityReference.nodeName during requireWellFormed serialization",
+            "url": "https://github.com/advisories/GHSA-6gmq-8vp8-gcm6",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: HTML raw-text closing-tag case mismatch causes output amplification",
+            "url": "https://github.com/advisories/GHSA-6mj3-qw4j-hgrw",
+            "range": ">=0.9.0-beta.1 <=0.9.11"
+          },
+          {
+            "title": "xmldom PI grammar regex ReDoS: quadratic backtracking on unterminated processing instructions",
+            "url": "https://github.com/advisories/GHSA-g53g-w8rj-fmg7",
+            "range": ">=0.9.0-beta.9 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Element name injection via createElement() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-w2rr-34g9-rvrj",
+            "range": ">=0.9.0 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Attribute name injection via setAttribute() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-4w3w-2rp5-g8jm",
+            "range": ">=0.9.0 <=0.9.10"
+          },
+          {
+            "title": "xmldom: Processing Instruction Target Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-c7q8-3ch8-vqpv",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: DocType `name` Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-27p8-2357-5qqv",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Creation-time XML Name/QName validation is bypassable via an embedded line terminator, allowing injection on the default serialization path",
+            "url": "https://github.com/advisories/GHSA-3px3-54cx-rmw9",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: requireWellFormed DocType publicId/systemId validation is bypassable via an embedded line terminator",
+            "url": "https://github.com/advisories/GHSA-vr34-hp96-76pp",
+            "range": ">=0.9.10 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Parser silently accepts a not-well-formed end tag whose name is followed by a line break and trailing content",
+            "url": "https://github.com/advisories/GHSA-6h8r-xr42-gp59",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-time attribute deduplication",
+            "url": "https://github.com/advisories/GHSA-8344-3jmq-59r6",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-memory consumption",
+            "url": "https://github.com/advisories/GHSA-965w-775f-mr7g",
+            "range": ">=0.9.0 <=0.9.11"
+          },
+          {
+            "title": "xmldom: Quadratic-time parsing via the malformed-input recovery path — `parseElementStartPart` re-scan and `normalize()` adjacent-text merge",
+            "url": "https://github.com/advisories/GHSA-93r5-fhx6-vmg9",
+            "range": ">=0.9.0 <=0.9.11"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "baseline-browser-mapping",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/baseline-browser-mapping"
+        ],
+        "via": [
+          {
+            "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+            "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+            "range": ">=2.0.0 <2.11.0"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "nanoid",
+        "severity": "high",
+        "nodes": [
+          "node_modules/nanoid"
+        ],
+        "via": [
+          {
+            "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+            "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+            "range": "<3.3.16"
+          },
+          {
+            "title": "nanoid: custom generators can loop indefinitely when size is zero",
+            "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+            "range": "<3.3.18"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "next",
+        "severity": "critical",
+        "nodes": [
+          "node_modules/next"
+        ],
+        "via": [
+          {
+            "title": "Next.js: Middleware / Proxy bypass in App Router applications using Turbopack and single locale",
+            "url": "https://github.com/advisories/GHSA-6gpp-xcg3-4w24",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Denial of Service in App Router using Server Actions",
+            "url": "https://github.com/advisories/GHSA-m99w-x7hq-7vfj",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Server-Side Request Forgery in Server Actions on custom servers",
+            "url": "https://github.com/advisories/GHSA-89xv-2m56-2m9x",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Cache confusion of response bodies for requests with bodies",
+            "url": "https://github.com/advisories/GHSA-68g3-v927-f742",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Cache confusion of response bodies for requests with bodies containing invalid UTF-8 byte sequences",
+            "url": "https://github.com/advisories/GHSA-4633-3j49-mh5q",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unbounded Server Action payload in Edge runtime",
+            "url": "https://github.com/advisories/GHSA-4c39-4ccg-62r3",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname",
+            "url": "https://github.com/advisories/GHSA-p9j2-gv94-2wf4",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Denial of Service in the Image Optimization API using SVGs",
+            "url": "https://github.com/advisories/GHSA-q8wf-6r8g-63ch",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unauthenticated disclosure of internal Server Function endpoints",
+            "url": "https://github.com/advisories/GHSA-955p-x3mx-jcvp",
+            "range": ">=16.0.0 <16.2.11"
+          },
+          {
+            "title": "Next.js: Unauthenticated Remote Code Execution on windows-hosted servers",
+            "url": "https://github.com/advisories/GHSA-p293-qw3h-jr36",
+            "range": ">=16.0.0 <16.3.3"
+          },
+          {
+            "title": "Next.js: Unauthenticated Remote Code Execution in Image Optimization API when AVIF files are used",
+            "url": "https://github.com/advisories/GHSA-2xp9-vwfh-vxw4",
+            "range": ">=16.0.0 <16.3.3"
+          },
+          "postcss",
+          "sharp"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "postcss",
+        "severity": "high",
+        "nodes": [
+          "node_modules/next/node_modules/postcss"
+        ],
+        "via": [
+          {
+            "title": "PostCSS has XSS via Unescaped </style> in its CSS Stringify Output",
+            "url": "https://github.com/advisories/GHSA-qx2v-qp2m-jg93",
+            "range": "<8.5.10"
+          },
+          {
+            "title": "PostCSS: Arbitrary file read and information disclosure via attacker-controlled sourceMappingURL in CSS comments",
+            "url": "https://github.com/advisories/GHSA-6g55-p6wh-862q",
+            "range": "<=8.5.11"
+          },
+          {
+            "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+            "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+            "range": "<=8.5.22"
+          },
+          {
+            "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+            "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+            "range": "<=8.5.17"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "sharp",
+        "severity": "high",
+        "nodes": [
+          "node_modules/sharp"
+        ],
+        "via": [
+          {
+            "title": "sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591",
+            "url": "https://github.com/advisories/GHSA-f88m-g3jw-g9cj",
+            "range": "<0.35.0"
+          },
+          {
+            "title": "sharp: Vulnerabilities in libheif: GHSA-g89c-p67h-r497 and GHSA-2jg2-4ch7-h545",
+            "url": "https://github.com/advisories/GHSA-rgj7-g3m4-5g8c",
+            "range": "<0.35.4"
+          }
+        ],
+        "fixAvailable": true
+      }
+    ]
+  },
+  "mobile-audit-before": {
+    "counts": {
+      "info": 0,
+      "low": 1,
+      "moderate": 15,
+      "high": 12,
+      "critical": 1,
+      "total": 29
+    },
+    "packages": [
+      {
+        "name": "@babel/core",
+        "severity": "low",
+        "nodes": [
+          "node_modules/@babel/core"
+        ],
+        "via": [
+          {
+            "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment",
+            "url": "https://github.com/advisories/GHSA-4x5r-pxfx-6jf8",
+            "range": "<=7.29.0"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "@expo/cli",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo/node_modules/@expo/cli"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/inline-modules",
+          "@expo/metro-config",
+          "@expo/prebuild-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config-plugins",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config-plugins"
+        ],
+        "via": [
+          "xcode"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/inline-modules",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/inline-modules"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/local-build-cache-provider",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/local-build-cache-provider"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/metro",
+        "severity": "high",
+        "nodes": [
+          "node_modules/@expo/metro"
+        ],
+        "via": [
+          "metro",
+          "metro-config",
+          "metro-transform-worker"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "@expo/metro-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/metro-config"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/prebuild-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/prebuild-config"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "@xmldom/xmldom",
+        "severity": "high",
+        "nodes": [
+          "node_modules/@xmldom/xmldom"
+        ],
+        "via": [
+          {
+            "title": "xmldom: XML fragment injection via invalid EntityReference.nodeName during requireWellFormed serialization",
+            "url": "https://github.com/advisories/GHSA-6gmq-8vp8-gcm6",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: Element name injection via createElement() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-w2rr-34g9-rvrj",
+            "range": ">=0.7.0 <=0.8.13"
+          },
+          {
+            "title": "xmldom: Attribute name injection via setAttribute() bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-4w3w-2rp5-g8jm",
+            "range": ">=0.7.0 <=0.8.13"
+          },
+          {
+            "title": "xmldom: Processing Instruction Target Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-c7q8-3ch8-vqpv",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: DocType `name` Injection Bypasses requireWellFormed",
+            "url": "https://github.com/advisories/GHSA-27p8-2357-5qqv",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: Parser silently accepts a not-well-formed end tag whose name is followed by a line break and trailing content",
+            "url": "https://github.com/advisories/GHSA-6h8r-xr42-gp59",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: Quadratic-time attribute deduplication",
+            "url": "https://github.com/advisories/GHSA-8344-3jmq-59r6",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: End-tag Whitespace-Trim Regex ReDoS — quadratic backtracking in the 0.8.x end-tag parser",
+            "url": "https://github.com/advisories/GHSA-x4fp-j954-r2f4",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: Quadratic-memory consumption",
+            "url": "https://github.com/advisories/GHSA-965w-775f-mr7g",
+            "range": ">=0.7.0 <=0.8.14"
+          },
+          {
+            "title": "xmldom: Quadratic-time parsing via the malformed-input recovery path — `parseElementStartPart` re-scan and `normalize()` adjacent-text merge",
+            "url": "https://github.com/advisories/GHSA-93r5-fhx6-vmg9",
+            "range": ">=0.7.0 <=0.8.14"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "baseline-browser-mapping",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/baseline-browser-mapping"
+        ],
+        "via": [
+          {
+            "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+            "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+            "range": ">=2.0.0 <2.11.0"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "brace-expansion",
+        "severity": "high",
+        "nodes": [
+          "node_modules/brace-expansion"
+        ],
+        "via": [
+          {
+            "title": "brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups",
+            "url": "https://github.com/advisories/GHSA-3jxr-9vmj-r5cp",
+            "range": ">=3.0.0 <5.0.7"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+            "url": "https://github.com/advisories/GHSA-mh99-v99m-4gvg",
+            "range": ">=4.0.0 <5.0.8"
+          },
+          {
+            "title": "brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation",
+            "url": "https://github.com/advisories/GHSA-rgw5-rvv9-x895",
+            "range": ">=4.0.0 <5.0.9"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "browserslist",
+        "severity": "high",
+        "nodes": [
+          "node_modules/browserslist"
+        ],
+        "via": [
+          {
+            "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+            "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx",
+            "range": "<=4.28.6"
+          },
+          {
+            "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+            "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g",
+            "range": "<=4.28.6"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "decode-uri-component",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/decode-uri-component"
+        ],
+        "via": [
+          {
+            "title": "decode-uri-component: Denial of service via exponential decoding of malformed percent-encoded input",
+            "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+            "range": "<=0.4.2"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo"
+        ],
+        "via": [
+          "@expo/cli",
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/local-build-cache-provider",
+          "@expo/metro-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-router",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-router"
+        ],
+        "via": [
+          "query-string"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-splash-screen",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-splash-screen"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo-splash-screen",
+          "version": "55.0.25",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "image-size",
+        "severity": "high",
+        "nodes": [
+          "node_modules/image-size"
+        ],
+        "via": [
+          {
+            "title": "image-size: ICNS parser allows denial of service through an infinite loop",
+            "url": "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr",
+            "range": "<=2.0.2"
+          },
+          {
+            "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
+            "url": "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq",
+            "range": "<=2.0.2"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "js-yaml",
+        "severity": "high",
+        "nodes": [
+          "node_modules/js-yaml"
+        ],
+        "via": [
+          {
+            "title": "js-yaml: YAML merge-key chains can force quadratic CPU consumption",
+            "url": "https://github.com/advisories/GHSA-52cp-r559-cp3m",
+            "range": ">=4.0.0 <4.3.0"
+          },
+          {
+            "title": "JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) — CVE-2026-59870 fix not backported",
+            "url": "https://github.com/advisories/GHSA-5p4m-2wfm-xmqj",
+            "range": ">=4.0.0 <4.3.1"
+          },
+          {
+            "title": "js-yaml: maxTotalMergeKeys does not limit CPU use for empty merge sources",
+            "url": "https://github.com/advisories/GHSA-2883-xcg3-v3hh",
+            "range": ">=4.0.0 <4.3.2"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "metro",
+        "severity": "high",
+        "nodes": [
+          "node_modules/metro"
+        ],
+        "via": [
+          "image-size",
+          "metro-config",
+          "metro-transform-worker"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "metro-config",
+        "severity": "high",
+        "nodes": [
+          "node_modules/metro-config"
+        ],
+        "via": [
+          "metro"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "metro-transform-worker",
+        "severity": "high",
+        "nodes": [
+          "node_modules/metro-transform-worker"
+        ],
+        "via": [
+          "metro"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "nanoid",
+        "severity": "high",
+        "nodes": [
+          "node_modules/nanoid"
+        ],
+        "via": [
+          {
+            "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+            "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+            "range": "<3.3.16"
+          },
+          {
+            "title": "nanoid: custom generators can loop indefinitely when size is zero",
+            "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+            "range": "<3.3.18"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "postcss",
+        "severity": "high",
+        "nodes": [
+          "node_modules/postcss"
+        ],
+        "via": [
+          {
+            "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q — attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+            "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+            "range": "<=8.5.22"
+          },
+          {
+            "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+            "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+            "range": "<=8.5.17"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "query-string",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/query-string"
+        ],
+        "via": [
+          "decode-uri-component"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "shell-quote",
+        "severity": "critical",
+        "nodes": [
+          "node_modules/shell-quote"
+        ],
+        "via": [
+          {
+            "title": "shell-quote quote() does not escape newlines in object .op values",
+            "url": "https://github.com/advisories/GHSA-w7jw-789q-3m8p",
+            "range": ">=1.1.0 <=1.8.3"
+          },
+          {
+            "title": "shell-quote: Quadratic-complexity Denial of Service in `parse()` (CWE-407)",
+            "url": "https://github.com/advisories/GHSA-395f-4hp3-45gv",
+            "range": "<=1.8.4"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "uuid",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/uuid"
+        ],
+        "via": [
+          {
+            "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+            "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+            "range": "<11.1.1"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "ws",
+        "severity": "high",
+        "nodes": [
+          "node_modules/react-devtools-core/node_modules/ws"
+        ],
+        "via": [
+          {
+            "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+            "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+            "range": ">=7.0.0 <7.5.11"
+          }
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "xcode",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/xcode"
+        ],
+        "via": [
+          "uuid"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  },
+  "root-audit-after": {
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "packages": []
+  },
+  "root-prod-after": {
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "packages": []
+  },
+  "mobile-audit-after": {
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 14,
+      "high": 0,
+      "critical": 0,
+      "total": 14
+    },
+    "packages": [
+      {
+        "name": "@expo/cli",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo/node_modules/@expo/cli"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/inline-modules",
+          "@expo/metro-config",
+          "@expo/prebuild-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config-plugins",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config-plugins"
+        ],
+        "via": [
+          "xcode"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/inline-modules",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/inline-modules"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/local-build-cache-provider",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/local-build-cache-provider"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/metro-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/metro-config"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/prebuild-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/prebuild-config"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "decode-uri-component",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/decode-uri-component"
+        ],
+        "via": [
+          {
+            "title": "decode-uri-component: Denial of service via exponential decoding of malformed percent-encoded input",
+            "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+            "range": "<=0.4.2"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo"
+        ],
+        "via": [
+          "@expo/cli",
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/local-build-cache-provider",
+          "@expo/metro-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-router",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-router"
+        ],
+        "via": [
+          "query-string"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-splash-screen",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-splash-screen"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo-splash-screen",
+          "version": "55.0.25",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "query-string",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/query-string"
+        ],
+        "via": [
+          "decode-uri-component"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "uuid",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/uuid"
+        ],
+        "via": [
+          {
+            "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+            "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+            "range": "<11.1.1"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "xcode",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/xcode"
+        ],
+        "via": [
+          "uuid"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  },
+  "mobile-prod-after": {
+    "counts": {
+      "info": 0,
+      "low": 0,
+      "moderate": 14,
+      "high": 0,
+      "critical": 0,
+      "total": 14
+    },
+    "packages": [
+      {
+        "name": "@expo/cli",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo/node_modules/@expo/cli"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/inline-modules",
+          "@expo/metro-config",
+          "@expo/prebuild-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/config-plugins",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/config-plugins"
+        ],
+        "via": [
+          "xcode"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/inline-modules",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/inline-modules"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/local-build-cache-provider",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/local-build-cache-provider"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/metro-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/metro-config"
+        ],
+        "via": [
+          "@expo/config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "@expo/prebuild-config",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/@expo/prebuild-config"
+        ],
+        "via": [
+          "@expo/config",
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": true
+      },
+      {
+        "name": "decode-uri-component",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/decode-uri-component"
+        ],
+        "via": [
+          {
+            "title": "decode-uri-component: Denial of service via exponential decoding of malformed percent-encoded input",
+            "url": "https://github.com/advisories/GHSA-vcc3-ghjq-m6fr",
+            "range": "<=0.4.2"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo"
+        ],
+        "via": [
+          "@expo/cli",
+          "@expo/config",
+          "@expo/config-plugins",
+          "@expo/local-build-cache-provider",
+          "@expo/metro-config"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-router",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-router"
+        ],
+        "via": [
+          "query-string"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "expo-splash-screen",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/expo-splash-screen"
+        ],
+        "via": [
+          "@expo/config-plugins"
+        ],
+        "fixAvailable": {
+          "name": "expo-splash-screen",
+          "version": "55.0.25",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "query-string",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/query-string"
+        ],
+        "via": [
+          "decode-uri-component"
+        ],
+        "fixAvailable": {
+          "name": "expo-router",
+          "version": "5.1.11",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "uuid",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/uuid"
+        ],
+        "via": [
+          {
+            "title": "uuid: Missing buffer bounds check in v3/v5/v6 when buf is provided",
+            "url": "https://github.com/advisories/GHSA-w5hq-g745-h8pq",
+            "range": "<11.1.1"
+          }
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      },
+      {
+        "name": "xcode",
+        "severity": "moderate",
+        "nodes": [
+          "node_modules/xcode"
+        ],
+        "via": [
+          "uuid"
+        ],
+        "fixAvailable": {
+          "name": "expo",
+          "version": "46.0.21",
+          "isSemVerMajor": true
+        }
+      }
+    ]
+  }
+}

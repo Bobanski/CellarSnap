@@ -29,5 +29,6 @@ export default defineConfig({
     "auth-privacy.spec.ts",
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
+    "image-dependency.spec.ts",
   ],
 });

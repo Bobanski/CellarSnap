@@ -67,6 +67,8 @@ export default function LoginPage() {
           if (!displayName) {
             setInfoMessage("Signed in. Redirecting...");
             await new Promise((resolve) => setTimeout(resolve, 200));
+            // Reload after setting the session so cached anonymous layout state is discarded.
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
             window.location.assign("/profile?setup=username");
             return;
           }
@@ -77,6 +79,8 @@ export default function LoginPage() {
 
       setInfoMessage("Signed in. Redirecting...");
       await new Promise((resolve) => setTimeout(resolve, 200));
+      // Reload after setting the session so cached anonymous layout state is discarded.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/");
     } catch {
       setErrorMessage("Unable to sign in. Check your connection and try again.");
