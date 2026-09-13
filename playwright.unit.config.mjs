@@ -27,6 +27,7 @@ export default defineConfig({
     "storage-access.spec.ts",
     "knowledge-access.spec.ts",
     "auth-privacy.spec.ts",
+    "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
   ],
 });

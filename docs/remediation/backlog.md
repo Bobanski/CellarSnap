@@ -1,6 +1,6 @@
 # Canonical remediation backlog
 
-Updated September 12, 2026. **61 records: all 50 original audit findings, nine browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
+Updated September 12, 2026. **63 records: all 50 original audit findings, eleven browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
@@ -16,9 +16,9 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-02 | P0 | PUBLIC can write public-assets | Closed | B01 deployed as `20260912211719`. Live anon/auth upload, replacement and upsert denied; public reads and backend upload/update retained. Disposable object cleanup verified. [Live QC](../audits/sql-rollout-qc-2026-09-12.md). |
 | AUD-03 | P0 | Client-editable privileged test-account flag | Closed | Enabled SECURITY INVOKER guard deployed in B01. Live escalation, privileged insert and tester revocation denied; ordinary profile edit and backend assignment/revocation passed. Existing flags fingerprint unchanged. [Live QC](../audits/sql-rollout-qc-2026-09-12.md). |
 | AUD-04 | P0 | Personal embeddings globally readable/searchable | Closed | B03a/B03b [PR #90](https://github.com/Bobanski/CellarSnap/pull/90)/[PR #91](https://github.com/Bobanski/CellarSnap/pull/91) merged, all three SQL migrations live, primary production `63712c3` verified. Owner/curated boundaries, FK cleanup, synchronous invalidation and stale-publication rejection passed; 212 tests, live HTTP/concurrency/browser/Expo evidence. 384 original entries/384 personal chunks, zero orphan/stale/legacy personal chunks; curated 3,349 retained. [Release handover](handovers/b03-release.md). Native tooling unavailable; unchanged RPCs support existing clients. Broader retention/QC-09 remain separate. |
-| AUD-05 | P1 | Identifier lookup exposes email/phone mappings | QC passed — release pending | B04: non-enumerating public responses and restricted resolver authority; login/recovery and deliberate availability checks still work with abuse limits. |
+| AUD-05 | P1 | Identifier lookup exposes email/phone mappings | Closed | B04a PR #94 merged/deployed `db402fe`, exact SQL live `20260913020752`; 20 production checks and browser login passed. [Release evidence](handovers/batch-04b.md). Service-only RPCs, constant retired resolver, server login/recovery and stable shared limits; deliberate availability booleans retained. Native/delivery limitations documented. |
 | AUD-06 | P1 | Public identity projection overexposes fields | Open | B02: explicit public DTO/projection honoring identity preferences and visibility, verified on web/mobile without breaking legitimate profile reads. Related QC-01. |
-| AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | Open | B04: validate destination and every redirect; total body deadline and byte limits; accept legitimate restaurant sources and reject disallowed destinations. |
+| AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | QC passed — release pending | B04: validate destination and every redirect; total body deadline and byte limits; accept legitimate restaurant sources and reject disallowed destinations. |
 | AUD-08 | P1 | Dependency advisories and undeclared runtime imports | Open | B04: recheck advisories, upgrade compatible Next/Expo sets, declare imports; separate build-only exposure and test auth/scanning/images/mobile build compatibility. |
 | AUD-09 | P1 | Badge trigger/evaluator incompatibility and award authority | Open | B06: exhaustive shared trigger union coverage, server-authoritative awards, checked writes, representative fixtures for all supported trigger families; preserve all 85 definitions. |
 | AUD-10 | P1 | Score-loader/schema drift | Partial | B01 fixes nonexistent quality_tier query and preserves wine_type, with tests/QC in PR #80. B07 still must resolve absent ai_notes_summary and the newly reproduced absent grape_aliases.alias_type resolver query, and prove the schema/loader contract. See merge-review evidence below. |
@@ -76,6 +76,8 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-07 | P1 | Mobile entry details read an absent grape table | Open | B08 with AUD-13/21: use canonical relation, surface query failures, retain grapes during unrelated edits; positive web/mobile detail/save fixture. See evidence below. |
 | QC-08 | P2 | Event card details link differs from selected wine slide | Open | B06: selected wine slide opens its own authorized detail; context caption/navigation semantics explicit; test web/mobile, reordered members and restricted siblings. See evidence below. |
 | QC-09 | P2 | Sommelier makes unsupported cellar/write claims | Needs triage | B10/AUD-50 follow-up: after fixture deletion, chat denied the note but claimed the bottle was listed and offered to save a note without a write tool. Distinguish stale context from generation error; ground existence and capabilities. [Evidence below](#qc-09--unsupported-sommelier-existence-and-write-claims). |
+| QC-10 | P2 | Expo recovery may retain a displaced page scroll after navigation | Needs triage | B11: reproduce without viewport changes; verify full-height recovery background and native behavior where available. |
+| QC-11 | P2 | Script-rendered menu reports successful empty scan | Open | B11 bounded parser follow-up: reject empty/unreadable results with upload guidance; preserve supported server-rendered menus. |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -183,8 +185,33 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Verification / residual work: [B03 release handover](handovers/b03-release.md); screenshot `/tmp/cellarsnap-b03-qc/production-phone-deleted.png`. Reproduction above is independent of local artifacts.
 
 ### AUD-05 — B04a identifier/contact containment
-- Priority / status: P1 / QC passed — release pending.
+- Priority / status: P1 / Closed for hosted authority/API scope.
 - Branch / issue / PR: `codex/b04a-identifier-privacy` / #93 / #94; product head `4870c37`.
 - Evidence: [QC report](../audits/b04a-auth-privacy-qc-2026-09-12.md), [handover](handovers/batch-04a.md), captured live catalog and actual migration role tests.
 - Acceptance implemented: no unauthenticated contact projection, backend-only lookup/availability RPCs, existing session API for web/mobile, uniform recovery response shapes, stable shared anonymous limits and protected-path failure containment.
-- Release: deploy API before `20260913014834_restrict_contact_resolution.sql`. Hosted rehearsal rolled back; not a live fix yet. Old web tabs require reload. Availability booleans remain deliberately public through limited APIs. No native runtime, live delivery or password-change coverage.
+- Release: PR #94 / main `db402fe` deployed before exact migration `20260913014834_restrict_contact_resolution.sql` was applied as `20260913020752`, MD5 `0a15926a59392db0f4906d5be3c30dcc`. Twenty live assertions and production browser username login passed. [Release handover](handovers/batch-04b.md). Old web tabs require reload. Availability booleans remain deliberately public through limited APIs. No native runtime, live delivery or password-change coverage.
+
+### QC-10 — Expo recovery scroll/background gap after responsive navigation
+- Priority / status: P2 / Needs triage.
+- Discovered: September 12, 2026, B04a `4870c37`, fresh Expo production web export in in-app browser at 390×844.
+- Reproduction: sign in/sign out, switch desktop to phone viewport, submit unknown username recovery. Reset form appeared with a light gap below its dark screen. DOM showed root height 844 but top -136; reload restored top 0.
+- Expected / actual: recovery screen should fill viewport; a displaced root exposed page background. No input or data loss observed.
+- Impact / confidence: responsive browser observation only; viewport/focus/scroll harness interaction has not been excluded, no confirmed native defect. Do not conflate this with QC-05's route headings.
+- Target batch / owner / issue / PR: B11 / unassigned / none / none.
+- Acceptance: reproduce at a fixed phone viewport, verify recovery navigation/keyboard dismissal and full-screen background on browser plus available native runtime; close as harness-only if not reproducible outside resizing.
+- Deployment / rollback: no product change made. Reload cleared the observed offset. Optional screenshot `/tmp/cellarsnap-b04-qc/expo-recovery-phone.png`; textual reproduction above is canonical.
+
+### AUD-07 — B04b bounded remote menu transport
+- Priority / status: P1 / QC passed — release pending; branch `codex/b04b-bounded-menu-fetch`, issue #93 / PR #95; final product `bc8ac20`.
+- Scope and acceptance: public-only DNS-pinned sockets, every redirect validated, full download deadline and encoded/decoded byte caps; preserve legitimate menu/PDF/image inputs.
+- Evidence: 250 isolated tests, type/lint/build, real HTTPS HTML/PDF parsing and desktop/phone/Expo scanning. [QC report](../audits/b04b-remote-menu-qc-2026-09-12.md). [Current handover](handovers/batch-04b.md).
+- Remaining: PR merge, deployment and live verification; no migration required. AUD-08 dependency backlog is not closed by adding the pinned address parser.
+
+### QC-11 — Script-rendered wine list reports success with no wines
+- Priority / status: P2 / Open; confirmed during B04b against main `db402fe` plus bounded fetch changes.
+- Source / reproduction: scan `https://restaurantbeck.com/wine.html` in Expo web. HTTP 200 scan persisted zero wines; results show 0/0 and misleading scoring-unavailable copy even though the public website lists wines. Wine objects are inside a script that the existing HTML extractor removes.
+- Regression check: original fetch and bounded downloader produced identical 35,257-byte documents, SHA-256 `bbdfbffd66090f8a147ab0669015f9055fb6ab16e019c151113dee5d853bb9d8`; existing extraction/model behavior, not a destination/transport failure. No browser-script execution was added to the scanner.
+- Expected / actual: unreadable or empty parsed sources should show a useful upload/readability fallback, not a saved successful empty scan or claim a scoring outage. Do not promise all JS sites can be safely rendered by the server.
+- Related IDs / target batch / owner / issue / PR: AUD-07 compatibility evidence, separate B11 scanner correctness follow-up / unassigned / none / none.
+- Acceptance: server-rendered menu continues to parse; scripted/empty sources fail clearly or use a deliberately supported safe extraction path; browser/Expo results show accurate error state and do not persist empty successes. Add route/parser regression fixtures.
+- Deployment / rollback: no fix added to B04b. Disposable empty scan captured for cleanup. Screenshot optionally `/tmp/cellarsnap-b04-qc/expo-scripted-menu-empty.png`; reproduction and evidence above are durable.

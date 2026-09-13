@@ -1,0 +1,16 @@
+{
+  "date": "2026-09-13T02:08:45.755Z",
+  "release": "db402fefca8319af49a85e1769f182d0d1e12395",
+  "assertions": 20,
+  "passed": true,
+  "scope": "production email and username sign-in; 12 direct anon/authenticated RPC denials; availability; constant resolver; unknown recovery",
+  "delivery": "No designated account recovery messages or password changes",
+  "forwardedHeaderAndUserAgentChurn": {
+    "requests": 2,
+    "remaining": [
+      178,
+      177
+    ],
+    "passed": true
+  }
+}
