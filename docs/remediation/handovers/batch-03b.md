@@ -1,5 +1,7 @@
 # Batch B03b handover — September 12, 2026
 
+**Final release:** both B03 PRs, all SQL and primary production are complete. This file preserves its implementation checkpoint; resume from the [release handover](b03-release.md).
+
 ## Objective and IDs
 AUD-04 personal knowledge lifecycle, lifecycle subset of AUD-26, targeted AUD-19/48. B03a PR #90 merged as `19cb4fe`; its SQL/live read containment passed. B03b branch `codex/b03b-knowledge-lifecycle` starts from B03a's final head `5e15f9c` (included in merged main). Issue #89. No unrelated backlog scope pulled in.
 

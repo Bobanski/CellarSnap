@@ -30,3 +30,9 @@ The initial actual 386-source regeneration took about one minute with **386 publ
 ## Limits and recovery
 
 Entry/account cascade proved with actual SQL in isolation; account deletion was not repeated on designated live accounts. Live entry deletion is checked during cleanup. Old conversation text is not rewritten; broader conversation retention remains AUD-26/B10. Any entry-row change conservatively invalidates its vector. No automatic refresh job added to save/read paths. Recover with forward fixes and regeneration; never restore legacy personal rows in the curated table. Fixtures and synthetic conversations remain until final release QC cleanup.
+
+## Final release verification
+
+Final product head `973b4c3` passed all 212 tests, lint, types, build and GitHub web/mobile CI; primary preview passed. PR #91 merged as `63712c3`; primary production `dpl_59Ds8k68hnLHFEh2kzQ36pPtTDUP` Ready at cellarsnap.app. Batch SQL deployed remote `20260913005247`, MD5 `0e8c864fbd8abfbf0b623a0b715d360d`. Actual bounded-ingester retest published 386 / skipped zero in 25.448 seconds, five source pages and four publication requests. Hosted anon/authenticated batch EXECUTE denied.
+
+Production desktop chat returned revised `violet compass`. Deletion through each owner's production API succeeded; FK removed personal chunks. Fresh phone chat did not return the deleted note, but made unsupported existence/write claims: recorded QC-09, Needs triage. Current production browser warnings/errors and bounded server error query were empty. Original counts restored: 384 entries / 384 personal chunks / 3,349 curated chunks; zero orphan/stale/legacy personal chunks. All B03 synthetic conversations/messages removed. See [final handover](../remediation/handovers/b03-release.md). Earlier pending statements above are historical checkpoints.

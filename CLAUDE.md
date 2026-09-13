@@ -77,7 +77,7 @@ supabase/
 - DB: `user_badges` table + `profiles.featured_badge_id`
 
 ### Pocket Sommelier
-RAG-based wine knowledge chat using OpenAI embeddings + pgvector. Knowledge ingested from PDFs into `wine_knowledge_chunks` / `general_knowledge_chunks` tables.
+RAG-based wine knowledge chat using OpenAI embeddings + pgvector. Curated reference knowledge lives in `wine_knowledge_chunks` / `general_knowledge_chunks`. Personal entry embeddings live separately in owner-only `user_entry_knowledge_chunks`, with entry/account FKs and synchronous source invalidation. Ingestion captures an atomic row/grape snapshot and publishes bounded batches only if the source is still current; see the B03 release handover in `docs/remediation/`.
 
 ### Social Layer
 Friends, entry reactions/comments, entry groups (shared tastings), blocks/reports. Notifications via `wine_notifications` table + realtime subscriptions.
