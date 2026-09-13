@@ -1,0 +1,674 @@
+{
+  "function_grants": {
+    "remove": [
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "anon",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "PUBLIC",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      }
+    ],
+    "add": [
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_a uuid, user_b uuid",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "are_friends",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_id uuid",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "is_test_account",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "can_view_entry_standard",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "can_view_entry",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "can_view_test_authored_content",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "is_user_blocked",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      }
+    ]
+  },
+  "functions": {
+    "remove": [
+      {
+        "args": "user_a uuid, user_b uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.are_friends(user_a uuid, user_b uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if user_a is null or user_b is null then\n    return false;\n  end if;\n\n  if user_a = user_b then\n    return true;\n  end if;\n\n  return exists (\n    select 1\n    from public.friend_requests fr\n    where fr.status = 'accepted'\n      and (\n        (fr.requester_id = user_a and fr.recipient_id = user_b)\n        or\n        (fr.requester_id = user_b and fr.recipient_id = user_a)\n      )\n  );\nend;\n$function$\n",
+        "name": "are_friends",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.is_test_account(user_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if user_id is null then\n    return false;\n  end if;\n\n  return exists (\n    select 1\n    from public.profiles\n    where id = user_id\n      and coalesce(is_test_account, false)\n  );\nend;\n$function$\n",
+        "name": "is_test_account",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_entry_standard(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\ndeclare\n  normalized_privacy text;\nbegin\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if public.is_user_blocked(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if not public.can_view_test_authored_content(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if viewer_id = owner_id then\n    return true;\n  end if;\n\n  normalized_privacy := lower(coalesce(privacy, ''));\n\n  if normalized_privacy = 'public' then\n    return true;\n  end if;\n\n  if normalized_privacy = 'friends' then\n    return public.are_friends(viewer_id, owner_id);\n  end if;\n\n  if normalized_privacy = 'friends_of_friends' then\n    if public.are_friends(viewer_id, owner_id) then\n      return true;\n    end if;\n\n    return exists (\n      with viewer_friends as (\n        select case\n          when fr.requester_id = viewer_id then fr.recipient_id\n          else fr.requester_id\n        end as friend_id\n        from public.friend_requests fr\n        where fr.status = 'accepted'\n          and (fr.requester_id = viewer_id or fr.recipient_id = viewer_id)\n      ),\n      owner_friends as (\n        select case\n          when fr.requester_id = owner_id then fr.recipient_id\n          else fr.requester_id\n        end as friend_id\n        from public.friend_requests fr\n        where fr.status = 'accepted'\n          and (fr.requester_id = owner_id or fr.recipient_id = owner_id)\n      )\n      select 1\n      from viewer_friends vf\n      join owner_friends ofr\n        on ofr.friend_id = vf.friend_id\n      where vf.friend_id <> viewer_id\n        and vf.friend_id <> owner_id\n      limit 1\n    );\n  end if;\n\n  return false;\nend;\n$function$\n",
+        "name": "can_view_entry_standard",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_entry(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if public.can_view_entry_standard(viewer_id, owner_id, privacy) then\n    return true;\n  end if;\n\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if public.is_user_blocked(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if not public.can_view_test_authored_content(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  return public.is_test_account(viewer_id);\nend;\n$function$\n",
+        "name": "can_view_entry",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_test_authored_content(viewer_id uuid, owner_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if viewer_id = owner_id then\n    return true;\n  end if;\n\n  if not public.is_test_account(owner_id) then\n    return true;\n  end if;\n\n  return public.is_test_account(viewer_id);\nend;\n$function$\n",
+        "name": "can_view_test_authored_content",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.is_user_blocked(viewer_id uuid, target_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  if viewer_id is null or target_id is null then\n    return false;\n  end if;\n\n  if viewer_id = target_id then\n    return false;\n  end if;\n\n  return exists (\n    select 1\n    from public.user_blocks b\n    where (b.blocker_id = viewer_id and b.blocked_id = target_id)\n       or (b.blocker_id = target_id and b.blocked_id = viewer_id)\n  );\nend;\n$function$\n",
+        "name": "is_user_blocked",
+        "owner": "postgres",
+        "schema_name": "public"
+      }
+    ],
+    "add": [
+      {
+        "args": "user_a uuid, user_b uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.are_friends(user_a uuid, user_b uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if user_a is null or user_b is null then\n    return false;\n  end if;\n\n  if user_a = user_b then\n    return true;\n  end if;\n\n  return exists (\n    select 1\n    from public.friend_requests fr\n    where fr.status = 'accepted'\n      and (\n        (fr.requester_id = user_a and fr.recipient_id = user_b)\n        or\n        (fr.requester_id = user_b and fr.recipient_id = user_a)\n      )\n  );\nend;\n$function$\n",
+        "name": "are_friends",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_a uuid, user_b uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.are_friends(user_a uuid, user_b uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.are_friends(user_a, user_b);\n$function$\n",
+        "name": "are_friends",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "user_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.is_test_account(user_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if user_id is null then\n    return false;\n  end if;\n\n  return exists (\n    select 1\n    from public.profiles\n    where id = user_id\n      and coalesce(is_test_account, false)\n  );\nend;\n$function$\n",
+        "name": "is_test_account",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "user_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.is_test_account(user_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.is_test_account(user_id);\n$function$\n",
+        "name": "is_test_account",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION private.can_view_entry_standard(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  normalized_privacy text;\nbegin\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if private.is_user_blocked(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if not private.can_view_test_authored_content(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if viewer_id = owner_id then\n    return true;\n  end if;\n\n  normalized_privacy := lower(coalesce(privacy, ''));\n\n  if normalized_privacy = 'public' then\n    return true;\n  end if;\n\n  if normalized_privacy = 'friends' then\n    return private.are_friends(viewer_id, owner_id);\n  end if;\n\n  if normalized_privacy = 'friends_of_friends' then\n    if private.are_friends(viewer_id, owner_id) then\n      return true;\n    end if;\n\n    return exists (\n      with viewer_friends as (\n        select case\n          when fr.requester_id = viewer_id then fr.recipient_id\n          else fr.requester_id\n        end as friend_id\n        from public.friend_requests fr\n        where fr.status = 'accepted'\n          and (fr.requester_id = viewer_id or fr.recipient_id = viewer_id)\n      ),\n      owner_friends as (\n        select case\n          when fr.requester_id = owner_id then fr.recipient_id\n          else fr.requester_id\n        end as friend_id\n        from public.friend_requests fr\n        where fr.status = 'accepted'\n          and (fr.requester_id = owner_id or fr.recipient_id = owner_id)\n      )\n      select 1\n      from viewer_friends vf\n      join owner_friends ofr\n        on ofr.friend_id = vf.friend_id\n      where vf.friend_id <> viewer_id\n        and vf.friend_id <> owner_id\n      limit 1\n    );\n  end if;\n\n  return false;\nend;\n$function$\n",
+        "name": "can_view_entry_standard",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION private.can_view_entry(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if private.can_view_entry_standard(viewer_id, owner_id, privacy) then\n    return true;\n  end if;\n\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if private.is_user_blocked(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  if not private.can_view_test_authored_content(viewer_id, owner_id) then\n    return false;\n  end if;\n\n  return private.is_test_account(viewer_id);\nend;\n$function$\n",
+        "name": "can_view_entry",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_entry_standard(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.can_view_entry_standard(viewer_id, owner_id, privacy);\n$function$\n",
+        "name": "can_view_entry_standard",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid, privacy text",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_entry(viewer_id uuid, owner_id uuid, privacy text)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.can_view_entry(viewer_id, owner_id, privacy);\n$function$\n",
+        "name": "can_view_entry",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.can_view_test_authored_content(viewer_id uuid, owner_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if viewer_id is null or owner_id is null then\n    return false;\n  end if;\n\n  if viewer_id = owner_id then\n    return true;\n  end if;\n\n  if not private.is_test_account(owner_id) then\n    return true;\n  end if;\n\n  return private.is_test_account(viewer_id);\nend;\n$function$\n",
+        "name": "can_view_test_authored_content",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, owner_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.can_view_test_authored_content(viewer_id uuid, owner_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.can_view_test_authored_content(viewer_id, owner_id);\n$function$\n",
+        "name": "can_view_test_authored_content",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.is_user_blocked(viewer_id uuid, target_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  if viewer_id is null or target_id is null then\n    return false;\n  end if;\n\n  if viewer_id = target_id then\n    return false;\n  end if;\n\n  return exists (\n    select 1\n    from public.user_blocks b\n    where (b.blocker_id = viewer_id and b.blocked_id = target_id)\n       or (b.blocker_id = target_id and b.blocked_id = viewer_id)\n  );\nend;\n$function$\n",
+        "name": "is_user_blocked",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "viewer_id uuid, target_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.is_user_blocked(viewer_id uuid, target_id uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select private.is_user_blocked(viewer_id, target_id);\n$function$\n",
+        "name": "is_user_blocked",
+        "owner": "postgres",
+        "schema_name": "public"
+      }
+    ]
+  },
+  "policies": {
+    "remove": [
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Owners can create share rows",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "post_shares",
+        "with_check": "((auth.uid() = created_by) AND (EXISTS ( SELECT 1\n   FROM wine_entries entries\n  WHERE ((entries.id = post_shares.post_id) AND can_view_entry(auth.uid(), entries.user_id, entries.entry_privacy)))))"
+      },
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can add comments for allowed audience",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_comments",
+        "with_check": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_comments.entry_id) AND can_view_entry_standard(auth.uid(), e.user_id, e.entry_privacy) AND can_view_entry_standard(auth.uid(), e.user_id, COALESCE((e.comments_privacy)::text,\n        CASE\n            WHEN ((COALESCE(e.comments_scope, 'viewers'::text) = 'friends'::text) AND (COALESCE(e.entry_privacy, 'public'::text) <> 'private'::text)) THEN 'friends'::text\n            ELSE COALESCE(e.entry_privacy, 'public'::text)\n        END)) AND can_view_test_authored_content(e.user_id, auth.uid())))))"
+      },
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can add reactions for allowed audience",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_reactions",
+        "with_check": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_reactions.entry_id) AND can_view_entry_standard(auth.uid(), e.user_id, e.entry_privacy) AND can_view_entry_standard(auth.uid(), e.user_id, COALESCE((e.reaction_privacy)::text, e.entry_privacy)) AND can_view_test_authored_content(e.user_id, auth.uid())))))"
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can read entry reactions for allowed audience",
+        "qual": "(can_view_test_authored_content(auth.uid(), user_id) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_reactions.entry_id) AND can_view_entry(auth.uid(), e.user_id, e.entry_privacy) AND can_view_entry(auth.uid(), e.user_id, COALESCE((e.reaction_privacy)::text, e.entry_privacy))))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_reactions",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed entry group slides",
+        "qual": "(EXISTS ( SELECT 1\n   FROM (entry_groups g\n     JOIN wine_entries e ON ((e.id = COALESCE(entry_group_slides.entry_id, g.anchor_entry_id))))\n  WHERE ((g.id = entry_group_slides.group_id) AND (e.entry_group_id = g.id) AND (e.user_id = g.user_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_group_slides.photo_type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END) AND ((entry_group_slides.entry_id IS NOT NULL) OR (split_part(entry_group_slides.path, '/'::text, 1) = (g.user_id)::text)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed entry groups",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_groups.anchor_entry_id) AND (e.entry_group_id = entry_groups.id) AND (e.user_id = entry_groups.user_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed wine entries",
+        "qual": "can_view_entry(( SELECT auth.uid() AS uid), user_id, entry_privacy)",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view entry comments for allowed audience",
+        "qual": "((NOT is_user_blocked(auth.uid(), user_id)) AND can_view_test_authored_content(auth.uid(), user_id) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_comments.entry_id) AND can_view_entry(auth.uid(), e.user_id, e.entry_privacy) AND can_view_entry(auth.uid(), e.user_id, COALESCE((e.comments_privacy)::text,\n        CASE\n            WHEN ((COALESCE(e.comments_scope, 'viewers'::text) = 'friends'::text) AND (COALESCE(e.entry_privacy, 'public'::text) <> 'private'::text)) THEN 'friends'::text\n            ELSE COALESCE(e.entry_privacy, 'public'::text)\n        END))))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_comments",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view entry photos",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_photos.entry_id) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_photos.type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view primary grapes for visible entries",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_primary_grapes.entry_id) AND can_view_entry(auth.uid(), e.user_id, e.entry_privacy))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_primary_grapes",
+        "with_check": null
+      }
+    ],
+    "add": [
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Owners can create share rows",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "post_shares",
+        "with_check": "((auth.uid() = created_by) AND (EXISTS ( SELECT 1\n   FROM wine_entries entries\n  WHERE ((entries.id = post_shares.post_id) AND private.can_view_entry(auth.uid(), entries.user_id, entries.entry_privacy)))))"
+      },
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can add comments for allowed audience",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_comments",
+        "with_check": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_comments.entry_id) AND private.can_view_entry_standard(auth.uid(), e.user_id, e.entry_privacy) AND private.can_view_entry_standard(auth.uid(), e.user_id, COALESCE((e.comments_privacy)::text,\n        CASE\n            WHEN ((COALESCE(e.comments_scope, 'viewers'::text) = 'friends'::text) AND (COALESCE(e.entry_privacy, 'public'::text) <> 'private'::text)) THEN 'friends'::text\n            ELSE COALESCE(e.entry_privacy, 'public'::text)\n        END)) AND private.can_view_test_authored_content(e.user_id, auth.uid())))))"
+      },
+      {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can add reactions for allowed audience",
+        "qual": null,
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_reactions",
+        "with_check": "((user_id = auth.uid()) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_reactions.entry_id) AND private.can_view_entry_standard(auth.uid(), e.user_id, e.entry_privacy) AND private.can_view_entry_standard(auth.uid(), e.user_id, COALESCE((e.reaction_privacy)::text, e.entry_privacy)) AND private.can_view_test_authored_content(e.user_id, auth.uid())))))"
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can read entry reactions for allowed audience",
+        "qual": "(private.can_view_test_authored_content(auth.uid(), user_id) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_reactions.entry_id) AND private.can_view_entry(auth.uid(), e.user_id, e.entry_privacy) AND private.can_view_entry(auth.uid(), e.user_id, COALESCE((e.reaction_privacy)::text, e.entry_privacy))))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_reactions",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed entry group slides",
+        "qual": "(EXISTS ( SELECT 1\n   FROM (entry_groups g\n     JOIN wine_entries e ON ((e.id = COALESCE(entry_group_slides.entry_id, g.anchor_entry_id))))\n  WHERE ((g.id = entry_group_slides.group_id) AND (e.entry_group_id = g.id) AND (e.user_id = g.user_id) AND private.can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND private.can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_group_slides.photo_type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END) AND ((entry_group_slides.entry_id IS NOT NULL) OR (split_part(entry_group_slides.path, '/'::text, 1) = (g.user_id)::text)))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_group_slides",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed entry groups",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_groups.anchor_entry_id) AND (e.entry_group_id = entry_groups.id) AND (e.user_id = entry_groups.user_id) AND private.can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_groups",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view allowed wine entries",
+        "qual": "private.can_view_entry(( SELECT auth.uid() AS uid), user_id, entry_privacy)",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "wine_entries",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view entry comments for allowed audience",
+        "qual": "((NOT private.is_user_blocked(auth.uid(), user_id)) AND private.can_view_test_authored_content(auth.uid(), user_id) AND (EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_comments.entry_id) AND private.can_view_entry(auth.uid(), e.user_id, e.entry_privacy) AND private.can_view_entry(auth.uid(), e.user_id, COALESCE((e.comments_privacy)::text,\n        CASE\n            WHEN ((COALESCE(e.comments_scope, 'viewers'::text) = 'friends'::text) AND (COALESCE(e.entry_privacy, 'public'::text) <> 'private'::text)) THEN 'friends'::text\n            ELSE COALESCE(e.entry_privacy, 'public'::text)\n        END))))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_comments",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view entry photos",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_photos.entry_id) AND private.can_view_entry(( SELECT auth.uid() AS uid), e.user_id, e.entry_privacy) AND private.can_view_entry(( SELECT auth.uid() AS uid), e.user_id,\n        CASE entry_photos.type\n            WHEN 'label'::text THEN COALESCE(e.label_photo_privacy, e.entry_privacy)\n            WHEN 'place'::text THEN COALESCE(e.place_photo_privacy, e.entry_privacy)\n            ELSE e.entry_privacy\n        END))))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_photos",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Users can view primary grapes for visible entries",
+        "qual": "(EXISTS ( SELECT 1\n   FROM wine_entries e\n  WHERE ((e.id = entry_primary_grapes.entry_id) AND private.can_view_entry(auth.uid(), e.user_id, e.entry_privacy))))",
+        "roles": [
+          "public"
+        ],
+        "schemaname": "public",
+        "tablename": "entry_primary_grapes",
+        "with_check": null
+      }
+    ]
+  }
+}

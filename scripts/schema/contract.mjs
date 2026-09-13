@@ -57,6 +57,15 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  const helperDelta = JSON.parse(await readFile(new URL('./b02f-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(helperDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error(`Missing reviewed B02f predecessor in ${key}`);
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {
