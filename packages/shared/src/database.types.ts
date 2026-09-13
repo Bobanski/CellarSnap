@@ -2682,30 +2682,6 @@ export type Database = {
           name_display_preference: string | null
           username: string | null
         }
-        Insert: {
-          avatar_path?: string | null
-          created_at?: string | null
-          display_name?: never
-          email?: never
-          first_name?: string | null
-          id?: string | null
-          is_test_account?: boolean | null
-          last_name?: string | null
-          name_display_preference?: string | null
-          username?: never
-        }
-        Update: {
-          avatar_path?: string | null
-          created_at?: string | null
-          display_name?: never
-          email?: never
-          first_name?: string | null
-          id?: string | null
-          is_test_account?: boolean | null
-          last_name?: string | null
-          name_display_preference?: string | null
-          username?: never
-        }
         Relationships: []
       }
     }

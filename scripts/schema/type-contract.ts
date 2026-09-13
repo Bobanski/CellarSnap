@@ -9,6 +9,8 @@ const name: JoinedGrape['name'] = 'Nebbiolo';
 const entry: TablesInsert<'wine_entries'> = { user_id:'fixture-owner', rating:92 };
 const nullableProducer: Tables<'wine_entries'>['producer'] = null;
 void [name, entry, nullableProducer];
+// @ts-expect-error Public social projection is read-only; owner edits use profiles.
+db.from('public_profiles').update({first_name:'not writable'});
 // @ts-expect-error Unknown table must fail before a network call.
 db.from('wine_entry_typo');
 // @ts-expect-error Missing required writer ownership must fail.
