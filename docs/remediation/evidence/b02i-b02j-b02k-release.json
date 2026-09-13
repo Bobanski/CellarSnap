@@ -1,0 +1,407 @@
+{
+  "release": {
+    "date": "2026-09-13",
+    "applicationHead": "18814594826ca3501214bb92b0a5c086da2bfd1d",
+    "main": "c7dcfd23e8c4e00d5903ce9462153047919add94",
+    "sameTree": true,
+    "prs": [
+      {
+        "number": 138,
+        "head": "3686ac9ade329416a11c69d217031cc4fe3e570e",
+        "merge": "552d5411ffbda5051c4d442b782b85494a9f0496",
+        "mergedAt": "2026-09-13T23:03:41Z"
+      },
+      {
+        "number": 139,
+        "head": "2d3b067da37d830530480bc34d49f9f17ca7a9d4",
+        "merge": "a2b50aa96a3ae7efb42042ca351bb1448c42a4cb",
+        "mergedAt": "2026-09-13T23:09:45Z"
+      },
+      {
+        "number": 140,
+        "head": "18814594826ca3501214bb92b0a5c086da2bfd1d",
+        "merge": "c7dcfd23e8c4e00d5903ce9462153047919add94",
+        "mergedAt": "2026-09-13T23:16:31Z"
+      }
+    ]
+  },
+  "automated": {
+    "isolatedTests": 412,
+    "schemaTests": 21,
+    "realPostgres": "17.6",
+    "fullCatalogMatches": true,
+    "existingBadgeRaces": 4,
+    "existingEditRaces": 2,
+    "inventoryCliUnicodeExclusivePublication": true,
+    "webTypesLintBuild": true,
+    "mobileTypesAndCi": true,
+    "databaseCompileContracts": true
+  },
+  "migration": {
+    "file": "20260913225201_request_photo_paths.sql",
+    "hostedVersion": "20260913225511",
+    "sha256": "6bfaf403b9eeed7de8813c423ae2246ed38bd187bd44eeeb3941f056bc8a272c",
+    "hostedStatementMd5": "4d4abaee0bee864881e8c05d1f790d32"
+  },
+  "advisors": {
+    "before": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "level": "INFO"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 2,
+        "level": "WARN"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "level": "WARN"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 6,
+        "level": "WARN"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 6,
+        "level": "WARN"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "level": "WARN"
+      }
+    ],
+    "after": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "level": "INFO"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 2,
+        "level": "WARN"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "level": "WARN"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 6,
+        "level": "WARN"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 6,
+        "level": "WARN"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "level": "WARN"
+      }
+    ]
+  },
+  "hostedInventory": "b02j-inventory.json",
+  "webPhotoLive": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/immutable/chunks/1es"
+    ],
+    "failedRequests": [
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/auth/v1/user",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate/distill",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "expoPhotoLive": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true
+      },
+      {
+        "crossOriginBearer": {
+          "status": 200,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "deniedLoadThenRetry": true
+      },
+      {
+        "outageThenRetry": true
+      },
+      {
+        "adoptedPayloadSignatureFree": true,
+        "oldBearerCompatible": true
+      },
+      {
+        "storageRequests": 0,
+        "imageRequests": 13,
+        "bearerOnly": true
+      },
+      {
+        "signOutClearsImageSurface": true
+      },
+      {
+        "ownerCropSaveAndReopen": true,
+        "originalDimensionReads": 3
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 ()",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "failures": [
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "feedLive": {
+    "results": [
+      {
+        "payloadAllBands": true,
+        "numericRatingsNull": true,
+        "privateAndOwnExcluded": true,
+        "friendsIncluded": true,
+        "groupSlides": 2
+      },
+      {
+        "cursorPagination": true
+      },
+      {
+        "device": "desktop",
+        "labelsVisible": true,
+        "imagesDecoded": true,
+        "groupRendered": true,
+        "groupSelectionAndCaption": true,
+        "loadMore": true
+      },
+      {
+        "device": "phone",
+        "labelsVisible": true,
+        "imagesDecoded": true,
+        "groupRendered": true,
+        "groupSelectionAndCaption": true,
+        "loadMore": true
+      },
+      {
+        "testAuthorExcluded": true,
+        "blockExcludedAndRestored": true
+      },
+      {
+        "ownerRatingEditAndReload": true,
+        "storedScale": "1\u2013100"
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failures": [],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "deployment": {
+    "id": "dpl_GBvwhP2CyLffim2uk2qC6tV7LQFc",
+    "githubId": 6427650763,
+    "state": "Ready",
+    "primary": "https://cellarsnap.app",
+    "succeededAt": "2026-09-13T23:16:57Z",
+    "photoAcceptanceAt": "a2b50aa (photo source unchanged by B02k)",
+    "feedAcceptanceAt": "c7dcfd2",
+    "errorQuery": {
+      "from": "2026-09-13T23:16:57Z",
+      "until": "2026-09-13T23:20:46Z",
+      "limit": 100,
+      "records": 0
+    }
+  },
+  "native": {
+    "xcodeApps": 0,
+    "androidEmulators": 0,
+    "androidAvds": 0,
+    "tested": false,
+    "distributed": false,
+    "expoBrowserArtifact": "Previously exported B02g; unchanged mobile runtime source"
+  },
+  "cleanup": {
+    "sessionNamedEntries": 0,
+    "sessionNamedGroups": 0,
+    "objectsRemovedThroughStorageApi": true,
+    "originalTesterFlagsRestored": true,
+    "originalTsconfigByteIdentical": true,
+    "temporaryServersStopped": [
+      3001,
+      8083
+    ]
+  },
+  "qcCorrections": [
+    "Initial live feed screenshot awaited avatar decoding, not wine-photo fade completion. Corrected to exact wine image decode plus opacity=1; complete live feed run repeated. No application fix required."
+  ],
+  "residuals": [
+    "AUD-01 P0: durable production rekey/CAS, supported native rollout/adoption and legacy authority cutoff",
+    "QC-01: direct Data API/mobile/other payloads; web feed containment only",
+    "AUD-22: review twelve missing references and external consumers before any object retirement",
+    "AUD-49 Partial: tracked historical worktree gitlinks break checkout cleanup; developer watcher acceptance retained",
+    "OPS-01 duplicate hosting missing Supabase environment; primary succeeds",
+    "AUD-50 recurring cookie/owner fetch diagnostic; final live feed had zero page/console/HTTP failures"
+  ]
+}
