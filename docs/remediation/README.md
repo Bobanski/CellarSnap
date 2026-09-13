@@ -3,7 +3,8 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover and release:** [B06b/B06c/B06d merged and live-verified](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md). Implementation checkpoints: [B06b](handovers/batch-06b.md), [B06c](handovers/batch-06c.md), [B06d](handovers/batch-06d.md); issue #112 remains open.
+- **Latest work checkpoint:** [B06e release checkpoint](handovers/b06e-release.md). Authority SQL and hosted/browser QC pass; merge pending. QC-03 outage routing and B05e aliases are next.
+- **Latest completed release:** [B06b/B06c/B06d merged and live-verified](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md). Implementation checkpoints: [B06b](handovers/batch-06b.md), [B06c](handovers/batch-06c.md), [B06d](handovers/batch-06d.md); issue #112 remains open.
 - **Prior releases:** [B05d/B06a](handovers/b05d-b06a-release.md), [B05b/B05c](handovers/b05b-b05c-release.md), [B04d/B05a](handovers/b04d-b05a-release.md), [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
@@ -11,6 +12,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B06e resumed and QC passed**, #117. SQL applied as `20260913074139`; 29 live HTTP checks, ten hosted races, four PostgreSQL lock tests, desktop/phone editing and clean profile reloads pass. [Checkpoint](handovers/b06e-release.md), [QC](../audits/b06e-qc-2026-09-13.md). QC-15 not reproduced; QC-16 records absent Expo feature controls. Next B06f fixes reproduced summary-outage routing, then B05e/QC-14.
 
 **B06b, B06c and B06d are merged; web/server is live-verified at `b51ae78` through #113/#114/#115.** Primary Vercel `dpl_2mmNXsfTW4ztLghCRgmVDoUuCiJ7` is Ready on cellarsnap.app. Badge server authority migration was applied as hosted version `20260913064845`; direct client award writes deny and concurrent legitimate awards occur once. Shared complete counts and selected event-photo navigation are live. [Release and resume steps](handovers/b06b-b06d-release.md).
 

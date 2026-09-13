@@ -1,0 +1,52 @@
+{
+  "function_grants": [
+    {
+      "args": "",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "enforce_earned_featured_badges",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    },
+    {
+      "args": "",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "remove_revoked_featured_badge",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    }
+  ],
+  "functions": [
+    {
+      "args": "",
+      "definition": "CREATE OR REPLACE FUNCTION private.enforce_earned_featured_badges()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  selected text[];\n  badge text;\nbegin\n  -- Only a trigger can call this private function. Definer rights are needed\n  -- to lock awards without giving clients UPDATE privileges on user_badges.\n  -- Profile RLS still controls the outer write; bind client calls to auth.uid().\n  if current_setting('role') in ('anon', 'authenticated')\n     and new.id is distinct from auth.uid() then\n    raise exception 'Cannot feature badges for another user' using errcode = '42501';\n  end if;\n\n  if tg_op = 'UPDATE' and new.featured_badge_id is distinct from old.featured_badge_id\n     and new.featured_badge_ids is not distinct from old.featured_badge_ids then\n    -- Legacy single-column feature/clear replaces the complete selection.\n    selected := case when new.featured_badge_id is null then '{}'::text[]\n      else array[new.featured_badge_id] end;\n  else\n    selected := new.featured_badge_ids;\n    if tg_op = 'INSERT' and cardinality(selected) = 0 and new.featured_badge_id is not null then\n      selected := array[new.featured_badge_id];\n    elsif new.featured_badge_id is distinct from selected[1]\n      and ((tg_op = 'INSERT' and new.featured_badge_id is not null)\n        or (tg_op = 'UPDATE' and new.featured_badge_id is distinct from old.featured_badge_id)) then\n      raise exception 'Conflicting featured badge selections' using errcode = '23514';\n    end if;\n  end if;\n\n  if selected is null or cardinality(selected) > 5\n     or coalesce(array_ndims(selected), 1) <> 1\n     or coalesce(array_lower(selected, 1), 1) <> 1\n     or exists (select from unnest(selected) f where f is null)\n     or (select count(distinct f) from unnest(selected) f) <> cardinality(selected) then\n    raise exception 'Select up to five distinct earned badges' using errcode = '23514';\n  end if;\n  -- Stable order and key locks protect the check against concurrent revocation.\n  for badge in select f from unnest(selected) f order by f loop\n    perform 1 from public.user_badges b\n      where b.user_id = new.id and b.badge_id = badge for key share;\n    if not found then\n      raise exception 'Badge not earned' using errcode = '42501';\n    end if;\n  end loop;\n  new.featured_badge_ids := selected;\n  new.featured_badge_id := selected[1];\n  return new;\nend;\n$function$\n",
+      "name": "enforce_earned_featured_badges",
+      "owner": "postgres",
+      "schema_name": "private"
+    },
+    {
+      "args": "",
+      "definition": "CREATE OR REPLACE FUNCTION private.remove_revoked_featured_badge()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  remaining text[];\nbegin\n  if tg_op = 'DELETE' or old.user_id is distinct from new.user_id\n      or old.badge_id is distinct from new.badge_id then\n    -- A single statement may revoke multiple awards; remove all missing rows\n    -- before revalidating the profile, while holding its row lock.\n    select p.featured_badge_ids into remaining from public.profiles p\n      where p.id = old.user_id and old.badge_id = any(p.featured_badge_ids)\n      for update;\n    if found then\n      select coalesce(array_agg(f order by ordinal), '{}'::text[]) into remaining\n      from unnest(remaining) with ordinality as selected(f, ordinal)\n      where exists (select from public.user_badges b where b.user_id = old.user_id and b.badge_id = f);\n      update public.profiles set featured_badge_ids = remaining,\n        featured_badge_id = remaining[1] where id = old.user_id;\n    end if;\n  end if;\n  return null;\nend;\n$function$\n",
+      "name": "remove_revoked_featured_badge",
+      "owner": "postgres",
+      "schema_name": "private"
+    }
+  ],
+  "triggers": [
+    {
+      "definition": "CREATE TRIGGER profiles_earned_featured_badges BEFORE INSERT OR UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION private.enforce_earned_featured_badges()",
+      "enabled": "O",
+      "name": "profiles_earned_featured_badges",
+      "schema_name": "public",
+      "table_name": "profiles"
+    },
+    {
+      "definition": "CREATE TRIGGER user_badges_remove_revoked_feature AFTER DELETE OR UPDATE OF user_id, badge_id ON user_badges FOR EACH ROW EXECUTE FUNCTION private.remove_revoked_featured_badge()",
+      "enabled": "O",
+      "name": "user_badges_remove_revoked_feature",
+      "schema_name": "public",
+      "table_name": "user_badges"
+    }
+  ]
+}

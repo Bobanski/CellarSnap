@@ -1,6 +1,6 @@
 # Canonical remediation backlog
 
-Updated September 13, 2026. **66 records: all 50 original audit findings, fourteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
+Updated September 13, 2026. **68 records: all 50 original audit findings, sixteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
@@ -20,7 +20,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-06 | P1 | Public identity projection overexposes fields | Open | B02: explicit public DTO/projection honoring identity preferences and visibility, verified on web/mobile without breaking legitimate profile reads. Related QC-01. |
 | AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | Closed | B04b/#95 released as `c83a5cb`: public DNS-pinned destinations/redirects, full-body deadline and byte caps. 250 tests plus production denials and legitimate 48-wine parse; [release](handovers/b04-release.md). Existing script-rendered empty extraction stays QC-11. |
 | AUD-08 | P1 | Dependency advisories and undeclared runtime imports | Partial | B04c `588d49a`, [PR #98](https://github.com/Bobanski/CellarSnap/pull/98), issue #97: compatible Next 16/Expo 56 updates, declared Sharp, tar/Metro patches; root audit 13 → 0, mobile 29 → 14 moderate (no high/critical). 256 tests and web/mobile export/QC evidence in [handover](handovers/batch-04c.md). Merged/deployed/live-verified at `a0a9564`: [release](handovers/b04c-release.md). B04d `bd40acd`, [PR #100](https://github.com/Bobanski/CellarSnap/pull/100), repairs both remaining advisory roots with 7 installed-consumer contracts; root/mobile audits zero. [QC/handover](handovers/batch-04d.md). Merged #100 as `3527208`; combined web release `960caaa` live-verified. [Release](handovers/b04d-b05a-release.md). Native acceptance/distribution remains outstanding. |
-| AUD-09 | P1 | Badge trigger/evaluator incompatibility and award authority | Partial | B06b #113 merged/live: 53 stored-fact definitions supported, 32 explicitly deferred; server-only award writes deployed and verified. [Release](handovers/b06b-b06d-release.md), [contract](b06-badge-contract.md), issue #112. Remaining featured-profile authority, deferred facts/semantics, historical review and native acceptance. Preserve all 85 definitions. |
+| AUD-09 | P1 | Badge trigger/evaluator incompatibility and award authority | Partial | B06b #113 merged/live: 53 stored-fact definitions supported, 32 explicitly deferred; server-only award writes deployed and verified. [Release](handovers/b06b-b06d-release.md), [contract](b06-badge-contract.md), issue #112. B06e #117 authority SQL applied; hosted concurrency/HTTP and desktop/phone QC pass; merge pending. [QC](../audits/b06e-qc-2026-09-13.md). QC-16 separately tracks missing Expo controls. Remaining deferred facts/semantics, historical review and native acceptance. Preserve all 85 definitions. |
 | AUD-10 | P1 | Score-loader/schema drift | Partial | B01 fixes nonexistent quality_tier query and preserves wine_type, with tests/QC in PR #80. B07 still must resolve absent ai_notes_summary and the newly reproduced absent grape_aliases.alias_type resolver query, and prove the schema/loader contract. See merge-review evidence below. |
 | AUD-11 | P1 | Refresh and on-demand scoring use different preferences | Open | B07: identical versioned inputs for seeded/unseeded single, batch, refresh and list-scan paths; numerical parity fixtures. |
 | AUD-12 | P2 | Cached responses lose promised score fields | Open | B07: cold/warm response equivalence including explanation/confidence fields, or an explicit compatible score-only versus detail contract. |
@@ -80,6 +80,8 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-11 | P2 | Script-rendered menu reports successful empty scan | Open | B11 bounded parser follow-up: reject empty/unreadable results with upload guidance; preserve supported server-rendered menus. |
 | QC-12 | P2 | Expo single-photo feed cards render loaded images at zero height | Open | B11: reproduce/fix static Image sizing under Pressable; candidate and prior B04c export both reproduce. Related AUD-38/OPS-02; see detail below. |
 | QC-13 | P1 | Grape search rejects native bearer authentication | Closed | B05d PR #108 / `719ad1d`, live-verified again at `d4e5cd2`: typed cookie/bearer parity, alias/name/limit/failure contracts and cookie-stripped Expo passed. No native binary needed for the server fix; native device acceptance remains unavailable. [Release](handovers/b05d-b06a-release.md). |
+| QC-16 | P2 | Expo featured-badge handler has no reachable UI control | Open | B06g / AUD-09; bearer legacy authority passes but no client feature/clear interaction exists. See detail below. |
+| QC-15 | P2 | Transient local profile JSON parse failure | Not reproducible | B06e resume: clean production build and dev 3004 repeated profile loads pass, no JSON errors. Original cause unknown; retain reproduction history and reopen on recurrence. [QC](../audits/b06e-qc-2026-09-13.md). |
 | QC-14 | P2 | Seeded grape alias normalization drops uppercase letters | Open | B05e / AUD-19 reference-data contract: review collision-safe forward repair and seed generation; canonical/alias search parity. See detail below. |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
@@ -298,3 +300,32 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - AUD-09 Partial: supported 53/85 definitions, explicit 32 deferrals, checked server award writer. Forward privilege migration deployed as `20260913064845`; direct client writes deny, legitimate concurrent awards occur once, historical awards unchanged. Featured-profile direct editing still needs earned-award authority; no retrospective award reclassification.
 - QC-03/QC-08 Partial: desktop/phone web and cookie-stripped Expo success flows pass; complete summary and selected-slide navigation live. No native runtime/binary/OTA acceptance. Summary-outage reverse proxy did not hydrate Next; isolated failure tests pass but browser failure visual acceptance is unverified.
 - 385 isolated checks, five schema/source checks, database compile contracts, web/mobile types/lint/build/exports and all three GitHub CI runs pass. Disposable fixture cleanup and baseline count restoration verified. Existing security advisors unchanged; OPS-01 duplicate hosting remains. User-local files/design #75 preserved.
+
+### B06e active slice — AUD-09
+- September 13, 2026; `fix/b06e-featured-badge-authority`, base `ac8045a`, issue #112. Earned-only single/array profile writes, legacy synchronization and transactional revoked-award cleanup implemented. Nine schema/source tests pass; hosted migration and browser/Expo QC pending. [Checkpoint](handovers/batch-06e.md). Deferred trigger/historical/native scope remains Partial.
+
+### B06e paused — September 13, 2026
+- Implementation `63cb2c6`, draft [#117](https://github.com/Bobanski/CellarSnap/pull/117), issue #112. User requested pause. 385 isolated checks, nine schema/source tests, web/mobile lint, web types and database compile contracts pass. Forward featured-authority SQL NOT applied; browser/Expo/concurrency acceptance and release pending. AUD-09 remains Partial. [Resume handover](handovers/batch-06e.md). B05e/QC-14 and summary-outage follow-up unimplemented.
+
+### QC-15 — Transient local profile JSON parse failure
+- Priority / status: P2 / Needs triage; not a confirmed product regression.
+- Discovered: September 13, 2026; local Next dev 3001, B06e `63cb2c6` (no application source edits).
+- Source / reproduction: designated-account login, navigate `/profile`; server emitted one `SyntaxError: Unexpected end of JSON input` at JSON.parse, page `/profile`, HTTP 500, followed by multiple 200s. Exact failing parse site unknown. Optional terminal evidence was captured during shutdown; no durable stack beyond those fields.
+- Expected / actual: profile consistently renders; observed transient server error. No badge writes were attempted and migration was not applied.
+- Impact / confidence: local-only observation; may be concurrent build/test generated-output interference, unproven. No production evidence.
+- Related IDs / batch / owner / issue / PR: AUD-48 regression obligation; B06e QC intake / unassigned / #112 / #117. Do not silently implement unrelated profile work in the authority slice.
+- Acceptance: reproduce with isolated dev/build output and a fresh login; locate failing JSON parse, distinguish artifact interference from application data, repair/test if confirmed or retain evidence if not reproducible; desktop/phone profile interactions and server/browser error checks.
+- Deployment / rollback: no fix or rollout; triage before changes.
+- Verification / residual: user paused before triage. Do not call B06e browser QC complete.
+
+### QC-16 — Expo has no reachable featured-badge mutation control
+- Priority / status: P2 / Open.
+- Discovered: September 13, 2026, B06e resume at `3df3298`; current Expo production web export, 390×844.
+- Evidence: `apps/mobile/src/screens/badges/BadgesScreen.tsx:87` defines `setFeaturedBadge` but never calls it; earned cards only navigate to detail. `BadgeDetailScreen.tsx` contains no feature/clear control. Browsed collection and First Pour detail with designated account; no feature action appears.
+- Expected / actual: supported mobile users should be able to feature/clear earned awards; the API works with bearer legacy payloads, but current UI cannot initiate them.
+- Related / target / issue: AUD-09, separate B06g client slice / #112. This predates B06e and is not a database-authority regression.
+- Acceptance: accessible feature/clear actions, persisted state and useful failure feedback; cookie-stripped Expo browser interaction and available native acceptance. Preserve multi-selection compatibility and all historical awards.
+- Deployment / rollback: future mobile source/runtime release; no data migration required by this finding.
+
+### QC-03 follow-up — B06f summary-outage routing
+- September 13, 2026, `3df3298`: production-build reverse proxy returning only `/api/profile/summary` 503 now hydrates. Profile identity/gallery and unknown count dashes survive, but `(wineCount ?? 0)` incorrectly routes a 71-wine account to `/taste-survey` and claims survey-only DNA. Same unknown-versus-zero contract as QC-03; repair in separate B06f, with desktop/phone outage/recovery verification. No live service failure injected.
