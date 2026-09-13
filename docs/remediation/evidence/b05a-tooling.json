@@ -1,0 +1,25 @@
+{
+  "baseline": {
+    "total": 43405,
+    "agentFiles": 660,
+    "sharedVisible": true,
+    "decoderVisible": true,
+    "elapsedMs": 604
+  },
+  "candidate": {
+    "total": 42745,
+    "agentFiles": 0,
+    "sharedVisible": true,
+    "decoderVisible": true,
+    "elapsedMs": 534
+  },
+  "productCommit": "0487d5a",
+  "ciRun": "34736652248",
+  "checks": {
+    "isolated": 256,
+    "dependencyContracts": 7,
+    "toolingContracts": 3
+  },
+  "nativeRuntimeAvailable": false,
+  "note": "Crawl counts compare the same local repository and default/candidate Metro exclusions; elapsed times are not a performance claim."
+}

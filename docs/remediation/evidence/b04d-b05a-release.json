@@ -1,0 +1,75 @@
+{
+  "date": "2026-09-13",
+  "b04d": {
+    "product": "bd40acd78712082c5e56c40c7208a5b3e3820785",
+    "pr": 100,
+    "finalHead": "0619dd1a84ca72fb751e3c1a6780c47be2f8d98f",
+    "merge": "3527208c3bbf12eccb75519d99c488144d4d5cef",
+    "deployment": "dpl_3ruJT27ThNw8d7j8XJmfdJcdxFc6",
+    "state": "Ready"
+  },
+  "b05a": {
+    "product": "0487d5a88ec76c10870dd78db6e6634f2752646e",
+    "pr": 102,
+    "merge": "960caaab773acb98d18648dbf9999702211b4a80",
+    "deployment": "dpl_73JpFDVgvoe9LSJwoUfx6LDTDhrr",
+    "url": "https://cellar-snap-obovnfvc8-eitan-sneiders-projects.vercel.app",
+    "alias": "https://cellarsnap.app",
+    "state": "Ready",
+    "githubDeploymentId": 6417473246
+  },
+  "http": {
+    "checkedAt": "2026-09-13T04:01:24.552Z",
+    "checks": [
+      {
+        "path": "/login",
+        "status": 200,
+        "passed": true
+      },
+      {
+        "path": "/forgot-password",
+        "status": 200,
+        "passed": true
+      },
+      {
+        "path": "/privacy",
+        "status": 200,
+        "passed": true
+      },
+      {
+        "path": "/api/photo-crop",
+        "method": "POST",
+        "status": 401,
+        "passed": true
+      }
+    ]
+  },
+  "browser": {
+    "phone": [
+      390,
+      844
+    ],
+    "desktop": [
+      1440,
+      1000
+    ],
+    "login": true,
+    "feedImages": true,
+    "filter": true,
+    "signOut": true,
+    "horizontalOverflow": false,
+    "capturedWarningsErrors": 0
+  },
+  "migrations": [],
+  "nativeRuntimeAvailable": false,
+  "nativeDistribution": false,
+  "dataMutations": false,
+  "serverLogs": {
+    "deployment": "dpl_73JpFDVgvoe9LSJwoUfx6LDTDhrr",
+    "since": "2026-09-13T04:01:00Z",
+    "level": "error",
+    "limit": 50,
+    "returnedRecords": 0,
+    "scope": "Bounded query after live QC; not proof of absence of all errors."
+  }
+}
