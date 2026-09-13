@@ -29,7 +29,11 @@ function createMockSupabase(fixtures: TableFixtures) {
 
       const chain = {
         select(columns: string) {
-          void columns;
+          if (table === "grape_aliases" && columns.includes("alias_type")) throw new Error("column grape_aliases.alias_type does not exist");
+          return chain;
+        },
+        eq(column: string, value: string) {
+          state.filters.push({ column, value });
           return chain;
         },
         ilike(column: string, value: string) {
@@ -127,7 +131,7 @@ test.describe("WS2: Entry Normalization", () => {
             alias: "Cab Sauv",
             alias_normalized: "cab sauv",
             variety_id: "grape-1",
-            alias_type: "colloquial",
+            
             grape_varieties: { name: "Cabernet Sauvignon" },
           },
         ],
@@ -136,9 +140,25 @@ test.describe("WS2: Entry Normalization", () => {
       await expect(lookupGrapeAlias(supabase, "cab sauv")).resolves.toEqual({
         canonical_name: "Cabernet Sauvignon",
         variety_id: "grape-1",
-        alias_type: "colloquial",
+        alias_type: "synonym",
         matched: true,
       });
+    });
+
+    test("normalizes punctuation against stored keys and preserves synonym provenance", async () => {
+      const supabase = createMockSupabase({ grape_aliases: [{ alias: "Cab Sauv", alias_normalized: "cab sauv", variety_id: "g1", grape_varieties: { name: "Cabernet Sauvignon" } }] });
+      await expect(lookupGrapeAlias(supabase, "  CAB-SAUV  ")).resolves.toMatchObject({ canonical_name: "Cabernet Sauvignon", alias_type: "synonym" });
+      await expect(lookupGrapeAlias(supabase, "!!!")).resolves.toBeNull();
+      await expect(lookupGrapeAlias(supabase, "%")).resolves.toBeNull();
+    });
+
+    test("canonical spelling remains exact and resolver reports alias-map provenance", async () => {
+      const supabase = createMockSupabase({ grape_aliases: [
+        { alias: "Syrah", alias_normalized: "syrah", variety_id: "g1", grape_varieties: { name: "Syrah" } },
+        { alias: "Shiraz", alias_normalized: "shiraz", variety_id: "g1", grape_varieties: { name: "Syrah" } },
+      ] });
+      await expect(lookupGrapeAlias(supabase, "SYRAH")).resolves.toMatchObject({ alias_type: "exact" });
+      await expect(resolveEntryFields(supabase, { varietal: "Shiraz", region: null, producer: null, classification: null, wine_type: null, country: null })).resolves.toMatchObject({ canonical_varietal: "Syrah", resolution_source: "alias_map" });
     });
 
     test("returns null when no alias match is found", async () => {
