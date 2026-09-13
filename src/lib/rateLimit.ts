@@ -20,6 +20,7 @@ type ApplyRateLimitParams = {
   windowMs: number;
   maxRequests: number;
   userId?: string | null;
+  requireDistributed?: boolean;
 };
 
 type DistributedRateLimitRow = {
@@ -69,9 +70,7 @@ function getRateLimitSubject({
   }
 
   const ip = getClientIp(request);
-  const userAgent = request.headers.get("user-agent") ?? "unknown";
-  const normalizedUserAgent = userAgent.slice(0, 120);
-  return `ip:${ip}|ua:${normalizedUserAgent}`;
+  return `ip:${ip}`;
 }
 
 function cleanupStore(now: number) {
@@ -199,8 +198,8 @@ async function applyDistributedRateLimit({
     if (!warnedAboutDistributedRateLimit) {
       warnedAboutDistributedRateLimit = true;
       console.warn(
-        "Falling back to in-memory rate limiting. Apply supabase/sql/093_api_rate_limits.sql to enable shared buckets.",
-        error
+        "Shared rate limiter unavailable; protected auth endpoints deny requests.",
+        error instanceof Error ? error.name : "database_error"
       );
     }
     return null;
@@ -211,7 +210,13 @@ export async function applyRateLimit(
   params: ApplyRateLimitParams
 ): Promise<RateLimitResult> {
   const distributedResult = await applyDistributedRateLimit(params);
-  return distributedResult ?? applyMemoryRateLimit(params);
+  if (distributedResult) return distributedResult;
+  // Explicit memory mode is for local/isolated tests only, never hosted auth.
+  if (params.requireDistributed && (process.env.VERCEL || process.env.CELLARSNAP_RATE_LIMIT_BACKEND !== "memory")) {
+    console.warn("auth_rate_limit_unavailable", { routeKey: params.routeKey });
+    return { allowed: false, limit: params.maxRequests, remaining: 0, resetAt: Date.now() + 60000, retryAfterSeconds: 60 };
+  }
+  return applyMemoryRateLimit(params);
 }
 
 export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {

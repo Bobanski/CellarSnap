@@ -1,3 +1,4 @@
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -6,8 +7,8 @@ import { isMissingDbFunctionError } from "@/lib/supabase/errors";
 import { resolveIdentifierForAuth } from "@/server/auth/identifierResolution";
 
 const requestSchema = z.object({
-  identifier: z.string().trim().min(1),
-  password: z.string().min(1),
+  identifier: z.string().trim().min(1).max(320),
+  password: z.string().min(1).max(4096),
   authMode: z.enum(["email", "phone"]).optional(),
 });
 
@@ -23,7 +24,7 @@ type SupabaseAuthClient = {
   rpc: (
     fn: string,
     args?: Record<string, unknown>
-  ) => Promise<{ data: unknown; error: { message?: string } | null }>;
+  ) => PromiseLike<{ data: unknown; error: { message?: string } | null }>;
   auth: {
     signInWithPassword: (
       credentials:
@@ -37,6 +38,7 @@ type SupabaseAuthClient = {
 };
 
 type PasswordSignInHandlerDependencies = {
+  createResolverClient: () => Pick<SupabaseAuthClient, "rpc">;
   createAuthClient: () => SupabaseAuthClient;
 };
 
@@ -59,6 +61,7 @@ function createDefaultAuthClient() {
 
 const defaultDependencies: PasswordSignInHandlerDependencies = {
   createAuthClient: createDefaultAuthClient,
+  createResolverClient: createSupabaseAdminClient,
 };
 
 export function createPasswordSignInHandler(
@@ -75,6 +78,7 @@ export function createPasswordSignInHandler(
       routeKey: "password-sign-in",
       windowMs: RATE_LIMIT_WINDOW_MS,
       maxRequests: RATE_LIMIT_MAX_REQUESTS,
+      requireDistributed: true,
     });
     if (!rateLimit.allowed) {
       return NextResponse.json(
@@ -107,7 +111,7 @@ export function createPasswordSignInHandler(
     let resolution;
     try {
       resolution = await resolveIdentifierForAuth({
-        client: supabase,
+        client: resolvedDependencies.createResolverClient(),
         identifier: parsed.data.identifier,
         mode: "auto",
       });
@@ -143,12 +147,11 @@ export function createPasswordSignInHandler(
             ? { phone: resolution.phone, password: parsed.data.password }
             : null;
 
-    if (!credential) {
-      return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
-    }
-
-    const { data, error } = await supabase.auth.signInWithPassword(credential);
-    if (error || !data.session?.access_token || !data.session.refresh_token) {
+    // Unknown usernames still traverse password verification; never return contacts.
+    const { data, error } = await supabase.auth.signInWithPassword(
+      credential ?? { email: "invalid-credentials@invalid.invalid", password: parsed.data.password }
+    );
+    if (!credential || error || !data.session?.access_token || !data.session.refresh_token) {
       return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
     }
 
@@ -159,7 +162,7 @@ export function createPasswordSignInHandler(
           refresh_token: data.session.refresh_token,
         },
       },
-      { headers: rateLimitHeaders(rateLimit) }
+      { headers: { ...rateLimitHeaders(rateLimit), "Cache-Control": "no-store" } }
     );
   };
 }

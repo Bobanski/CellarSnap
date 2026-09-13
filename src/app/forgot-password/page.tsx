@@ -4,24 +4,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { getAuthMode } from "@/lib/auth/mode";
 
 type ForgotFormValues = {
   identifier: string;
 };
 
-type ResolvedIdentifier = {
-  email?: string | null;
-  phone?: string | null;
-};
-
 export default function ForgotPasswordPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
-  const authMode = getAuthMode();
   const { register, handleSubmit } = useForm<ForgotFormValues>();
-  const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,81 +24,25 @@ export default function ForgotPasswordPage() {
 
     setIsSubmitting(true);
     setErrorMessage(null);
-    setMessage(null);
 
     try {
-      const resolveResponse = await fetch("/api/auth/resolve-identifier", {
+      const response = await fetch("/api/auth/recovery-start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier, mode: "auto" }),
+        body: JSON.stringify({ identifier, redirectTo: `${window.location.origin}/reset-password` }),
       });
-
-      if (!resolveResponse.ok) {
-        const payload = await resolveResponse.json().catch(() => ({}));
-        setErrorMessage(payload.error ?? "No account matches that identifier.");
+      const payload = await response.json();
+      if (!response.ok) {
+        setErrorMessage(payload.error ?? "Unable to start recovery.");
         return;
       }
-
-      const payload = (await resolveResponse.json()) as ResolvedIdentifier;
-      const phone = payload.phone?.trim() ?? "";
-      const email = payload.email?.trim().toLowerCase() ?? "";
-
-      if (authMode !== "phone" || !phone) {
-        // Legacy accounts may not have a phone yet; fall back to email reset.
-        if (!email) {
-          setErrorMessage(
-            authMode === "phone"
-              ? "This account does not have a phone number for recovery."
-              : "No account matches that identifier."
-          );
-          return;
-        }
-
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          email,
-          {
-            redirectTo: `${window.location.origin}/reset-password`,
-          }
-        );
-
-        if (resetError) {
-          setErrorMessage(resetError.message);
-          return;
-        }
-
-        if (typeof window !== "undefined") {
-          try {
-            window.sessionStorage.setItem("pendingRecoveryEmail", email);
-          } catch {
-            // Ignore client storage failures.
-          }
-        }
-
-        setMessage("Recovery email sent. Enter the code to reset your password.");
-        router.push(`/reset-password?email=${encodeURIComponent(email)}`);
+      if (payload.channel === "phone" && payload.phone) {
+        router.push(`/reset-password/phone?phone=${encodeURIComponent(payload.phone)}`);
         return;
       }
-
-      const { error } = await supabase.auth.signInWithOtp({
-        phone,
-        options: { shouldCreateUser: false },
-      });
-
-      if (error) {
-        setErrorMessage(error.message);
-        return;
-      }
-
-      if (typeof window !== "undefined") {
-        try {
-          window.sessionStorage.setItem("pendingRecoveryPhone", phone);
-        } catch {
-          // Ignore client storage failures.
-        }
-      }
-
-      setMessage("Verification code sent to your phone number.");
-      router.push(`/reset-password/phone?phone=${encodeURIComponent(phone)}`);
+      // Only prefill contact information the person supplied themselves.
+      const email = identifier.includes("@") ? identifier.toLowerCase() : "";
+      router.push(`/reset-password${email ? `?email=${encodeURIComponent(email)}` : ""}`);
     } catch {
       setErrorMessage("Unable to start recovery. Check your connection and try again.");
     } finally {
@@ -125,8 +59,7 @@ export default function ForgotPasswordPage() {
           </span>
           <h1 className="font-serif text-2xl font-semibold text-[var(--color-text-primary)]">Forgot your password?</h1>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Enter your username, phone number, or email. We will send a recovery code to your phone
-            (or email if your account does not have a phone number yet).
+            Enter your username, phone number, or email. If an account matches, we will send recovery instructions. Use your phone number for SMS recovery, or your email or username for email recovery.
           </p>
         </div>
 
@@ -146,7 +79,6 @@ export default function ForgotPasswordPage() {
           </div>
 
           {errorMessage ? <p className="text-sm text-rose-300">{errorMessage}</p> : null}
-          {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
 
           <button
             type="submit"

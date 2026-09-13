@@ -3,13 +3,15 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest handover:** [B03a/B03b released and verified](handovers/b03-release.md). Implementation: [B03b knowledge lifecycle](handovers/batch-03b.md). Predecessor: [B03a knowledge read containment](handovers/batch-03a.md). Prior release: [B02b production rollout](handovers/sql-rollout-b02b.md). Implementation: [B02b2 Storage/share privacy](handovers/batch-02b2.md). Predecessor: [B02b1 photo/group privacy](handovers/batch-02b1.md). Prior release: [B01/B02a SQL deployed](handovers/sql-rollout-b01-b02a.md); earlier [merged](handovers/merged-b01-b02a.md), [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md).
+- **Latest handover:** [B04a implementation checkpoint](handovers/batch-04a.md). Previous release: [B03a/B03b released and verified](handovers/b03-release.md). Implementation: [B03b knowledge lifecycle](handovers/batch-03b.md). Predecessor: [B03a knowledge read containment](handovers/batch-03a.md). Prior release: [B02b production rollout](handovers/sql-rollout-b02b.md). Implementation: [B02b2 Storage/share privacy](handovers/batch-02b2.md). Predecessor: [B02b1 photo/group privacy](handovers/batch-02b1.md). Prior release: [B01/B02a SQL deployed](handovers/sql-rollout-b01-b02a.md); earlier [merged](handovers/merged-b01-b02a.md), [merge readiness](handovers/merge-readiness.md), [batch 02a](handovers/batch-02a.md) and [batch 01](handovers/batch-01.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
 
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B04a/AUD-05 is implemented; final Expo QC and release are pending.** See [current checkpoint](handovers/batch-04a.md). Issue #93 tracks B04a and the next independent B04b/AUD-07 remote-input slice.
 
 **B03a/B03b are merged, migrated, deployed and verified; AUD-04 is Closed.** PRs #90/#91, product release `63712c3`, all three exact SQL versions/checksums and actual results are in the [release handover](handovers/b03-release.md). 212 automated tests, live access/concurrency checks, desktop/phone and Expo web flows passed. Final data: 384 original entries with 384 personal chunks, zero orphan/stale/legacy personal chunks; all 3,349 curated wine chunks retained. Fixtures removed. AUD-26 remains Partial for broader retention/jobs; new QC-09 records unsupported sommelier existence/write claims for triage. Next bounded slice: AUD-05/B04 identifier/contact-resolution containment.
 

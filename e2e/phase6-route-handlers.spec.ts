@@ -643,6 +643,7 @@ test.describe("Phase 6 route handler regressions", () => {
     const authClient = makePasswordSignInClient();
     const handler = createPasswordSignInHandler({
       createAuthClient: () => authClient.client as never,
+      createResolverClient: () => authClient.client as never,
     });
 
     const response = await handler(
@@ -676,6 +677,7 @@ test.describe("Phase 6 route handler regressions", () => {
     const recoveryClient = makeRecoveryStartClient();
     const handler = createRecoveryStartHandler({
       createAuthClient: () => recoveryClient.client as never,
+      createResolverClient: () => recoveryClient.client as never,
     });
 
     const response = await handler(
