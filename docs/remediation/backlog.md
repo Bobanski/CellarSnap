@@ -82,7 +82,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-13 | P1 | Grape search rejects native bearer authentication | Closed | B05d PR #108 / `719ad1d`, live-verified again at `d4e5cd2`: typed cookie/bearer parity, alias/name/limit/failure contracts and cookie-stripped Expo passed. No native binary needed for the server fix; native device acceptance remains unavailable. [Release](handovers/b05d-b06a-release.md). |
 | QC-16 | P2 | Expo featured-badge handler has no reachable UI control | Open | B06g / AUD-09; bearer legacy authority passes but no client feature/clear interaction exists. See detail below. |
 | QC-15 | P2 | Transient local profile JSON parse failure | Not reproducible | B06e resume: clean production build and dev 3004 repeated profile loads pass, no JSON errors. Original cause unknown; retain reproduction history and reopen on recurrence. [QC](../audits/b06e-qc-2026-09-13.md). |
-| QC-14 | P2 | Seeded grape alias normalization drops uppercase letters | Open | B05e / AUD-19 reference-data contract: review collision-safe forward repair and seed generation; canonical/alias search parity. See detail below. |
+| QC-14 | P2 | Seeded grape alias normalization drops uppercase letters | Partial | B05e repair applied `20260913080026`; 130 valid keys, unchanged varieties/entry joins, web/cookie/bearer QC passed. Mobile manual alias search implemented and Expo-tested; source merge/native distribution pending. [Handover](handovers/batch-05e.md). |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -332,3 +332,11 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 
 ### B06f checkpoint
 - QC-03 profile null-as-zero routing repaired and desktop/phone outage/empty/recovery retested; source release pending. [Handover](handovers/batch-06f.md). Native scope remains Partial; no database or fixture mutations.
+
+### B05e active — QC-14
+- Branch `fix/b05e-grape-alias-keys`, issue #104. Reviewed hosted inventory: 131 damaged ASCII aliases for 93 varieties, one same-variety collision (`Xarel-lo` / `Xarel Lo`), zero alias-ID FK consumers. Canonical spelling retained with one normalized key; both queries resolve identically. Preserve all canonical IDs/entry joins and surviving alias IDs/timestamps.
+- Forward migration `20260913075619_repair_grape_alias_keys.sql`, corrected reviewed seed generator and rollback/collision/repeatability tests pass; 12 schema tests and actual PostgreSQL catalog/authority replay pass. No historical SQL rewrite. Migration/live lookup QC pending at this checkpoint. [Seed contract](../../supabase/reference/README.md).
+- B05e Expo QC found the manual grape picker only queried canonical `grape_varieties.name`, so the repaired aliases still returned no suggestions. This directly fails QC-14's cross-client acceptance: manual mobile typeahead now calls authenticated `/api/grapes` with validated response and stale-result/error handling. Keep OCR suggested-grape resolver parity under AUD-10/B07; it is a separate automatic selection workflow. Retest Expo alias selection and outage/recovery before release.
+
+### B05e QC checkpoint
+- Repair applied and exact row preservation verified; schema/types/lint/385 isolated checks and fresh all-platform Expo exports pass. Web desktop/phone, production alias search and Expo failure/recovery pass. Source release pending; native distribution remains explicit. [Handover](handovers/batch-05e.md).

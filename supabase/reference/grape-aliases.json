@@ -1,0 +1,657 @@
+[
+  {
+    "variety_slug": "aglianico",
+    "variety_name": "Aglianico",
+    "alias": "Aglianico"
+  },
+  {
+    "variety_slug": "airen",
+    "variety_name": "Airen",
+    "alias": "Airen"
+  },
+  {
+    "variety_slug": "albarino",
+    "variety_name": "Albarino",
+    "alias": "Albarino"
+  },
+  {
+    "variety_slug": "alicante-bouschet",
+    "variety_name": "Alicante Bouschet",
+    "alias": "Alicante Bouschet"
+  },
+  {
+    "variety_slug": "albarino",
+    "variety_name": "Albarino",
+    "alias": "Alvarinho"
+  },
+  {
+    "variety_slug": "tempranillo",
+    "variety_name": "Tempranillo",
+    "alias": "Aragonez"
+  },
+  {
+    "variety_slug": "arneis",
+    "variety_name": "Arneis",
+    "alias": "Arneis"
+  },
+  {
+    "variety_slug": "assyrtiko",
+    "variety_name": "Assyrtiko",
+    "alias": "Assyrtiko"
+  },
+  {
+    "variety_slug": "baga",
+    "variety_name": "Baga",
+    "alias": "Baga"
+  },
+  {
+    "variety_slug": "barbera",
+    "variety_name": "Barbera",
+    "alias": "Barbera"
+  },
+  {
+    "variety_slug": "blaufrankisch",
+    "variety_name": "Blaufrankisch",
+    "alias": "Blaufrankisch"
+  },
+  {
+    "variety_slug": "bobal",
+    "variety_name": "Bobal",
+    "alias": "Bobal"
+  },
+  {
+    "variety_slug": "sangiovese",
+    "variety_name": "Sangiovese",
+    "alias": "Brunello"
+  },
+  {
+    "variety_slug": "cabernet-sauvignon",
+    "variety_name": "Cabernet Sauvignon",
+    "alias": "Cab"
+  },
+  {
+    "variety_slug": "cabernet-franc",
+    "variety_name": "Cabernet Franc",
+    "alias": "Cab Franc"
+  },
+  {
+    "variety_slug": "cabernet-sauvignon",
+    "variety_name": "Cabernet Sauvignon",
+    "alias": "Cab Sauv"
+  },
+  {
+    "variety_slug": "cabernet-sauvignon",
+    "variety_name": "Cabernet Sauvignon",
+    "alias": "Cab Sauvignon"
+  },
+  {
+    "variety_slug": "cabernet-sauvignon",
+    "variety_name": "Cabernet Sauvignon",
+    "alias": "Cabernet"
+  },
+  {
+    "variety_slug": "cabernet-franc",
+    "variety_name": "Cabernet Franc",
+    "alias": "Cabernet Franc"
+  },
+  {
+    "variety_slug": "cabernet-sauvignon",
+    "variety_name": "Cabernet Sauvignon",
+    "alias": "Cabernet Sauvignon"
+  },
+  {
+    "variety_slug": "carignan",
+    "variety_name": "Carignan",
+    "alias": "Carignan"
+  },
+  {
+    "variety_slug": "carignan",
+    "variety_name": "Carignan",
+    "alias": "Carignane"
+  },
+  {
+    "variety_slug": "carmenere",
+    "variety_name": "Carmenere",
+    "alias": "Carmenere"
+  },
+  {
+    "variety_slug": "carricante",
+    "variety_name": "Carricante",
+    "alias": "Carricante"
+  },
+  {
+    "variety_slug": "chardonnay",
+    "variety_name": "Chardonnay",
+    "alias": "Chard"
+  },
+  {
+    "variety_slug": "chardonnay",
+    "variety_name": "Chardonnay",
+    "alias": "Chardonnay"
+  },
+  {
+    "variety_slug": "chenin-blanc",
+    "variety_name": "Chenin Blanc",
+    "alias": "Chenin Blanc"
+  },
+  {
+    "variety_slug": "cinsault",
+    "variety_name": "Cinsault",
+    "alias": "Cinsault"
+  },
+  {
+    "variety_slug": "cortese",
+    "variety_name": "Cortese",
+    "alias": "Cortese"
+  },
+  {
+    "variety_slug": "corvina",
+    "variety_name": "Corvina",
+    "alias": "Corvina"
+  },
+  {
+    "variety_slug": "dolcetto",
+    "variety_name": "Dolcetto",
+    "alias": "Dolcetto"
+  },
+  {
+    "variety_slug": "durif",
+    "variety_name": "Durif",
+    "alias": "Durif"
+  },
+  {
+    "variety_slug": "falanghina",
+    "variety_name": "Falanghina",
+    "alias": "Falanghina"
+  },
+  {
+    "variety_slug": "fiano",
+    "variety_name": "Fiano",
+    "alias": "Fiano"
+  },
+  {
+    "variety_slug": "frappato",
+    "variety_name": "Frappato",
+    "alias": "Frappato"
+  },
+  {
+    "variety_slug": "furmint",
+    "variety_name": "Furmint",
+    "alias": "Furmint"
+  },
+  {
+    "variety_slug": "gamay",
+    "variety_name": "Gamay",
+    "alias": "Gamay"
+  },
+  {
+    "variety_slug": "garganega",
+    "variety_name": "Garganega",
+    "alias": "Garganega"
+  },
+  {
+    "variety_slug": "grenache",
+    "variety_name": "Grenache",
+    "alias": "Garnacha"
+  },
+  {
+    "variety_slug": "gewurztraminer",
+    "variety_name": "Gewurztraminer",
+    "alias": "Gewurz"
+  },
+  {
+    "variety_slug": "gewurztraminer",
+    "variety_name": "Gewurztraminer",
+    "alias": "Gewurztraminer"
+  },
+  {
+    "variety_slug": "glera",
+    "variety_name": "Glera",
+    "alias": "Glera"
+  },
+  {
+    "variety_slug": "godello",
+    "variety_name": "Godello",
+    "alias": "Godello"
+  },
+  {
+    "variety_slug": "graciano",
+    "variety_name": "Graciano",
+    "alias": "Graciano"
+  },
+  {
+    "variety_slug": "greco",
+    "variety_name": "Greco",
+    "alias": "Greco"
+  },
+  {
+    "variety_slug": "grenache",
+    "variety_name": "Grenache",
+    "alias": "Grenache"
+  },
+  {
+    "variety_slug": "gruner-veltliner",
+    "variety_name": "Gruner Veltliner",
+    "alias": "Gru Vee"
+  },
+  {
+    "variety_slug": "gruner-veltliner",
+    "variety_name": "Gruner Veltliner",
+    "alias": "Gruner"
+  },
+  {
+    "variety_slug": "gruner-veltliner",
+    "variety_name": "Gruner Veltliner",
+    "alias": "Gruner Veltliner"
+  },
+  {
+    "variety_slug": "harslevelu",
+    "variety_name": "Harslevelu",
+    "alias": "Harslevelu"
+  },
+  {
+    "variety_slug": "blaufrankisch",
+    "variety_name": "Blaufrankisch",
+    "alias": "Lemberger"
+  },
+  {
+    "variety_slug": "macabeo",
+    "variety_name": "Macabeo",
+    "alias": "Macabeo"
+  },
+  {
+    "variety_slug": "malbec",
+    "variety_name": "Malbec",
+    "alias": "Malbec"
+  },
+  {
+    "variety_slug": "malvasia",
+    "variety_name": "Malvasia",
+    "alias": "Malvasia"
+  },
+  {
+    "variety_slug": "marsanne",
+    "variety_name": "Marsanne",
+    "alias": "Marsanne"
+  },
+  {
+    "variety_slug": "mourvedre",
+    "variety_name": "Mourvedre",
+    "alias": "Mataro"
+  },
+  {
+    "variety_slug": "melon-de-bourgogne",
+    "variety_name": "Melon de Bourgogne",
+    "alias": "Melon de Bourgogne"
+  },
+  {
+    "variety_slug": "mencia",
+    "variety_name": "Mencia",
+    "alias": "Mencia"
+  },
+  {
+    "variety_slug": "merlot",
+    "variety_name": "Merlot",
+    "alias": "Merlot"
+  },
+  {
+    "variety_slug": "pinot-meunier",
+    "variety_name": "Pinot Meunier",
+    "alias": "Meunier"
+  },
+  {
+    "variety_slug": "molinara",
+    "variety_name": "Molinara",
+    "alias": "Molinara"
+  },
+  {
+    "variety_slug": "mourvedre",
+    "variety_name": "Mourvedre",
+    "alias": "Monastrell"
+  },
+  {
+    "variety_slug": "montepulciano",
+    "variety_name": "Montepulciano",
+    "alias": "Montepulciano"
+  },
+  {
+    "variety_slug": "moscato-bianco",
+    "variety_name": "Moscato Bianco",
+    "alias": "Moscato"
+  },
+  {
+    "variety_slug": "moscato-bianco",
+    "variety_name": "Moscato Bianco",
+    "alias": "Moscato Bianco"
+  },
+  {
+    "variety_slug": "moschofilero",
+    "variety_name": "Moschofilero",
+    "alias": "Moschofilero"
+  },
+  {
+    "variety_slug": "mourvedre",
+    "variety_name": "Mourvedre",
+    "alias": "Mourvedre"
+  },
+  {
+    "variety_slug": "muller-thurgau",
+    "variety_name": "Muller-Thurgau",
+    "alias": "Muller-Thurgau"
+  },
+  {
+    "variety_slug": "melon-de-bourgogne",
+    "variety_name": "Melon de Bourgogne",
+    "alias": "Muscadet"
+  },
+  {
+    "variety_slug": "moscato-bianco",
+    "variety_name": "Moscato Bianco",
+    "alias": "Muscat Blanc a Petits Grains"
+  },
+  {
+    "variety_slug": "muscat-of-alexandria",
+    "variety_name": "Muscat of Alexandria",
+    "alias": "Muscat of Alexandria"
+  },
+  {
+    "variety_slug": "nebbiolo",
+    "variety_name": "Nebbiolo",
+    "alias": "Nebbiolo"
+  },
+  {
+    "variety_slug": "nerello-mascalese",
+    "variety_name": "Nerello Mascalese",
+    "alias": "Nerello Mascalese"
+  },
+  {
+    "variety_slug": "nero-d-avola",
+    "variety_name": "Nero d'Avola",
+    "alias": "Nero d'Avola"
+  },
+  {
+    "variety_slug": "palomino",
+    "variety_name": "Palomino",
+    "alias": "Palomino"
+  },
+  {
+    "variety_slug": "parellada",
+    "variety_name": "Parellada",
+    "alias": "Parellada"
+  },
+  {
+    "variety_slug": "pedro-ximenez",
+    "variety_name": "Pedro Ximenez",
+    "alias": "Pedro Ximenez"
+  },
+  {
+    "variety_slug": "durif",
+    "variety_name": "Durif",
+    "alias": "Petit Sirah"
+  },
+  {
+    "variety_slug": "petit-verdot",
+    "variety_name": "Petit Verdot",
+    "alias": "Petit Verdot"
+  },
+  {
+    "variety_slug": "durif",
+    "variety_name": "Durif",
+    "alias": "Petite Sirah"
+  },
+  {
+    "variety_slug": "picpoul",
+    "variety_name": "Picpoul",
+    "alias": "Picpoul"
+  },
+  {
+    "variety_slug": "pinot-grigio",
+    "variety_name": "Pinot Grigio",
+    "alias": "Pinot Grigio"
+  },
+  {
+    "variety_slug": "pinot-grigio",
+    "variety_name": "Pinot Grigio",
+    "alias": "Pinot Gris"
+  },
+  {
+    "variety_slug": "pinot-meunier",
+    "variety_name": "Pinot Meunier",
+    "alias": "Pinot Meunier"
+  },
+  {
+    "variety_slug": "pinot-noir",
+    "variety_name": "Pinot Noir",
+    "alias": "Pinot Noir"
+  },
+  {
+    "variety_slug": "pinotage",
+    "variety_name": "Pinotage",
+    "alias": "Pinotage"
+  },
+  {
+    "variety_slug": "plavac-mali",
+    "variety_name": "Plavac Mali",
+    "alias": "Plavac Mali"
+  },
+  {
+    "variety_slug": "primitivo",
+    "variety_name": "Primitivo",
+    "alias": "Primitivo"
+  },
+  {
+    "variety_slug": "glera",
+    "variety_name": "Glera",
+    "alias": "Prosecco Grape"
+  },
+  {
+    "variety_slug": "sangiovese",
+    "variety_name": "Sangiovese",
+    "alias": "Prugnolo Gentile"
+  },
+  {
+    "variety_slug": "pedro-ximenez",
+    "variety_name": "Pedro Ximenez",
+    "alias": "PX"
+  },
+  {
+    "variety_slug": "refosco",
+    "variety_name": "Refosco",
+    "alias": "Refosco"
+  },
+  {
+    "variety_slug": "riesling",
+    "variety_name": "Riesling",
+    "alias": "Riesling"
+  },
+  {
+    "variety_slug": "muller-thurgau",
+    "variety_name": "Muller-Thurgau",
+    "alias": "Rivaner"
+  },
+  {
+    "variety_slug": "vermentino",
+    "variety_name": "Vermentino",
+    "alias": "Rolle"
+  },
+  {
+    "variety_slug": "rondinella",
+    "variety_name": "Rondinella",
+    "alias": "Rondinella"
+  },
+  {
+    "variety_slug": "roussanne",
+    "variety_name": "Roussanne",
+    "alias": "Roussanne"
+  },
+  {
+    "variety_slug": "sagrantino",
+    "variety_name": "Sagrantino",
+    "alias": "Sagrantino"
+  },
+  {
+    "variety_slug": "sangiovese",
+    "variety_name": "Sangiovese",
+    "alias": "Sangiovese"
+  },
+  {
+    "variety_slug": "saperavi",
+    "variety_name": "Saperavi",
+    "alias": "Saperavi"
+  },
+  {
+    "variety_slug": "sauvignon-blanc",
+    "variety_name": "Sauvignon Blanc",
+    "alias": "Sauv Blanc"
+  },
+  {
+    "variety_slug": "sauvignon-blanc",
+    "variety_name": "Sauvignon Blanc",
+    "alias": "Sauvignon Blanc"
+  },
+  {
+    "variety_slug": "savagnin",
+    "variety_name": "Savagnin",
+    "alias": "Savagnin"
+  },
+  {
+    "variety_slug": "schiava",
+    "variety_name": "Schiava",
+    "alias": "Schiava"
+  },
+  {
+    "variety_slug": "schioppettino",
+    "variety_name": "Schioppettino",
+    "alias": "Schioppettino"
+  },
+  {
+    "variety_slug": "semillon",
+    "variety_name": "Semillon",
+    "alias": "Semillon"
+  },
+  {
+    "variety_slug": "sercial",
+    "variety_name": "Sercial",
+    "alias": "Sercial"
+  },
+  {
+    "variety_slug": "syrah",
+    "variety_name": "Syrah",
+    "alias": "Shiraz"
+  },
+  {
+    "variety_slug": "silvaner",
+    "variety_name": "Silvaner",
+    "alias": "Silvaner"
+  },
+  {
+    "variety_slug": "nebbiolo",
+    "variety_name": "Nebbiolo",
+    "alias": "Spanna"
+  },
+  {
+    "variety_slug": "syrah",
+    "variety_name": "Syrah",
+    "alias": "Syrah"
+  },
+  {
+    "variety_slug": "tannat",
+    "variety_name": "Tannat",
+    "alias": "Tannat"
+  },
+  {
+    "variety_slug": "tempranillo",
+    "variety_name": "Tempranillo",
+    "alias": "Tempranillo"
+  },
+  {
+    "variety_slug": "tempranillo",
+    "variety_name": "Tempranillo",
+    "alias": "Tinta Roriz"
+  },
+  {
+    "variety_slug": "torrontes",
+    "variety_name": "Torrontes",
+    "alias": "Torrontes"
+  },
+  {
+    "variety_slug": "touriga-nacional",
+    "variety_name": "Touriga Nacional",
+    "alias": "Touriga"
+  },
+  {
+    "variety_slug": "touriga-nacional",
+    "variety_name": "Touriga Nacional",
+    "alias": "Touriga Nacional"
+  },
+  {
+    "variety_slug": "trebbiano",
+    "variety_name": "Trebbiano",
+    "alias": "Trebbiano"
+  },
+  {
+    "variety_slug": "trousseau",
+    "variety_name": "Trousseau",
+    "alias": "Trousseau"
+  },
+  {
+    "variety_slug": "trebbiano",
+    "variety_name": "Trebbiano",
+    "alias": "Ugni Blanc"
+  },
+  {
+    "variety_slug": "verdejo",
+    "variety_name": "Verdejo",
+    "alias": "Verdejo"
+  },
+  {
+    "variety_slug": "verdicchio",
+    "variety_name": "Verdicchio",
+    "alias": "Verdicchio"
+  },
+  {
+    "variety_slug": "vermentino",
+    "variety_name": "Vermentino",
+    "alias": "Vermentino"
+  },
+  {
+    "variety_slug": "viognier",
+    "variety_name": "Viognier",
+    "alias": "Viognier"
+  },
+  {
+    "variety_slug": "macabeo",
+    "variety_name": "Macabeo",
+    "alias": "Viura"
+  },
+  {
+    "variety_slug": "xarel-lo",
+    "variety_name": "Xarel-lo",
+    "alias": "Xarel Lo"
+  },
+  {
+    "variety_slug": "xarel-lo",
+    "variety_name": "Xarel-lo",
+    "alias": "Xarel-lo"
+  },
+  {
+    "variety_slug": "xinomavro",
+    "variety_name": "Xinomavro",
+    "alias": "Xinomavro"
+  },
+  {
+    "variety_slug": "muscat-of-alexandria",
+    "variety_name": "Muscat of Alexandria",
+    "alias": "Zibibbo"
+  },
+  {
+    "variety_slug": "zinfandel",
+    "variety_name": "Zinfandel",
+    "alias": "Zinfandel"
+  },
+  {
+    "variety_slug": "zweigelt",
+    "variety_name": "Zweigelt",
+    "alias": "Zweigelt"
+  }
+]
