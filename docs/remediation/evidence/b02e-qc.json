@@ -1,0 +1,65 @@
+{
+  "results": [
+    {
+      "device": "desktop",
+      "imageLoaded": true,
+      "storageRequests": 0,
+      "signatureFreePayload": true
+    },
+    {
+      "device": "phone",
+      "imageLoaded": true,
+      "storageRequests": 0,
+      "signatureFreePayload": true
+    },
+    {
+      "initial": {
+        "status": 200,
+        "noStore": true,
+        "bytes": 91828
+      }
+    },
+    {
+      "reason": "photoPrivacy",
+      "denied": {
+        "status": 404,
+        "noStore": true,
+        "bytes": 0
+      }
+    },
+    {
+      "reason": "entryPrivacy",
+      "denied": {
+        "status": 404,
+        "noStore": true,
+        "bytes": 0
+      }
+    },
+    {
+      "reason": "testAuthor",
+      "denied": {
+        "status": 404,
+        "noStore": true,
+        "bytes": 0
+      }
+    },
+    {
+      "anonymous": 401
+    },
+    {
+      "cropSaveAndOriginalReopen": true
+    },
+    {
+      "ownerEditor": "desktop",
+      "cropOpened": true
+    },
+    {
+      "ownerEditor": "phone",
+      "cropOpened": true
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "fixturesRemoved": true,
+  "profilesRestored": true
+}
