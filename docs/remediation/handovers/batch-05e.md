@@ -1,5 +1,7 @@
 # B05e grape-alias repair handover — September 13, 2026
 
+**Released:** This historical checkpoint is superseded by the [combined release handover](b06e-b06f-b05e-release.md); implementation PRs #117/#118/#119 are merged, both migrations applied, primary production verified. Native gaps remain explicit.
+
 ## Objective and IDs
 QC-14 / AUD-19 reference contract, issue #104. Repair uppercase-loss alias keys and prove normal alias search across cookie/bearer/web/mobile. Preserve canonical variety and entry references. Broader fresh-product bootstrap and OCR/scoring resolver work remain AUD-19/AUD-10.
 

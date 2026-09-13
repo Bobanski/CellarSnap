@@ -3,8 +3,8 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest work checkpoint:** [B05e alias repair QC](handovers/batch-05e.md). B06e/#117 and B06f/#118 merged; B05e forward repair applied and web/Expo QC passed, source release pending.
-- **Latest completed release:** [B06b/B06c/B06d merged and live-verified](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md). Implementation checkpoints: [B06b](handovers/batch-06b.md), [B06c](handovers/batch-06c.md), [B06d](handovers/batch-06d.md); issue #112 remains open.
+- **Latest release and resume point:** [B06e/B06f/B05e merged and live-verified](handovers/b06e-b06f-b05e-release.md), [sanitized evidence](evidence/b06e-b06f-b05e-release.json). Both forward migrations are applied. Native runtime/distribution and the new Expo badge-control gap remain open.
+- **Previous completed release:** [B06b/B06c/B06d](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md).
 - **Prior releases:** [B05d/B06a](handovers/b05d-b06a-release.md), [B05b/B05c](handovers/b05b-b05c-release.md), [B04d/B05a](handovers/b04d-b05a-release.md), [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
 - **Implementation/QC history:** [progress log](../audits/remediation-progress.md), [batch-one browser/mobile QC](../audits/batch-1-browser-mobile-qc-2026-09-12.md).
@@ -13,13 +13,11 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-**B06e #117 and B06f #118 merged**, at `65a4c1c` and `4eb7df8`. Authority and summary-outage QC pass. **B05e alias repair applied** (`20260913080026`), canonical data unchanged, mobile manual alias lookup fixed and Expo-tested; source release pending. [Current handover](handovers/batch-05e.md). Next B06g/QC-16 and the canonical remaining priorities.
+**B06e, B06f and B05e are merged through #117/#118/#119, final product main `67a188f`.** Earned-only featured-profile authority and normalized grape alias SQL are live. The profile now treats an unavailable summary as unknown and keeps the full palate accessible. Expo manual grape lookup uses the authenticated alias API. Primary production is Ready and scoped live checks pass. [Release and resume steps](handovers/b06e-b06f-b05e-release.md).
 
-**B06b, B06c and B06d are merged; web/server is live-verified at `b51ae78` through #113/#114/#115.** Primary Vercel `dpl_2mmNXsfTW4ztLghCRgmVDoUuCiJ7` is Ready on cellarsnap.app. Badge server authority migration was applied as hosted version `20260913064845`; direct client award writes deny and concurrent legitimate awards occur once. Shared complete counts and selected event-photo navigation are live. [Release and resume steps](handovers/b06b-b06d-release.md).
+**385 isolated checks, 12 schema tests**, database compile contracts, whole web/mobile types/lint, real PostgreSQL replay/concurrency, Next build and all Expo exports passed. Desktop/phone browser and Expo interactions include failure/recovery; exact badge fixtures restored and canonical reference identities preserved. QC-15 was not reproduced on clean builds. QC-03/QC-14 remain **Partial for native runtime/distribution**, not missing browser coverage; Expo web is not native acceptance.
 
-**385 isolated checks**, five schema/source tests, database compile contracts, whole web/mobile types/lint, Next build and all Expo exports passed. Desktop/phone local and production browser flows plus cookie-stripped Expo badge/count/event interactions passed. Exact disposable fixtures were cleaned and historical awards preserved. AUD-09 stays **Partial**: 53 definitions supported, 32 explicitly deferred, featured-profile authority and historical review unfinished. QC-03/QC-08 stay **Partial** for native runtime/distribution; browser summary-outage visual acceptance remains unverified. Expo web is not native acceptance. Issue #112 stays open.
-
-**Next B06e: AUD-09 featured-profile earned-award authority**, then separately resolve deferred trigger facts/semantics. **QC-14 / B05e** needs a collision-reviewed forward repair of damaged historical grape alias keys; keep it separate and never replay historical SQL. Prior B05d/QC-13 remains Closed, B06a/QC-02 Partial for native (#109). Broader AUD-21 adoption and AUD-19 bootstrap/corpus restoration remain Partial under #104. AUD-20 retirement prerequisites remain open. Merge/close permission was one-session only.
+**Next:** re-triage outstanding P0 AUD-01 revocation and P1 AUD-06/QC-01 projections before broader polish. B06g/QC-16 is the next bounded badge client slice: Expo's existing feature handler has no reachable control. AUD-09 also retains 32 deferred definitions/history/native; AUD-10/B07 retains automatic OCR/scoring parity. AUD-19/21 bootstrap/type adoption remain Partial; AUD-20 retirement prerequisites remain open. #104/#112 stay open. Merge/close permission was one-session only.
 
 B04d dependency and B05a tooling scopes remain as documented in their [release](handovers/b04d-b05a-release.md): audits zero, no nested agent files in Metro; AUD-08 native acceptance/distribution remains Partial and AUD-49 Closed. Existing QC-05/10/12 remain B11. OPS-01 duplicate hosting, AUD-01 cache revocation and AUD-06/QC-01 public projections remain separate.
 
@@ -58,7 +56,7 @@ For remaining B02 work, start with policy/access fixtures, not a broad code dele
 
 ## Finding intake and local tickets
 
-Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-14 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
+Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-16 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
 
 When a session finds something new:
 
