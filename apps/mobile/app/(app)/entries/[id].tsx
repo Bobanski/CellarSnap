@@ -41,6 +41,9 @@ import {
   type QprLevel,
   toExploreSlug,
   formatConsumedDate,
+  loadEntryPrimaryGrapes,
+  primaryGrapeSelectionChanged,
+  type EntryPrimaryGrape as PrimaryGrape,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
@@ -66,7 +69,7 @@ import {
   readPhotoBytes,
 } from "@/src/lib/entryFlow/photoIO";
 import { requestPhotoContext } from "@/src/lib/entryFlow/photoAnalysisClient";
-import { supabase } from "@/src/lib/supabase";
+import { supabase, supabaseDatabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
 
@@ -129,27 +132,6 @@ type EntryPhotoRow = {
   path: string;
   position: number;
   created_at: string;
-};
-
-type EntryPrimaryGrapeRow = {
-  entry_id: string;
-  position: number;
-  grape_varieties:
-    | {
-        id: string;
-        name: string;
-      }
-    | {
-        id: string;
-        name: string;
-      }[]
-    | null;
-};
-
-type PrimaryGrape = {
-  id: string;
-  name: string;
-  position: number;
 };
 
 type LocationSuggestion = {
@@ -575,12 +557,6 @@ function formatProfileName(profile: ProfileRow) {
   return getPublicProfileName(profile);
 }
 
-function isPrimaryGrapeTableMissingError(message: string) {
-  return (
-    message.includes("entry_primary_grapes") || message.includes("grape_varieties")
-  );
-}
-
 function toAdvancedNotesFormState(value: unknown): AdvancedNotesFormState {
   if (!value || typeof value !== "object") {
     return { ...EMPTY_ADVANCED_NOTES };
@@ -626,18 +602,6 @@ function toOrdinal(value: number) {
 
 function isMissingAvatarColumn(message: string) {
   return message.includes("avatar_path") || message.includes("column");
-}
-
-function normalizeVariety(
-  variety: EntryPrimaryGrapeRow["grape_varieties"]
-): { id: string; name: string } | null {
-  if (!variety) {
-    return null;
-  }
-  if (Array.isArray(variety)) {
-    return variety[0] ?? null;
-  }
-  return variety;
 }
 
 async function createSignedUrlMap(paths: string[]) {
@@ -831,7 +795,6 @@ export default function EntryDetailScreen() {
   const [primaryGrapeSuggestions, setPrimaryGrapeSuggestions] = useState<PrimaryGrape[]>(
     []
   );
-  const [isPrimaryGrapeFocused, setIsPrimaryGrapeFocused] = useState(false);
   const [isPrimaryGrapeLoading, setIsPrimaryGrapeLoading] = useState(false);
   const [primaryGrapeError, setPrimaryGrapeError] = useState<string | null>(null);
   const [bulkAdvancedNotes, setBulkAdvancedNotes] =
@@ -1006,18 +969,16 @@ export default function EntryDetailScreen() {
         ? nextEntry.entry_group_id
         : null;
 
-    const [{ data: photoRows }, { data: grapeRows }, groupResponse] = await Promise.all([
+    const [{ data: photoRows }, grapeResponse, groupResponse] = await Promise.all([
       supabase
         .from("entry_photos")
         .select("id, entry_id, type, path, position, created_at")
         .eq("entry_id", entryId)
         .order("position", { ascending: true })
         .order("created_at", { ascending: true }),
-      supabase
-        .from("wine_entry_primary_grapes")
-        .select("entry_id, position, grape_varieties(id, name)")
-        .eq("entry_id", entryId)
-        .order("position", { ascending: true }),
+      loadEntryPrimaryGrapes(supabaseDatabase.from('entry_primary_grapes')
+        .select('position, grape_varieties(id, name)').eq('entry_id', entryId)
+        .order('position', {ascending: true})),
       nextEntryGroupId
         ? supabase
             .from("entry_groups")
@@ -1038,19 +999,13 @@ export default function EntryDetailScreen() {
           }
         : null;
 
-    const primaryGrapes: PrimaryGrape[] = ((grapeRows ?? []) as EntryPrimaryGrapeRow[])
-      .map((row) => {
-        const variety = normalizeVariety(row.grape_varieties);
-        if (!variety) {
-          return null;
-        }
-        return {
-          id: variety.id,
-          name: variety.name,
-          position: row.position,
-        };
-      })
-      .filter((row): row is PrimaryGrape => Boolean(row));
+    if (grapeResponse.grapes === null) {
+      setEntry(null);
+      setErrorMessage(grapeResponse.error);
+      setLoading(false);
+      return;
+    }
+    const primaryGrapes = grapeResponse.grapes;
 
     const profileIds = Array.from(
       new Set([
@@ -1760,9 +1715,9 @@ export default function EntryDetailScreen() {
   useEffect(() => {
     let cancelled = false;
     const query = primaryGrapeQuery.trim();
+    // Inline results remain usable after scrolling dismisses the keyboard.
     const shouldSearch =
-      isBulkReview &&
-      isPrimaryGrapeFocused &&
+      (isBulkReview || ownerEditOpen) &&
       selectedPrimaryGrapes.length < 3 &&
       query.length >= 4;
 
@@ -1808,7 +1763,7 @@ export default function EntryDetailScreen() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isBulkReview, isPrimaryGrapeFocused, primaryGrapeQuery, selectedPrimaryGrapes]);
+  }, [isBulkReview, ownerEditOpen, primaryGrapeQuery, selectedPrimaryGrapes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -3163,33 +3118,15 @@ export default function EntryDetailScreen() {
       return updateError.message;
     }
 
-    const { error: clearPrimaryGrapesError } = await supabase
-      .from("entry_primary_grapes")
-      .delete()
-      .eq("entry_id", entry.id);
-
-    if (
-      clearPrimaryGrapesError &&
-      !isPrimaryGrapeTableMissingError(clearPrimaryGrapesError.message ?? "")
-    ) {
-      return clearPrimaryGrapesError.message;
-    }
-
-    if (primaryGrapeIds.length > 0) {
-      const { error: insertPrimaryGrapesError } = await supabase
-        .from("entry_primary_grapes")
-        .insert(
-          primaryGrapeIds.map((grapeId, index) => ({
-            entry_id: entry.id,
-            variety_id: grapeId,
-            position: index + 1,
-          }))
+    if (primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes)) {
+      const {error: clearError} = await supabaseDatabase.from("entry_primary_grapes")
+        .delete().eq("entry_id", entry.id);
+      if (clearError) return "Entry details saved, but grapes could not be updated. Please try again.";
+      if (primaryGrapeIds.length > 0) {
+        const {error: insertError} = await supabaseDatabase.from("entry_primary_grapes").insert(
+          primaryGrapeIds.map((grapeId, index) => ({entry_id:entry.id, variety_id:grapeId, position:index+1}))
         );
-      if (
-        insertPrimaryGrapesError &&
-        !isPrimaryGrapeTableMissingError(insertPrimaryGrapesError.message ?? "")
-      ) {
-        return insertPrimaryGrapesError.message;
+        if (insertError) return "Entry details saved, but grapes could not be saved. Keep this selection and try again.";
       }
     }
 
@@ -3416,6 +3353,9 @@ export default function EntryDetailScreen() {
         ) : errorMessage || !entry ? (
           <View style={styles.errorCard}>
             <AppText style={styles.errorText}>{errorMessage ?? "Entry unavailable."}</AppText>
+            <Pressable accessibilityRole="button" accessibilityLabel="Retry entry" style={styles.actionButton} onPress={() => void loadEntry()}>
+              <AppText style={styles.actionButtonText}>Try again</AppText>
+            </Pressable>
           </View>
         ) : (
           <>
@@ -3756,6 +3696,9 @@ export default function EntryDetailScreen() {
                   </View>
                 ) : null}
 
+                {!isBulkReview && bulkReviewError ? (
+                  <AppText accessibilityRole="alert" style={styles.bulkReviewErrorText}>{bulkReviewError}</AppText>
+                ) : null}
                 <View style={styles.bulkFormField}>
                   <AppText style={styles.bulkFormLabel}>Notes</AppText>
                   <DoneTextInput
@@ -3932,10 +3875,6 @@ export default function EntryDetailScreen() {
                   <DoneTextInput
                     value={primaryGrapeQuery}
                     onChangeText={setPrimaryGrapeQuery}
-                    onFocus={() => setIsPrimaryGrapeFocused(true)}
-                    onBlur={() => {
-                      setTimeout(() => setIsPrimaryGrapeFocused(false), 120);
-                    }}
                     editable={selectedPrimaryGrapes.length < 3}
                     autoCapitalize="words"
                     autoCorrect={false}
@@ -3953,8 +3892,7 @@ export default function EntryDetailScreen() {
                   {primaryGrapeError ? (
                     <AppText style={styles.bulkReviewErrorText}>{primaryGrapeError}</AppText>
                   ) : null}
-                  {isPrimaryGrapeFocused &&
-                  primaryGrapeQuery.trim().length >= 4 &&
+                  {primaryGrapeQuery.trim().length >= 4 &&
                   primaryGrapeSuggestions.length > 0 ? (
                     <View style={styles.inlineSuggestionList}>
                       {primaryGrapeSuggestions.map((option) => (
@@ -3969,8 +3907,7 @@ export default function EntryDetailScreen() {
                     </View>
                   ) : null}
                   {!isPrimaryGrapeLoading &&
-                  isPrimaryGrapeFocused &&
-                  primaryGrapeQuery.trim().length >= 4 &&
+                              primaryGrapeQuery.trim().length >= 4 &&
                   primaryGrapeSuggestions.length === 0 &&
                   !primaryGrapeError ? (
                     <AppText style={styles.bulkSectionHint}>No grape matches found.</AppText>
