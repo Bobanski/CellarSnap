@@ -1,0 +1,335 @@
+{
+  "hosted": {
+    "results": [
+      {
+        "reason": "public",
+        "who": "A",
+        "allowed": true
+      },
+      {
+        "reason": "owner",
+        "who": "B",
+        "allowed": true
+      },
+      {
+        "reason": "private-photo",
+        "who": "A",
+        "allowed": false
+      },
+      {
+        "reason": "private-owner",
+        "who": "B",
+        "allowed": true
+      },
+      {
+        "reason": "private-entry",
+        "who": "A",
+        "allowed": false
+      },
+      {
+        "reason": "test-author",
+        "who": "A",
+        "allowed": false
+      },
+      {
+        "reason": "block",
+        "who": "A",
+        "allowed": false
+      },
+      {
+        "reason": "restored",
+        "who": "A",
+        "allowed": true
+      },
+      {
+        "anonDenied": true,
+        "overLimitDenied": true
+      },
+      {
+        "singlePathTimingObservations": [
+          {
+            "rpcMs": 122,
+            "signMs": 144
+          },
+          {
+            "rpcMs": 113,
+            "signMs": 348
+          },
+          {
+            "rpcMs": 118,
+            "signMs": 296
+          },
+          {
+            "rpcMs": 127,
+            "signMs": 128
+          }
+        ]
+      },
+      {
+        "reason": "deleted-object",
+        "who": "B",
+        "allowed": false
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "web": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "TypeError: Failed to fetch\n    at http://localhost:3001/_next/static/chunks/1scpb4b6ryiff.js:24:38515\n    at tD (http://localhost:3001/_next/static/chunks/1scpb4b6ryiff.js:24:43455"
+    ],
+    "failedRequests": [
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/auth/v1/user",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/list-scan",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate/distill",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "expoWeb": {
+    "results": [
+      {
+        "device": "desktop",
+        "imageLoaded": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true
+      },
+      {
+        "crossOriginBearer": {
+          "status": 200,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "deniedLoadThenRetry": true
+      },
+      {
+        "outageThenRetry": true
+      },
+      {
+        "adoptedPayloadSignatureFree": true,
+        "oldBearerCompatible": true
+      },
+      {
+        "storageRequests": 0,
+        "imageRequests": 13,
+        "bearerOnly": true
+      },
+      {
+        "signOutClearsImageSurface": true
+      },
+      {
+        "ownerCropSaveAndReopen": true,
+        "originalDimensionReads": 3
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "failures": [
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "automated": {
+    "unit": 411,
+    "schema": 19,
+    "postgres": "17.6",
+    "catalogMatches": true,
+    "webTypesLintBuild": true,
+    "databaseTypes": true,
+    "mobileTypes": true
+  },
+  "migration": {
+    "file": "20260913225201_request_photo_paths.sql",
+    "hostedVersion": "20260913225511",
+    "sha256": "6bfaf403b9eeed7de8813c423ae2246ed38bd187bd44eeeb3941f056bc8a272c",
+    "hostedStatementMd5": "4d4abaee0bee864881e8c05d1f790d32"
+  },
+  "native": {
+    "available": false,
+    "reason": "xcrun simctl unavailable; adb/emulator absent",
+    "distribution": false
+  }
+}

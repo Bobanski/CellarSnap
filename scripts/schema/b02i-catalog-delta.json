@@ -1,0 +1,35 @@
+{
+  "function_grants": {
+    "add": [
+      {
+        "args": "object_names text[]",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "readable_wine_photo_paths",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      },
+      {
+        "args": "object_names text[]",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "readable_wine_photo_paths",
+        "privilege_type": "EXECUTE",
+        "schema_name": "public"
+      }
+    ],
+    "remove": []
+  },
+  "functions": {
+    "add": [
+      {
+        "args": "object_names text[]",
+        "definition": "CREATE OR REPLACE FUNCTION public.readable_wine_photo_paths(object_names text[])\n RETURNS SETOF text\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\nbegin\n  if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;\n  if object_names is null or cardinality(object_names) > 100\n    or exists(select 1 from unnest(object_names) p where p is null or octet_length(p) > 2048) then\n    raise exception 'Invalid photo batch' using errcode='22023';\n  end if;\n  return query select o.name from storage.objects o\n    where o.bucket_id='wine-photos' and o.name=any(object_names)\n      and private.can_access_wine_photo(o.name);\nend;\n$function$\n",
+        "name": "readable_wine_photo_paths",
+        "owner": "postgres",
+        "schema_name": "public"
+      }
+    ],
+    "remove": []
+  }
+}

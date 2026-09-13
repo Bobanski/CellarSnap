@@ -2813,6 +2813,10 @@ export type Database = {
           published: boolean
         }[]
       }
+      readable_wine_photo_paths: {
+        Args: { object_names: string[] }
+        Returns: string[]
+      }
       save_entry_details: {
         Args: {
           p_entry_id: string
