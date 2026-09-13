@@ -1,0 +1,91 @@
+{
+  "direct": {
+    "usernameProjection": true,
+    "privateSearchDenied": true,
+    "crossUserWriteDenied": "55000",
+    "ownerEdit": true,
+    "realNameProjection": true,
+    "anonymousDenied": true,
+    "privateFunctionNotExposed": true,
+    "ownerPrivateRead": true,
+    "originalRestored": true
+  },
+  "browser": {
+    "results": [
+      {
+        "surface": "web",
+        "device": "desktop",
+        "preference": "username",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "web",
+        "device": "phone",
+        "preference": "username",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "expo",
+        "device": "desktop",
+        "preference": "username",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "expo",
+        "device": "phone",
+        "preference": "username",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "web",
+        "device": "desktop",
+        "preference": "real_name",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "web",
+        "device": "phone",
+        "preference": "real_name",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "expo",
+        "device": "desktop",
+        "preference": "real_name",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      },
+      {
+        "surface": "expo",
+        "device": "phone",
+        "preference": "real_name",
+        "visibleChosenName": true,
+        "rawSurnameAbsent": true,
+        "failedApiResponses": []
+      }
+    ],
+    "errors": [],
+    "profileRestored": true
+  },
+  "schema": {
+    "catalogDifferences": [],
+    "migration": {
+      "version": "20260913195059",
+      "name": "restrict_public_profile_projection",
+      "statement_md5": "e76dec629d5c7c72045fdb596d516a39"
+    }
+  }
+}

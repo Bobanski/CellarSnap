@@ -46,6 +46,17 @@ export async function expectedCatalog() {
   // and two triggers. Keep this captured delta independent of replay output.
   const featuredDelta = JSON.parse(await readFile(new URL('./b06e-catalog-delta.json', import.meta.url), 'utf8'));
   for (const [key, rows] of Object.entries(featuredDelta)) expected[key].push(...rows);
+  // Reviewed B02c2 delta: only the public-profile view/grants and its explicit
+  // private projection reader. Exact removals keep unexpected drift visible.
+  const profileDelta = JSON.parse(await readFile(new URL('./b02c2-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(profileDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error(`Missing reviewed B02c2 predecessor in ${key}`);
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

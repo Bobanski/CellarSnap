@@ -1,9 +1,10 @@
 {
-  "generatedAt": "2026-09-13T04:59:27.926356+00:00",
+  "generatedAt": "2026-09-13T19:52:11.353050+00:00",
   "project": "rbmkypbqavmnuycznssv",
-  "cliVersion": "2.78.1",
-  "command": "npx supabase gen types --project-id rbmkypbqavmnuycznssv --schema public",
+  "command": "supabase_generate_typescript_types(project_id=rbmkypbqavmnuycznssv)",
   "catalogSha256": "4acf9025e2cab84093e7ac2424269e335c3ec47a425eb25861030d63e02346f6",
-  "typesSha256": "c6f3d13cfd550fa7afb9c9efde9ce29fbe7726f59618811a831f9c75380a17e2",
-  "scope": "public schema; physical rows are distinct from domain DTOs. Private and managed schemas are not exposed to client type consumers."
+  "typesSha256": "547b5c0bcbb42fd35e029c770839585623b4cdc9fa60345805f0f2cc85d503f0",
+  "scope": "public schema; physical rows are distinct from domain DTOs. Private and managed schemas are not exposed to client type consumers.",
+  "generator": "Supabase MCP generate_typescript_types",
+  "forwardCatalogDelta": "scripts/schema/b02c2-catalog-delta.json"
 }

@@ -3,7 +3,8 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest release and resume point:** [B02c1/B06g/B07a/B06h merged, web live-verified](handovers/b02c1-b06g-b07a-b06h-release.md), [sanitized QC](evidence/b02c1-b06g-b07a-b06h-qc.json). No SQL. Native runtime/distribution and public-data privacy residuals remain open.
+- **Current session checkpoint:** [B02c2 public-profile authority](handovers/batch-02c2.md), SQL live and browser/Expo QC passed, PR #126 release pending. Next B02d share-image delivery and B08a grapes.
+- **Previous release and resume point:** [B02c1/B06g/B07a/B06h merged, web live-verified](handovers/b02c1-b06g-b07a-b06h-release.md), [sanitized QC](evidence/b02c1-b06g-b07a-b06h-qc.json). No SQL. Native runtime/distribution and public-data privacy residuals remain open.
 - **Previous release:** [B06e/B06f/B05e](handovers/b06e-b06f-b05e-release.md), [sanitized evidence](evidence/b06e-b06f-b05e-release.json).
 - **Previous completed release:** [B06b/B06c/B06d](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md).
 - **Prior releases:** [B05d/B06a](handovers/b05d-b06a-release.md), [B05b/B05c](handovers/b05b-b05c-release.md), [B04d/B05a](handovers/b04d-b05a-release.md), [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md).

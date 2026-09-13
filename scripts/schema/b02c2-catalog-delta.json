@@ -1,0 +1,177 @@
+{
+  "function_grants": {
+    "add": [
+      {
+        "args": "",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "read_public_profiles",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "read_public_profiles",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "service_role",
+        "is_grantable": false,
+        "name": "read_public_profiles",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "functions": {
+    "add": [
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.read_public_profiles()\n RETURNS TABLE(id uuid, display_name text, username text, first_name text, last_name text, name_display_preference text, avatar_path text, created_at timestamp with time zone, email text, is_test_account boolean)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\n  select p.id,\n    case when p.name_display_preference = 'real_name'\n      and nullif(btrim(p.first_name), '') is not null\n    then concat(btrim(p.first_name), case when nullif(btrim(p.last_name), '') is not null\n      then ' ' || upper(left(btrim(p.last_name), 1)) || '.' else '' end)\n    else nullif(btrim(p.display_name), '') end,\n    nullif(btrim(p.display_name), ''), null::text, null::text,\n    p.name_display_preference, p.avatar_path, p.created_at, null::text,\n    case when p.id = (select auth.uid())\n      or (select nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role') = 'service_role'\n      then p.is_test_account else null::boolean end\n  from public.profiles p\n  where\n    (select nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role') = 'service_role'\n    or ((select auth.uid()) is not null and (\n      p.id = (select auth.uid()) or (\n        not public.is_user_blocked((select auth.uid()), p.id)\n        and public.can_view_test_authored_content((select auth.uid()), p.id)\n      )\n    ));\n$function$\n",
+        "name": "read_public_profiles",
+        "owner": "postgres",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "grants": {
+    "add": [],
+    "remove": [
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "public_profiles",
+        "privilege_type": "UPDATE"
+      }
+    ]
+  },
+  "relations": {
+    "add": [
+      {
+        "force_rls": false,
+        "kind": "v",
+        "name": "public_profiles",
+        "options": [
+          "security_barrier=true",
+          "security_invoker=true"
+        ],
+        "owner": "postgres",
+        "replica_identity": "n",
+        "rls": false,
+        "schema_name": "public"
+      }
+    ],
+    "remove": [
+      {
+        "force_rls": false,
+        "kind": "v",
+        "name": "public_profiles",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "n",
+        "rls": false,
+        "schema_name": "public"
+      }
+    ]
+  },
+  "views": {
+    "add": [
+      {
+        "definition": " SELECT id,\n    display_name,\n    username,\n    first_name,\n    last_name,\n    name_display_preference,\n    avatar_path,\n    created_at,\n    email,\n    is_test_account\n   FROM private.read_public_profiles() read_public_profiles(id, display_name, username, first_name, last_name, name_display_preference, avatar_path, created_at, email, is_test_account);",
+        "name": "public_profiles",
+        "schema_name": "public"
+      }
+    ],
+    "remove": [
+      {
+        "definition": " SELECT id,\n        CASE\n            WHEN COALESCE(name_display_preference, 'real_name'::text) = 'real_name'::text AND NULLIF(btrim(first_name), ''::text) IS NOT NULL THEN concat(btrim(first_name),\n            CASE\n                WHEN NULLIF(btrim(last_name), ''::text) IS NOT NULL THEN (' '::text || upper(\"left\"(btrim(last_name), 1))) || '.'::text\n                ELSE ''::text\n            END)\n            ELSE NULLIF(btrim(display_name), ''::text)\n        END AS display_name,\n    NULLIF(btrim(display_name), ''::text) AS username,\n    first_name,\n    last_name,\n    name_display_preference,\n    avatar_path,\n    created_at,\n    NULL::text AS email,\n    is_test_account\n   FROM profiles;",
+        "name": "public_profiles",
+        "schema_name": "public"
+      }
+    ]
+  }
+}
