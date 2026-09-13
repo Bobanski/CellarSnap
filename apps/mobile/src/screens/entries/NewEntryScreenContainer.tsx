@@ -22,6 +22,7 @@ import {
   View
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { z } from "zod";
 import * as ImagePicker from "expo-image-picker";
 import { lightImpact } from "@/src/lib/haptics";
 import {
@@ -349,6 +350,9 @@ const ADVANCED_NOTE_FIELDS: Array<{
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 const WEB_API_BASE_URL = getWebApiBaseUrl();
+const grapeSearchResponseSchema = z.object({
+  grapes: z.array(z.object({ id: z.string(), name: z.string() })).max(20),
+});
 const RESCAN_CONFIDENCE_THRESHOLD = 0.6;
 
 export default function NewEntryScreen() {
@@ -958,31 +962,27 @@ export default function NewEntryScreen() {
       setIsPrimaryGrapeLoading(true);
       setPrimaryGrapeError(null);
 
-      const { data, error } = await supabase
-        .from("grape_varieties")
-        .select("id, name")
-        .ilike("name", `%${query}%`)
-        .order("name", { ascending: true })
-        .limit(8);
-
-      if (cancelled) {
-        return;
-      }
-
-      if (error) {
+      try {
+        const token = await getAccessTokenForApi();
+        if (!token || !WEB_API_BASE_URL) throw new Error("Grape search unavailable");
+        // Use the authenticated web lookup so canonical names and repaired
+        // aliases have the same matching/ordering contract on both clients.
+        const response = await fetch(
+          `${WEB_API_BASE_URL}/api/grapes?q=${encodeURIComponent(query)}&limit=8`,
+          { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" }
+        );
+        if (!response.ok) throw new Error("Grape search unavailable");
+        const { grapes } = grapeSearchResponseSchema.parse(await response.json());
+        if (cancelled) return;
+        const selectedIds = new Set(selectedPrimaryGrapes.map((grape) => grape.id));
+        setPrimaryGrapeSuggestions(grapes.filter((row) => !selectedIds.has(row.id)));
+      } catch {
+        if (cancelled) return;
         setPrimaryGrapeSuggestions([]);
-        setPrimaryGrapeError(error.message);
-        setIsPrimaryGrapeLoading(false);
-        return;
+        setPrimaryGrapeError("Unable to search grapes. Please try again.");
+      } finally {
+        if (!cancelled) setIsPrimaryGrapeLoading(false);
       }
-
-      const selectedIds = new Set(selectedPrimaryGrapes.map((grape) => grape.id));
-      const suggestions = (data ?? [])
-        .map((row) => ({ id: row.id, name: row.name }))
-        .filter((row) => !selectedIds.has(row.id));
-
-      setPrimaryGrapeSuggestions(suggestions);
-      setIsPrimaryGrapeLoading(false);
     }, 180);
 
     return () => {
