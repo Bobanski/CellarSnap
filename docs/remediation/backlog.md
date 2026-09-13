@@ -242,3 +242,6 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Product `bd40acd`, PR #100: 256 isolated + 7 dependency contracts, clean mobile install, root/mobile audits zero, web/mobile type/lint, Next build, all Expo exports and disposable SDK 56 iOS prebuild passed. See [handover](handovers/batch-04d.md). Merge/release pending, native acceptance/distribution outstanding.
 - The upstream decoder still hit regex-size limits on a long malformed run; equivalent literal replacement fixed and retested within AUD-08. The installed-consumer test catches broken npm local-file resolution even when audit reports zero.
 - QC-10 remains Open: this fixed-phone recovery run had rootTop/scrollY 0 but scrollWidth 450 versus viewport 390. Existing displaced-root history retained; B11 should inspect decorative overflow as part of the same recovery viewport contract.
+
+### B05a active slice — AUD-49
+- September 13, 2026 UTC: `codex/b05a-tooling-boundaries`, issue #101, stacked on B04d `0619dd1`. In progress: Metro file-map/watch and Tailwind source exclusion of nested `.claude` checkouts; preserve default exclusions and shared package refresh. AUD-19/21 remain separate.

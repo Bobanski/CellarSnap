@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "lint": "eslint --max-warnings 0 .",
     "typecheck": "tsc --noEmit",
-    "test:dependencies": "node --test tests/dependency-contracts.test.cjs"
+    "test:dependencies": "node --test tests/dependency-contracts.test.cjs",
+    "test:tooling": "node --test tests/tooling-boundaries.test.cjs"
   },
   "dependencies": {
     "@cellarsnap/shared": "file:../../packages/shared",

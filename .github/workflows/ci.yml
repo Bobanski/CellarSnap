@@ -48,6 +48,10 @@ jobs:
         working-directory: apps/mobile
         run: npm run test:dependencies
 
+      - name: Tooling boundary contracts
+        working-directory: apps/mobile
+        run: npm run test:tooling
+
       - name: Typecheck
         working-directory: apps/mobile
         run: npm run typecheck
