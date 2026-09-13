@@ -67,17 +67,28 @@ test('path traversal, empty/pending paths, backslashes, control bytes and unknow
   expect(f.state.checks).toBe(0);
 });
 
-test('cookie-web payloads hide capabilities and preserve per-object nulls', async () => {
-  const client = registerRequestPhotoClient(createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (_input, init) => {
-    const body = JSON.parse(String(init?.body));
-    return new Response(JSON.stringify(body.paths
-      ? body.paths.map((p: string) => ({ path: p, signedURL: '/object/sign/wine-photos/' + p + '?token=fixture', error: p === 'missing.jpg' ? 'not found' : null }))
-      : { signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } });
+test('adopted payloads authorize in bounded batches without Storage signing; invalid, denied and failed paths stay null', async () => {
+  const calls: string[][] = [];
+  const paths = Array.from({ length: 205 }, (_, i) => `owner/entry/label/${i}.jpg`);
+  const client = registerRequestPhotoClient(createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (input, init) => {
+    expect(String(input)).toBe('https://fixture.supabase.co/rest/v1/rpc/readable_wine_photo_paths');
+    const { object_names: batch } = JSON.parse(String(init?.body));
+    calls.push(batch);
+    return new Response(JSON.stringify(batch.includes(paths[100]) ? { message: 'Unavailable' } :
+      [...batch.filter((p: string) => p !== 'missing.jpg'), 'unrequested.jpg']), {
+      status: batch.includes(paths[100]) ? 503 : 200, headers: { 'content-type': 'application/json' }
+    });
   } } }));
   expect(await signPhotoUrl(path, client)).toBe(authenticatedPhotoUrl(path));
-  const urls = await signPhotoUrls([path, path, 'pending', null, 'missing.jpg'], client);
-  expect([...urls]).toEqual([[path, authenticatedPhotoUrl(path)], ['missing.jpg', null]]);
+  const urls = await signPhotoUrls([path, path, 'pending', null, 'missing.jpg', 'a/../b'], client);
+  expect([...urls]).toEqual([[path, authenticatedPhotoUrl(path)], ['missing.jpg', null], ['a/../b', null]]);
   expect(await signPhotoUrl(null, client)).toBeNull();
+  calls.length = 0;
+  const many = await signPhotoUrls(paths, client);
+  expect(calls.map(batch => batch.length)).toEqual([100, 100, 5]);
+  expect([...many.values()].filter(Boolean)).toHaveLength(105);
+  expect(many.get(paths[100])).toBeNull();
+  expect(many.has('unrequested.jpg')).toBe(false);
 });
 
 test('unadopted bearer/native clients retain signed response compatibility', async () => {
@@ -90,8 +101,8 @@ test('unadopted bearer/native clients retain signed response compatibility', asy
 
 test('only explicitly adopted verified bearer clients receive request-authorized payloads', async () => {
   for (const version of [null, 'unknown', 'request-v1']) {
-    const client = createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async () =>
-      new Response(JSON.stringify({ signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } }) } });
+    const client = createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (input) =>
+      new Response(JSON.stringify(String(input).includes('/rpc/') ? [path] : { signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } }) } });
     client.auth.getUser = async () => ({ data: { user: { id: 'viewer' } as User }, error: null });
     const headers = new Headers({ authorization: 'Bearer fixture' });
     if (version) headers.set('X-CellarSnap-Photo-Delivery', version);

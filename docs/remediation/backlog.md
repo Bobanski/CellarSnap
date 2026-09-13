@@ -12,6 +12,10 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 
 ## Original audit
 
+### B02i active — adopted photo metadata without Storage signing
+- AUD-01 P0/Partial, branch `codex/b02i-request-photo-authority`, base `3cc50fe`, issue #81. Source inspection found adopted server payloads still mint/discard signatures. This prerequisite slice uses a bounded invoker RPC over current Storage/source authorization and existence, then application URLs; no legacy-sign fallback. Raw legacy clients, native adoption and durable production rekey remain separate.
+- New additive SQL `20260913225201_request_photo_paths.sql`; no data rewrite or Storage policy change. Acceptance: isolated/hosted owner/friend/block/test/missing-path matrices, bounded batch/failure tests, desktop/phone web and existing Expo client image/crop/revocation QC, full catalog and deployment verification. QC passed; additive SQL live as `20260913225511`, application release pending. [Checkpoint](handovers/batch-02i.md), [evidence](evidence/b02i-qc.json).
+
 | ID | Priority | Finding | Status | Batch / next acceptance evidence |
 |---|---|---|---|---|---|
 | AUD-01 | P0 | Entry/photo policies bypass privacy | Partial | Prior entry/metadata/Storage/share repairs retained. B02g #134 merged `810fd3f`: adopted bearer/mobile request-time image authorization, bounded memory rendering, retry/sign-out/crop; primary backend released, native distribution pending. B02h #135 measured cached raw/transformed old URLs still 200 through 30s after deletion, denied at 60/90s from one host. Production supported-client/rekey/authority cutoff and retained-byte limits remain; no global revocation claim. [Current release](handovers/b02g-b02h-b08c-release.md), [contract](b02h-photo-revocation-contract.md). |

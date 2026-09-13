@@ -92,6 +92,11 @@ export async function expectedCatalog() {
     expected[key].push(...add);
   }
   }
+  const photoDelta = JSON.parse(await readFile(new URL('./b02i-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(photoDelta)) {
+    if (remove.length) throw new Error('B02i must be additive');
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

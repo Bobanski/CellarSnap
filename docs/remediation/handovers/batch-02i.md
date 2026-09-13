@@ -1,0 +1,17 @@
+# B02i handover — September 13, 2026
+## Objective and IDs
+AUD-01: stop minting discarded Storage signatures for adopted cookie/bearer payloads. Related AUD-19/21/48/50. This bounded prerequisite precedes inventory/rekey work; legacy clients, installed-version adoption and production revocation remain P0/Partial.
+## Resume here
+Branch `codex/b02i-request-photo-authority`, base `3cc50fe`, issue #81. Application QC passed; PR/merge/live application verification pending. New additive SQL is already live. Continue B02j inventory and QC-01 public feed projection separately.
+## State and decisions
+`readable_wine_photo_paths(text[])` uses SECURITY INVOKER, empty search path, existing Storage SELECT/RLS plus existing source authorization; only authenticated EXECUTE. Maximum 100 paths, bounded size, no arbitrary bucket or viewer argument. Deduplicated batches preserve null placeholders for missing/denied paths. Failed RPC batches remain null, never fall back to signing. The image endpoint still independently rechecks every byte request. Existing unadopted bearer payloads and other buckets keep compatibility.
+## Verification
+[Sanitized evidence](../evidence/b02i-qc.json). 411 isolated checks, 19 schema tests; actual PG17.6 full replay/catalog and prior races, web types/lint/build, database compile contracts and mobile types pass. New tests cover invoker/grants, null/oversize inputs, owner/privacy/existence, bounded mixed batch failure and zero signing calls. Existing source matrices remain passing.
+Hosted E2E accounts: public/owner, private photo/entry, test author, block/restore, anonymous/oversize denial and deleted-object null pass. Full hosted catalog matches before/after. Four alternating one-path timings are observations only; no general speedup claim. Browser desktop 1440×1000/phone 390×844 web and previously exported B02g Expo client load actual images, preserve original-dimension crop/save/reopen, recheck same URLs after privacy/test-author changes. Expo 503/retry and sign-out pass, no browser Storage requests. Screenshots visually inspected. Zero page exceptions; Expo has deliberate four 404s and one 503. Cookie web retains the earlier Supabase Failed to fetch diagnostic and navigation cancellations (AUD-50), no server application errors. Fixtures deleted and original tester flags restored.
+No simctl/Xcode or Android runtime. Existing Expo production browser export is compatibility QC, not a fresh native build, acceptance or distribution.
+## Release state
+SQL `20260913225201_request_photo_paths.sql` hosted as `20260913225511`; SHA256 and statement MD5 in evidence. No data rewrite or grants on existing objects. SQL precedes application adoption. Generated types refreshed from hosted generator; additive signature only. Roll application forward; never restore browser Storage capabilities. Application merge/deployment/live acceptance pending; safe additive RPC can remain if application release is delayed.
+## Workspace and environment
+Original tsconfig and two untracked user reports preserved; design #75 and nested worktree preserved. Temporary Next 3001 and prior Expo export/proxy 8083 running; no env file changed. Local harnesses/logs `/tmp/cellarsnap-b02i-b02j`.
+## Next slice
+Read-only complete photo-reference inventory, then resumable copy/hash/reference-CAS design. Supported native adoption and legacy signing cutoff remain required. QC-01 API projection and physical rating privileges are separate. [Backlog](../backlog.md).
