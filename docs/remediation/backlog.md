@@ -376,3 +376,7 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Priority / status: P0 / In progress. Hosted catalog at main `33b8200` confirms write grants/updatable columns on the definer public view. Isolated exact-view reproduction changes a foreign profile through the view while base-table RLS denies it. [Contract, verification and residual helper-RPC scope](handovers/batch-02c2.md). No production attack or ordinary-user identity changes.
 - Acceptance: public view rejects all mutations; preference-aware display name; raw names/email null; both-direction block and test-author filtering; owner private read/edit retained; direct REST, existing web/Expo and schema replay checks. Legacy arbitrary-ID helper RPC disclosures remain a separate slice of this finding.
 - Branch / issue: `codex/b02c2-public-profile-authority` / #81. Forward SQL named in handover, no row rewrite.
+
+### AUD-01 — B02d anonymous-share delivery
+- P0 / In progress, branch `codex/b02d-share-image-delivery`, issue #81. New anonymous image endpoint checks current share/source authority and returns no-store raster bytes, without exposing Storage signatures. [Contract and QC checkpoint](handovers/batch-02d.md).
+- Acceptance is request-time authorization after committed privacy/revocation changes, with page and OG rendering preserved. Old SDK/signed/transformed URLs, retained bytes and native clients remain outside this bounded slice; do not close AUD-01.
