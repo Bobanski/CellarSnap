@@ -13,7 +13,7 @@ import { toExploreSlug, WINE_REGIONS } from "@cellarsnap/shared";
 import { AppText } from "@/src/components/AppText";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import { colors } from "@/src/lib/theme";
-import { supabase } from "@/src/lib/supabase";
+import { supabaseDatabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 
@@ -98,7 +98,7 @@ export default function ExploreBrowseScreen() {
     let mounted = true;
     const load = async () => {
       if (!user) return;
-      const { data } = await supabase
+      const { data } = await supabaseDatabase
         .from("wine_entries")
         .select("producer")
         .eq("user_id", user.id)
@@ -108,7 +108,7 @@ export default function ExploreBrowseScreen() {
       if (!mounted || !data) return;
       const counts = new Map<string, number>();
       for (const row of data) {
-        const p = (row.producer as string)?.trim();
+        const p = row.producer?.trim();
         if (p) counts.set(p, (counts.get(p) ?? 0) + 1);
       }
       const sorted = [...counts.entries()]

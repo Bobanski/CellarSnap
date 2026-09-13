@@ -2,7 +2,8 @@ import "react-native-url-polyfill/auto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
-import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@cellarsnap/shared";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -44,7 +45,7 @@ const storage = {
   },
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabaseDatabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage,
     autoRefreshToken: true,
@@ -53,6 +54,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: "pkce",
   },
 });
+
+// Temporary AUD-21 bridge; typed and legacy consumers share one auth/storage client.
+export const supabase: SupabaseClient = supabaseDatabase;
 
 export function buildAuthRedirectUrl(path = "auth/callback") {
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;

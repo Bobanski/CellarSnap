@@ -21,6 +21,12 @@ jobs:
       - name: Lint
         run: npm run lint:web
 
+      - name: Web typecheck
+        run: npm run typecheck:web
+
+      - name: Database query type contracts
+        run: npm run test:database-types
+
       - name: Reviewed schema replay and drift contracts
         run: npm run test:schema
 
