@@ -1,0 +1,274 @@
+{
+  "date": "2026-09-13",
+  "scope": [
+    "B02c1/QC-01",
+    "B06g/QC-16",
+    "B07a/AUD-10",
+    "B06h/QC-08"
+  ],
+  "implementationHeads": {
+    "121": "2fafda2",
+    "122": "e8e9cc0",
+    "123": "7fd0634",
+    "124": "4c0383f"
+  },
+  "automated": {
+    "isolated": 388,
+    "schema": 12,
+    "resolverRetest": 42,
+    "webBuild": "passed",
+    "webMobileTypesLint": "passed",
+    "databaseQueryContracts": "passed",
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "nativeRuntime": "unavailable",
+    "migration": "none"
+  },
+  "badge-qc": {
+    "results": [
+      {
+        "device": "phone",
+        "flows": "feature, append, persisted reload, failed-save retention, retry, remove one preserving others, five selection, clear and reload, detail/back, load failure/retry",
+        "width": 390
+      },
+      {
+        "device": "desktop",
+        "flows": "feature, append, persisted reload, failed-save retention, retry, remove one preserving others, five selection, clear and reload, detail/back, load failure/retry",
+        "width": 1440
+      }
+    ],
+    "errors": [
+      {
+        "device": "phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "device": "desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "restored": true
+  },
+  "feed-qc": {
+    "results": [
+      {
+        "runtime": "expo",
+        "device": "phone",
+        "qualitative": true,
+        "noNumericDisplay": true,
+        "groupSlide": true,
+        "images": {
+          "total": 37,
+          "loaded": 22,
+          "pending": 15,
+          "failed": 0
+        }
+      },
+      {
+        "runtime": "expo",
+        "device": "desktop",
+        "qualitative": true,
+        "noNumericDisplay": true,
+        "groupSlide": true,
+        "images": {
+          "total": 26,
+          "loaded": 21,
+          "pending": 5,
+          "failed": 0
+        }
+      },
+      {
+        "runtime": "web",
+        "device": "phone",
+        "qualitative": true,
+        "noNumericDisplay": true,
+        "groupSlide": false,
+        "images": {
+          "total": 81,
+          "loaded": 44,
+          "pending": 37,
+          "failed": 0
+        }
+      },
+      {
+        "runtime": "web",
+        "device": "desktop",
+        "qualitative": true,
+        "noNumericDisplay": true,
+        "groupSlide": false,
+        "images": {
+          "total": 81,
+          "loaded": 40,
+          "pending": 41,
+          "failed": 0
+        }
+      }
+    ],
+    "errors": []
+  },
+  "lookup-live": {
+    "preFixError": "42703",
+    "results": [
+      {
+        "q": "Shiraz",
+        "name": "Syrah",
+        "kind": "synonym"
+      },
+      {
+        "q": "GARNACHA",
+        "name": "Grenache",
+        "kind": "synonym"
+      },
+      {
+        "q": "CAB-SAUV",
+        "name": "Cabernet Sauvignon",
+        "kind": "synonym"
+      },
+      {
+        "q": "Xarel Lo",
+        "name": "Xarel-lo",
+        "kind": "exact"
+      },
+      {
+        "q": "Syrah",
+        "name": "Syrah",
+        "kind": "exact"
+      }
+    ],
+    "unmatched": 4
+  },
+  "editor-qc": {
+    "results": [
+      {
+        "device": "desktop",
+        "save": 200,
+        "rating": 92,
+        "grape": "Syrah",
+        "resolution_source": "exact",
+        "reload": true
+      },
+      {
+        "device": "phone",
+        "save": 200,
+        "rating": 92,
+        "grape": "Syrah",
+        "resolution_source": "exact",
+        "reload": true
+      }
+    ],
+    "errors": [],
+    "warnings": {
+      "pageExceptions": 0,
+      "existingMapsWarnings": "QC-04",
+      "websocketWarnings": "Observed during route/context transitions; URL omitted"
+    },
+    "fixtureRemoved": true,
+    "awardsUnchanged": true
+  },
+  "browserLimits": [
+    "Expo web is not native acceptance",
+    "Some images remain pending/lazy at capture; zero completed-image failures in measured snapshots; no full gallery-loading acceptance claim",
+    "Existing Expo router group headings (QC-05), single-photo layout (QC-12), Maps warnings (QC-04) remain separate"
+  ],
+  "liveEditor": {
+    "deploymentSource": "ed28bbd",
+    "results": [
+      {
+        "device": "desktop",
+        "save": 200,
+        "rating": 92,
+        "grape": "Syrah",
+        "resolution_source": "exact",
+        "reload": true
+      },
+      {
+        "device": "phone",
+        "save": 200,
+        "rating": 92,
+        "grape": "Syrah",
+        "resolution_source": "exact",
+        "reload": true
+      }
+    ],
+    "errors": [],
+    "warnings": {
+      "existingMaps": "QC-04",
+      "websocketCloseWarnings": "Observed during route/context transitions; URLs omitted"
+    },
+    "fixtureRemoved": true,
+    "awardsUnchanged": true
+  },
+  "merged": [
+    {
+      "pr": 121,
+      "source": "2fafda2",
+      "merge": "6c28498041fe4dd47f2271371bbdeecf7620d738",
+      "at": "2026-09-13T18:37:03Z"
+    },
+    {
+      "pr": 122,
+      "source": "e8e9cc0",
+      "merge": "668dcc3ff3d3d54ea275b284e0eb85b51fdd4193",
+      "at": "2026-09-13T18:37:20Z"
+    },
+    {
+      "pr": 123,
+      "source": "7fd0634",
+      "merge": "ed28bbd388ae0a3e081959c6c9760b4b5fc174f1",
+      "at": "2026-09-13T18:37:40Z"
+    },
+    {
+      "pr": 124,
+      "source": "cc404bb",
+      "merge": "1b3dff365fc8ec4e2117ef1035b763a0b3a70c40",
+      "at": "2026-09-13T18:39:30Z"
+    }
+  ],
+  "finalDeployment": {
+    "source": "1b3dff365fc8ec4e2117ef1035b763a0b3a70c40",
+    "githubDeployment": 6425046728,
+    "url": "https://cellar-snap-i3p13tuqn-eitan-sneiders-projects.vercel.app",
+    "status": "success",
+    "readyAt": "2026-09-13T18:39:52Z",
+    "errorLogRecordsSinceReady": 0
+  },
+  "finalSmoke": {
+    "results": [
+      {
+        "endpoint": "/api/badges",
+        "status": 200
+      },
+      {
+        "endpoint": "/api/profile/summary",
+        "status": 200
+      },
+      {
+        "endpoint": "/api/grapes?q=shiraz&limit=8",
+        "status": 200
+      },
+      {
+        "flow": "production phone feed and sign-out",
+        "pass": true
+      }
+    ],
+    "errors": []
+  },
+  "remainingEditorFixtures": 0,
+  "workspace": {
+    "tsconfigPreserved": true,
+    "environmentFilesChanged": false,
+    "temporaryServersStopped": true,
+    "nativeReleased": false
+  }
+}
