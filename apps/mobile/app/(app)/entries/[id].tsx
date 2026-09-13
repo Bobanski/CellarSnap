@@ -3112,6 +3112,8 @@ export default function EntryDetailScreen() {
         is_feed_visible: true,
       };
     const grapesChanged = primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
     try {
       const snapshot = buildEntryEditSnapshot(updates, entry);
       const { error: saveError } = await supabaseDatabase.rpc('save_entry_details', {
@@ -3122,12 +3124,14 @@ export default function EntryDetailScreen() {
           p_grape_ids: primaryGrapeIds,
           p_expected_grape_ids: [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id),
         } : {}),
-      });
-      if (saveError) return saveError.code === '40001'
+      }).abortSignal(controller.signal);
+      if (saveError) return saveError.code === 'PT409'
         ? 'This entry changed elsewhere. Close the editor and refresh before saving again.'
-        : 'Unable to save this entry. Your changes are still here; please try again.';
+        : 'Unable to confirm the save. Your changes are still here; please retry.';
     } catch {
       return 'Unable to confirm the save. Your changes are still here; please retry.';
+    } finally {
+      clearTimeout(timeout);
     }
 
     return null;

@@ -13,8 +13,8 @@ test('atomic edit rolls back details and grape deletion on insert failure; retri
 });
 test('notes-only retains concurrent grape edits; stale explicit edits conflict without partial changes',async()=>{
  const db=await fixture();try{await role(db);await save(db,{}, {},[uid(203)],[uid(201),uid(202)]);const grapes=(await state(db)).grapes;await save(db,{notes:'After'},{notes:'Before'});assert.deepEqual((await state(db)).grapes,grapes);
- const before=await state(db);await assert.rejects(save(db,{notes:'Stale'},{notes:'Before'},[uid(204)],[uid(201),uid(202)]),/Entry changed elsewhere/);assert.deepEqual(await state(db),before);
- await assert.rejects(save(db,{notes:'Grape stale'},{notes:'After'},[uid(204)],[uid(201),uid(202)]),/Entry changed elsewhere/);assert.deepEqual(await state(db),before);
+ const before=await state(db);await assert.rejects(save(db,{notes:'Stale'},{notes:'Before'},[uid(204)],[uid(201),uid(202)]),{code:'PT409'});assert.deepEqual(await state(db),before);
+ await assert.rejects(save(db,{notes:'Grape stale'},{notes:'After'},[uid(204)],[uid(201),uid(202)]),{code:'PT409'});assert.deepEqual(await state(db),before);
  await save(db,{}, {},[],[uid(203)]);assert.deepEqual((await state(db)).grapes,[]);
  }finally{await db.close();}
 });
