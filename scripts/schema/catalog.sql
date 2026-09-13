@@ -49,6 +49,13 @@ select jsonb_build_object(
    from pg_class c join pg_namespace n on n.oid=c.relnamespace cross join lateral aclexplode(coalesce(c.relacl,acldefault(case when c.relkind='S' then 's'::"char" else 'r'::"char" end,c.relowner))) a
    where n.nspname in ('public','private') and c.relkind in ('r','p','v','m','S')
  ) x),
+ 'column_grants', (select jsonb_agg(to_jsonb(x) order by x.schema_name,x.table_name,x.column_name,x.grantee,x.privilege_type) from (
+   select n.nspname schema_name,c.relname table_name,at.attname column_name,
+     case when a.grantee=0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end grantee,a.privilege_type,a.is_grantable
+   from pg_attribute at join pg_class c on c.oid=at.attrelid join pg_namespace n on n.oid=c.relnamespace
+   cross join lateral aclexplode(at.attacl) a
+   where n.nspname in ('public','private') and at.attnum>0 and not at.attisdropped
+ ) x),
  'function_grants', (select jsonb_agg(to_jsonb(x) order by x.name,x.args,x.grantee,x.privilege_type) from (
    select n.nspname schema_name,p.proname name,pg_get_function_identity_arguments(p.oid) args,case when a.grantee=0 then 'PUBLIC' else pg_get_userbyid(a.grantee) end grantee,a.privilege_type,a.is_grantable
    from pg_proc p join pg_namespace n on n.oid=p.pronamespace cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a

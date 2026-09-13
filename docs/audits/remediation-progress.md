@@ -88,3 +88,9 @@ Complete reviewed public/private schema capture, disposable PGlite and PostgreSQ
 ## September 13 — B05c type/client checkpoint
 
 One shared generated Database source, CI drift/type contracts, typed web/mobile factory bridges and grape/producer browse adoption passed 271 tests plus compile-only checks, app types/lint/build/exports and desktop/phone/Expo interactions. Private disposable fixture removed and verified. Preexisting bearer-only grape search failure is new QC-13, reproduced on candidate and production. AUD-21 stays Partial for broader adoption. [QC](b05b-b05c-qc-2026-09-13.md), [handover](../remediation/handovers/batch-05c.md).
+
+## September 13 — B05b/B05c released
+
+PR #105 merged as `d31e966`, #106 as `c93e172`. Both CI runs and primary previews passed; primary production Ready/live-verified with desktop/phone grape browsing/search, login/sign-out, four HTTP checks and zero bounded error-log records. Generated types are byte-identical on regeneration. No SQL deployment; scoped fixture cleanup complete. AUD-19/21 stay Partial, QC-13 is next. [Release handover](../remediation/handovers/b05b-b05c-release.md).
+
+Final B05 release review (#107) extended the same AUD-19 drift contract to column-specific grants; the baseline already preserved them. Seven drift mutations and PG17/PGlite/live equality pass after the correction. No runtime or production SQL change.

@@ -21286,6 +21286,128 @@
       "table_name": "wine_profiles"
     }
   ],
+  "column_grants": [
+    {
+      "grantee": "anon",
+      "table_name": "post_shares",
+      "column_name": "created_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "created_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "created_by",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "INSERT"
+    },
+    {
+      "grantee": "anon",
+      "table_name": "post_shares",
+      "column_name": "expires_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "expires_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "INSERT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "expires_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "anon",
+      "table_name": "post_shares",
+      "column_name": "id",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "id",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "anon",
+      "table_name": "post_shares",
+      "column_name": "mode",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "mode",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "INSERT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "mode",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "anon",
+      "table_name": "post_shares",
+      "column_name": "post_id",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "post_id",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "INSERT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "post_id",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "authenticated",
+      "table_name": "post_shares",
+      "column_name": "revoked_at",
+      "schema_name": "public",
+      "is_grantable": false,
+      "privilege_type": "SELECT"
+    }
+  ],
   "schema_grants": [
     {
       "grantee": "PUBLIC",

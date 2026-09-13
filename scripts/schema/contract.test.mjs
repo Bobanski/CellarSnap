@@ -18,6 +18,7 @@ describe('B05 reviewed complete app schema', () => {
       const changes = [
         ['alter table wine_entries add column unexpected text', 'columns'],
         ['revoke select on public.profiles from authenticated', 'grants'],
+        ['grant update(email) on public.profiles to anon', 'column_grants'],
         ['alter policy "Users can view allowed wine entries" on wine_entries using (true)', 'policies'],
         ["create or replace function public.is_test_account(user_id uuid) returns boolean language sql stable as $$ select false $$", 'functions'],
         ['alter table profiles disable trigger profiles_protect_capabilities', 'triggers'],
