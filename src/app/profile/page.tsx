@@ -1171,7 +1171,7 @@ export default function ProfilePage() {
               href={
                 hasTasteSurvey === false
                   ? "/taste-survey"
-                  : (wineCount ?? 0) >= 8
+                  : wineCount === null || wineCount >= 8
                     ? "/palate"
                     : "/taste-survey"
               }
@@ -1181,14 +1181,16 @@ export default function ProfilePage() {
                 MY PALATE
               </p>
               <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                {wineCount && wineCount > 0
+                {wineCount === null
+                  ? "Explore your taste profile"
+                  : wineCount > 0
                   ? `Your taste DNA based on ${wineCount} wines`
                   : "Your taste DNA based on your survey answers"}
               </p>
               <p className="mt-3 text-xs font-semibold text-[var(--color-accent-primary)]">
                 {hasTasteSurvey === false
                   ? "Set up taste preferences \u2192"
-                  : (wineCount ?? 0) >= 8
+                  : wineCount === null || wineCount >= 8
                     ? "View full profile \u2192"
                     : "Edit taste preferences \u2192"}
               </p>
