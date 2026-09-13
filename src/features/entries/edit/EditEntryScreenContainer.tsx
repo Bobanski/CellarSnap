@@ -1,5 +1,7 @@
 "use client";
 
+import { authenticatedPhotoUrl } from "@/lib/storage/photoDelivery";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -851,16 +853,17 @@ export default function EditEntryPage() {
     }
 
     const originalPath = buildOriginalPhotoPath(photo.path);
-    const { data: originalSigned, error: originalError } = await supabase.storage
-      .from("wine-photos")
-      .createSignedUrl(originalPath, 60 * 60);
+    const originalUrl = authenticatedPhotoUrl(originalPath, 'original');
+    // Missing originals must retain the existing legacy/lineup crop fallback.
+    const originalResponse = await fetch(originalUrl, { cache: 'no-store' }).catch(() => null);
+    await originalResponse?.body?.cancel();
 
     if (!isCurrentRequest()) {
       return;
     }
 
-    if (!originalError && originalSigned?.signedUrl) {
-      setCropSourceUrl(originalSigned.signedUrl);
+    if (originalResponse?.ok) {
+      setCropSourceUrl(originalUrl);
       setCropSourcePath(originalPath);
       setCropSourceLoading(false);
       return;
@@ -1512,17 +1515,13 @@ export default function EditEntryPage() {
         };
       }
 
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from("wine-photos")
-        .createSignedUrl(labelPath, 60 * 60);
-
       return {
         id: candidate.id,
         wine_name: candidate.wine_name,
         producer: candidate.producer,
         vintage: candidate.vintage,
         consumed_at: candidate.consumed_at,
-        label_image_url: signedUrlError ? null : signedUrlData.signedUrl,
+        label_image_url: authenticatedPhotoUrl(labelPath),
       };
     },
     [supabase]

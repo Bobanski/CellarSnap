@@ -11,7 +11,7 @@ export default function AppImage({
   decoding = "async",
   ...props
 }: AppImageProps) {
-  // These images are served from signed storage URLs and arbitrary remote origins,
+  // These images use authorized app routes and arbitrary remote origins,
   // so we intentionally centralize raw img usage instead of scattering lint disables.
   // eslint-disable-next-line @next/next/no-img-element
   return <img src={src} alt={alt} decoding={decoding} {...props} />;
