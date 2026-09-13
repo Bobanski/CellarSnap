@@ -72,6 +72,7 @@ const lifecycleMigration = "supabase/sql/20260913003148_enforce_personal_knowled
 async function lifecycleDatabase() {
   const db = await knowledgeDatabase();
   await db.exec(await readFile(lifecycleMigration, "utf8"));
+  await db.exec(await readFile("supabase/sql/20260913004944_batch_personal_knowledge_publication.sql", "utf8"));
   return db;
 }
 async function publish(db: Awaited<ReturnType<typeof knowledgeDatabase>>, id = uid(11), content = "Current private note") {
@@ -202,9 +203,8 @@ function ingestionClient(db: Awaited<ReturnType<typeof knowledgeDatabase>>) {
       if (name === "get_entry_knowledge_sources") {
         return { data: (await db.query("select * from get_entry_knowledge_sources($1,$2)", [args.after_entry_id, args.batch_size])).rows, error: null };
       }
-      if (name === "publish_entry_knowledge") {
-        const result = await db.query<{ ok: boolean }>("select publish_entry_knowledge($1,$2,$3,$4) as ok", [args.target_entry_id, JSON.stringify(args.expected_snapshot), args.chunk_content, JSON.stringify(args.chunk_embedding)]);
-        return { data: result.rows[0].ok, error: null };
+      if (name === "publish_entry_knowledge_batch") {
+        return { data: (await db.query("select * from publish_entry_knowledge_batch($1)", [JSON.stringify(args.chunks)])).rows, error: null };
       }
       throw new Error(`Unexpected RPC ${name}`);
     },
@@ -250,5 +250,28 @@ test("ingestion keyset pages cover more than one hundred entries without duplica
     expect(sizes).toEqual([100,3]);
     expect(result.insertedCount).toBe(103);
     expect((await db.query("select count(*)::int as count from user_entry_knowledge_chunks")).rows).toEqual([{ count: 103 }]);
+  } finally { await db.close(); }
+});
+
+test("batch publication bounds inputs and cannot be called by clients", async () => {
+  const db = await lifecycleDatabase();
+  try {
+    await asKnowledgeRole(db, "authenticated", uid(1));
+    await expect(db.query("select * from publish_entry_knowledge_batch('[]')")).rejects.toMatchObject({code:"42501"});
+    await asKnowledgeRole(db, "service_role");
+    await expect(db.query("select * from publish_entry_knowledge_batch('{}')")).rejects.toMatchObject({code:"22023"});
+    await expect(db.query("select * from publish_entry_knowledge_batch($1)",[JSON.stringify(Array(101).fill({}))])).rejects.toMatchObject({code:"22023"});
+    expect((await db.query("select * from publish_entry_knowledge_batch('[]')")).rows).toEqual([]);
+  } finally { await db.close(); }
+});
+
+test("malformed later batch item rolls back earlier publications", async () => {
+  const db = await lifecycleDatabase();
+  try {
+    await asKnowledgeRole(db, "service_role");
+    const sources = (await db.query<{entry_id:string;source_snapshot:unknown}>("select * from get_entry_knowledge_sources()")).rows;
+    const chunks = sources.map((source,index)=>({...source,content:'Transactional fixture',embedding:index ? [1] : JSON.parse(embedding)}));
+    await expect(db.query("select * from publish_entry_knowledge_batch($1)",[JSON.stringify(chunks)])).rejects.toMatchObject({code:"22000"});
+    expect((await db.query("select * from user_entry_knowledge_chunks")).rows).toEqual([]);
   } finally { await db.close(); }
 });

@@ -708,17 +708,24 @@ export async function ingestWineEntryEmbeddings(
     if (embeddings.length !== sources.length || embeddings.some((value) => value.length !== 1536)) {
       throw new Error("Personal knowledge embedding response has invalid dimensions or count.");
     }
-    for (const [index, source] of sources.entries()) {
-      const { data: published, error: publishError } = await supabase.rpc("publish_entry_knowledge", {
-        target_entry_id: source.entry_id,
-        expected_snapshot: source.source_snapshot,
-        chunk_content: contents[index],
-        chunk_embedding: embeddings[index],
-      });
-      if (publishError) throw new Error(`Failed to publish personal knowledge: ${publishError.message}`);
-      if (published === true) insertedCount += 1;
-      else skippedCount += 1; // Source changed/deleted in flight; next ingestion can retry it.
+    const { data: results, error: publishError } = await supabase.rpc("publish_entry_knowledge_batch", {
+      chunks: sources.map((source, index) => ({
+        entry_id: source.entry_id,
+        source_snapshot: source.source_snapshot,
+        content: contents[index],
+        embedding: embeddings[index],
+      })),
+    });
+    if (publishError) throw new Error(`Failed to publish personal knowledge: ${publishError.message}`);
+    const publications = (results ?? []) as Array<{ entry_id: string; published: boolean }>;
+    if (publications.length !== sources.length ||
+        new Set(publications.map((result) => result.entry_id)).size !== sources.length ||
+        sources.some((source) => !publications.some((result) => result.entry_id === source.entry_id)) ||
+        publications.some((result) => typeof result.published !== "boolean")) {
+      throw new Error("Personal knowledge publication response is incomplete.");
     }
+    insertedCount += publications.filter((result) => result.published).length;
+    skippedCount += publications.filter((result) => !result.published).length;
     cursor = sources[sources.length - 1]!.entry_id;
   }
   return { sourceTable: "wine_entries", insertedCount, skippedCount };

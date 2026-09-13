@@ -77,3 +77,4 @@
 20260912222036_enforce_wine_object_privacy.sql
 20260913002148_isolate_personal_knowledge_reads.sql
 20260913003148_enforce_personal_knowledge_lifecycle.sql
+20260913004944_batch_personal_knowledge_publication.sql
