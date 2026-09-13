@@ -1,0 +1,18 @@
+{
+  "date": "2026-09-13T02:30:36.224Z",
+  "scope": "Only five captured B04 QC scan IDs, filtered to designated account A; child rows removed through existing FK cascade.",
+  "removedScanIds": [
+    "scan-mtz6thjo-2bo0lvhu",
+    "scan-mtz6qnj4-0y5lwlzt",
+    "scan-mtz6m6zs-b3dvl49q",
+    "scan-mtz6gsyu-xw7hzi6t",
+    "scan-mtz73v3s-6lkm14jo"
+  ],
+  "removedScans": 5,
+  "removedWines": 186,
+  "baselineScans": 1,
+  "baselinePreserved": true,
+  "qcParentsRemaining": 0,
+  "qcChildrenRemaining": 0,
+  "passed": true
+}
