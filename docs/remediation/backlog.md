@@ -223,3 +223,6 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Remaining tooling exposure: xcode 3 uses uuid 7 v4 without a supplied output buffer; advisory concerns v3/v5/v6 buffer bounds, so inspected consumer does not establish an exploit path. Deliberate upgrade/override contract remains; do not claim the mobile audit is clean.
 - Acceptance: preserve web/mobile behavior, remove or explicitly resolve residual advisory roots with current upstream evidence, pass clean installs/isolated/build/browser/native checks as available, then record merge/deployment/live verification. Retire tar and aligned Metro patch overrides when parent packages support repaired versions.
 - Scope boundary: QC-10 confirmed under its existing ID; no unrelated B11 layout repair, SQL migration or hosting change included.
+
+### B04d active slice — AUD-08
+- September 13, 2026 UTC: `codex/b04d-mobile-dependency-contracts`, based on `05d9e7b`, issue #97. In progress: explicitly package the upstream patched decoder for the CommonJS router and validate the xcode/uuid tooling contract. Native acceptance/distribution remains separate. B05a watcher boundaries follow after this checkpoint.
