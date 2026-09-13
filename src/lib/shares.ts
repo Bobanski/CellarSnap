@@ -1,12 +1,11 @@
 import "server-only";
-import { unstable_cache } from "next/cache";
 import {
   QPR_LEVEL_LABELS,
   QPR_LEVEL_VALUES,
   getPublicRatingBandLabel,
-  normalizePrivacyLevel,
   type QprLevel,
 } from "@shared";
+import { resolvePublicSharePhotoPaths } from "@/server/shares/photoAccess";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -21,6 +20,8 @@ type EntryRow = {
   id: string;
   user_id: string;
   entry_privacy: string | null;
+  label_photo_privacy: string | null;
+  place_photo_privacy: string | null;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
@@ -33,10 +34,6 @@ type EntryRow = {
   qpr_level: string | null;
   label_image_path: string | null;
   entry_group_id: string | null;
-};
-
-type PhotoPathRow = {
-  path: string;
 };
 
 type PublicProfileRow = {
@@ -129,14 +126,6 @@ function truncateClean(value: string, maxLength: number) {
   return `${slice.slice(0, end).trimEnd()}…`;
 }
 
-function normalizeStoragePath(path: string | null | undefined) {
-  const normalized = normalizeText(path);
-  if (!normalized || normalized === "pending") {
-    return null;
-  }
-  return normalized;
-}
-
 function normalizePrimaryGrape(
   variety: PrimaryGrapeRow["grape_varieties"]
 ): string | null {
@@ -224,10 +213,10 @@ async function createSignedImagePair(
   const [defaultSigned, ogSigned] = await Promise.all([
     supabase.storage
       .from("wine-photos")
-      .createSignedUrl(path, 60 * 60 * 24 * 7),
+      .createSignedUrl(path, 60 * 60),
     supabase.storage
       .from("wine-photos")
-      .createSignedUrl(path, 60 * 60 * 24 * 7, {
+      .createSignedUrl(path, 60 * 60, {
         transform: {
           width: 640,
           height: 640,
@@ -278,7 +267,7 @@ async function resolvePublicPostShareUncached(
   const { data: rawEntry, error: entryError } = await supabase
     .from("wine_entries")
     .select(
-      "id, user_id, entry_privacy, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path, entry_group_id"
+      "id, user_id, entry_privacy, label_photo_privacy, place_photo_privacy, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path, entry_group_id"
     )
     .eq("id", share.post_id)
     .maybeSingle();
@@ -288,53 +277,21 @@ async function resolvePublicPostShareUncached(
   }
 
   const entry = rawEntry as EntryRow;
-  if (normalizePrivacyLevel(entry.entry_privacy, "public") !== "public") {
+  if (entry.entry_privacy !== "public") {
     return null;
   }
 
-  let labelPath = normalizeStoragePath(entry.label_image_path);
-
   const [
-    { data: rawLabelPhoto },
-    { data: rawFirstPhoto },
+    { labelPath, previewPath },
     { data: rawProfile },
-    { data: rawGroupedPreviewPhoto },
     { data: rawEntryScore },
   ] = await Promise.all([
-    supabase
-      .from("entry_photos")
-      .select("path")
-      .eq("entry_id", entry.id)
-      .eq("type", "label")
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("entry_photos")
-      .select("path")
-      .eq("entry_id", entry.id)
-      .order("position", { ascending: true })
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
+    resolvePublicSharePhotoPaths(supabase, entry),
     supabase
       .from("public_profiles")
-      .select(
-        "display_name, username, first_name, last_name, email, name_display_preference"
-      )
+      .select("display_name, username, first_name, last_name, email, name_display_preference, is_test_account")
       .eq("id", entry.user_id)
       .maybeSingle(),
-    entry.entry_group_id
-      ? supabase
-          .from("entry_group_slides")
-          .select("path")
-          .eq("group_id", entry.entry_group_id)
-          .order("position", { ascending: true })
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
     // The entry owner's own cached palate match score, if one has already
     // been computed (e.g. they viewed their own entry detail). Not gated by
     // the 6hr TTL used for live scoring — a slightly stale number is fine
@@ -349,18 +306,10 @@ async function resolvePublicPostShareUncached(
       .maybeSingle(),
   ]);
 
-  if (rawLabelPhoto) {
-    const labelPhoto = rawLabelPhoto as PhotoPathRow;
-    labelPath = normalizeStoragePath(labelPhoto.path) ?? labelPath;
-  }
+  // Anonymous shares never expose trusted-test authors, even though this
+  // service-role query bypasses ordinary metadata RLS. Missing profiles deny.
+  if (!rawProfile || rawProfile.is_test_account !== false) return null;
 
-  const groupedPreviewPath = rawGroupedPreviewPhoto
-    ? normalizeStoragePath((rawGroupedPreviewPhoto as PhotoPathRow).path)
-    : null;
-  const firstPhotoPath = rawFirstPhoto
-    ? normalizeStoragePath((rawFirstPhoto as PhotoPathRow).path)
-    : null;
-  const previewPath = groupedPreviewPath ?? firstPhotoPath ?? labelPath;
   const authorName = getPublicProfileName(
     (rawProfile ?? null) as PublicProfileRow | null,
     "Someone from Cluster"
@@ -428,14 +377,8 @@ async function resolvePublicPostShareUncached(
   };
 }
 
-const resolvePublicPostShareCached = unstable_cache(
-  resolvePublicPostShareUncached,
-  ["public-post-share"],
-  {
-    revalidate: 60,
-  }
-);
-
+// Check revocation, expiry and current privacy on every request. Do not cache
+// authorization decisions across requests; issued image URLs last at most 1h.
 export async function resolvePublicPostShare(shareId: string) {
-  return resolvePublicPostShareCached(shareId);
+  return resolvePublicPostShareUncached(shareId);
 }

@@ -8,6 +8,8 @@ import { resolvePublicPostShare } from "@/lib/shares";
 import { getConfiguredPublicSiteUrl } from "@/lib/siteUrl";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 type SharePageProps = {
   params: Promise<{ shareId: string }>;
 };
