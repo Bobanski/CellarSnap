@@ -25,7 +25,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "exifreader": "^4.40.5",
     "ipaddr.js": "2.5.0",
-    "next": "^16.2.7",
+    "next": "^16.3.5",
     "openai": "^6.18.0",
     "papaparse": "^5.5.3",
     "pdf-parse": "^2.4.5",
@@ -35,6 +35,7 @@
     "react-markdown": "^10.1.0",
     "read-excel-file": "^9.1.1",
     "rehype-sanitize": "^6.0.0",
+    "sharp": "^0.35.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -48,9 +49,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.7",
+    "eslint-config-next": "^16.3.5",
     "supabase": "^2.78.1",
     "tailwindcss": "^4",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "supabase": {
+      "tar": "7.5.22"
+    }
   }
 }
