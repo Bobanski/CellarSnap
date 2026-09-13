@@ -1,0 +1,850 @@
+{
+  "grants": [
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "postgres",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "YES",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "anon",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "authenticated",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "INSERT",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "SELECT",
+      "with_hierarchy": "YES"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "UPDATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "DELETE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRUNCATE",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "REFERENCES",
+      "with_hierarchy": "NO"
+    },
+    {
+      "grantee": "service_role",
+      "grantor": "postgres",
+      "table_name": "wine_knowledge_chunks",
+      "is_grantable": "NO",
+      "table_schema": "public",
+      "table_catalog": "postgres",
+      "privilege_type": "TRIGGER",
+      "with_hierarchy": "NO"
+    }
+  ],
+  "columns": [
+    {
+      "data_type": "uuid",
+      "table_name": "entry_primary_grapes",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "entry_primary_grapes",
+      "column_name": "entry_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "entry_primary_grapes",
+      "column_name": "variety_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "smallint",
+      "table_name": "entry_primary_grapes",
+      "column_name": "position",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "entry_primary_grapes",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "wine_entries",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "gen_random_uuid()"
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "wine_entries",
+      "column_name": "user_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "wine_name",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "producer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "vintage",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "region",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "integer",
+      "table_name": "wine_entries",
+      "column_name": "rating",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "notes",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "location_text",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "date",
+      "table_name": "wine_entries",
+      "column_name": "consumed_at",
+      "is_nullable": "NO",
+      "column_default": "CURRENT_DATE"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "label_image_path",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "place_image_path",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "wine_entries",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    },
+    {
+      "data_type": "ARRAY",
+      "table_name": "wine_entries",
+      "column_name": "tasted_with_user_ids",
+      "is_nullable": "NO",
+      "column_default": "'{}'::uuid[]"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "pairing_image_path",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "country",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "appellation",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "entry_privacy",
+      "is_nullable": "YES",
+      "column_default": "'private'::text"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "label_photo_privacy",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "place_photo_privacy",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "wine_entries",
+      "column_name": "advanced_notes",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "numeric",
+      "table_name": "wine_entries",
+      "column_name": "price_paid",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "price_paid_source",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "qpr_level",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "price_paid_currency",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "classification",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "wine_entries",
+      "column_name": "root_entry_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "boolean",
+      "table_name": "wine_entries",
+      "column_name": "is_feed_visible",
+      "is_nullable": "NO",
+      "column_default": "true"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "location_place_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "comments_scope",
+      "is_nullable": "NO",
+      "column_default": "'viewers'::text"
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "reaction_privacy",
+      "is_nullable": "NO",
+      "column_default": "'public'::privacy_level"
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "comments_privacy",
+      "is_nullable": "NO",
+      "column_default": "'public'::privacy_level"
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "survey_how_was_it",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "survey_expectation_match",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "survey_drink_again",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "boolean",
+      "table_name": "wine_entries",
+      "column_name": "drinking_now",
+      "is_nullable": "NO",
+      "column_default": "false"
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "wine_entries",
+      "column_name": "entry_group_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "wine_type",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "raw_region",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "raw_producer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "raw_classification",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "raw_wine_type",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "canonical_region",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "canonical_producer",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "canonical_classification",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "numeric",
+      "table_name": "wine_entries",
+      "column_name": "resolution_confidence",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "smallint",
+      "table_name": "wine_entries",
+      "column_name": "fallback_level",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "canonical_country",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "canonical_sub_region",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_entries",
+      "column_name": "survey_enjoyment_intent",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "wine_entries",
+      "column_name": "assembled_sensory",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "wine_entries",
+      "column_name": "sensory_resolved_at",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "entry_status",
+      "is_nullable": "NO",
+      "column_default": "'consumed'::text"
+    },
+    {
+      "data_type": "integer",
+      "table_name": "wine_entries",
+      "column_name": "cellar_quantity",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_entries",
+      "column_name": "bottle_format",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "uuid",
+      "table_name": "wine_entries",
+      "column_name": "cellared_from_id",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "bigint",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "id",
+      "is_nullable": "NO",
+      "column_default": "nextval('wine_knowledge_chunks_id_seq'::regclass)"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "source_table",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "source_row_id",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "integer",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "chunk_index",
+      "is_nullable": "NO",
+      "column_default": "0"
+    },
+    {
+      "data_type": "text",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "content",
+      "is_nullable": "NO",
+      "column_default": null
+    },
+    {
+      "data_type": "USER-DEFINED",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "embedding",
+      "is_nullable": "YES",
+      "column_default": null
+    },
+    {
+      "data_type": "jsonb",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "metadata",
+      "is_nullable": "NO",
+      "column_default": "'{}'::jsonb"
+    },
+    {
+      "data_type": "timestamp with time zone",
+      "table_name": "wine_knowledge_chunks",
+      "column_name": "created_at",
+      "is_nullable": "NO",
+      "column_default": "now()"
+    }
+  ],
+  "orphans": 0,
+  "sources": [
+    {
+      "count": 40,
+      "source_table": "aging_curve_baselines"
+    },
+    {
+      "count": 205,
+      "source_table": "base_profiles"
+    },
+    {
+      "count": 55,
+      "source_table": "classification_tier_modifiers"
+    },
+    {
+      "count": 61,
+      "source_table": "grape_sensitivity_coefficients"
+    },
+    {
+      "count": 705,
+      "source_table": "producer_modifiers"
+    },
+    {
+      "count": 133,
+      "source_table": "taxonomy_classification_tiers"
+    },
+    {
+      "count": 2150,
+      "source_table": "vintage_weather_modifiers"
+    },
+    {
+      "count": 172,
+      "source_table": "wine_entries"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "wine_knowledge_chunks",
+      "permissive": "PERMISSIVE",
+      "policyname": "wine_knowledge_chunks_select_authenticated",
+      "schemaname": "public",
+      "with_check": null
+    }
+  ],
+  "functions": [
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.match_user_entries(query_embedding vector, target_user_id uuid, match_threshold double precision DEFAULT 0.55, match_count integer DEFAULT 5)\n RETURNS TABLE(id bigint, content text, similarity double precision, metadata jsonb)\n LANGUAGE sql\n STABLE\nAS $function$\n  select\n    wkc.id,\n    wkc.content,\n    1 - (wkc.embedding <=> query_embedding) as similarity,\n    wkc.metadata\n  from public.wine_knowledge_chunks wkc\n  where wkc.embedding is not null\n    and wkc.source_table = 'wine_entries'\n    and wkc.metadata->>'user_id' = target_user_id::text\n    and 1 - (wkc.embedding <=> query_embedding) > match_threshold\n  order by wkc.embedding <=> query_embedding\n  limit match_count;\n$function$\n"
+    },
+    {
+      "acl": [
+        "=X/postgres",
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "definition": "CREATE OR REPLACE FUNCTION public.match_wine_knowledge(query_embedding vector, match_threshold double precision DEFAULT 0.72, match_count integer DEFAULT 5)\n RETURNS TABLE(id bigint, content text, similarity double precision, metadata jsonb)\n LANGUAGE sql\n STABLE\nAS $function$\n  select\n    wkc.id,\n    wkc.content,\n    1 - (wkc.embedding <=> query_embedding) as similarity,\n    wkc.metadata\n  from public.wine_knowledge_chunks wkc\n  where wkc.embedding is not null\n    and 1 - (wkc.embedding <=> query_embedding) > match_threshold\n  order by wkc.embedding <=> query_embedding\n  limit match_count;\n$function$\n"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "wine_knowledge_chunks_pkey",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "name": "wine_knowledge_chunks_source_table_source_row_id_chunk_inde_key",
+      "definition": "UNIQUE (source_table, source_row_id, chunk_index)"
+    }
+  ]
+}

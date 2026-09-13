@@ -31,6 +31,7 @@ const USER_ENTRY_MATCH_THRESHOLD = 0.55;
 
 type RequestScopedSupabase = {
   from: AdminClient["from"];
+  rpc: AdminClient["rpc"];
 };
 
 function asRecord(value: unknown) {
@@ -422,10 +423,10 @@ async function retrieveUserEntryMatchesByEmbedding(
   userId: string,
   limit = 5,
   dependencies: {
-    supabase?: AdminClient;
-  } = {}
+    supabase: Pick<AdminClient, "rpc">;
+  }
 ) {
-  const supabase = dependencies.supabase ?? createSupabaseAdminClient();
+  const supabase = dependencies.supabase;
   const { data, error } = await supabase.rpc("match_user_entries", {
     query_embedding: queryEmbedding,
     target_user_id: userId,
@@ -713,7 +714,7 @@ export async function assembleContext(
       retrieveGeneralKnowledgeByEmbedding(queryEmbedding, 5, { supabase: adminSupabase }),
       retrieveUserContext(dependencies.requestSupabase, userId, query),
       retrieveUserEntryMatchesByEmbedding(queryEmbedding, userId, 5, {
-        supabase: adminSupabase,
+        supabase: dependencies.requestSupabase,
       }),
       // Read-only: the somm never triggers a (re)distillation inline — it
       // only reads whatever palate_profiles already has cached.
