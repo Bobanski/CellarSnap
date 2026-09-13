@@ -27,6 +27,7 @@ export * from "./explore";
 export * from "./validation/phone";
 export * from "./validation/username";
 export * from "./educationPages";
+export * from "./dates";
 
 // Physical database schema; keep domain/public DTOs separate.
 export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from "./database.types";

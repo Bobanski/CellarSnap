@@ -28,6 +28,7 @@ export default defineConfig({
     "knowledge-access.spec.ts",
     "auth-privacy.spec.ts",
     "grape-search.spec.ts",
+    "consumed-dates.spec.ts",
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
     "image-dependency.spec.ts",

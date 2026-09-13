@@ -40,6 +40,7 @@ import {
   type PrivacyLevel,
   type QprLevel,
   toExploreSlug,
+  formatConsumedDate,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
@@ -385,19 +386,6 @@ const QPR_OPTIONS = [
     label: QPR_LEVEL_LABELS[value],
   })),
 ];
-
-function formatConsumedDate(raw: string) {
-  const dateOnly = raw.slice(0, 10);
-  const date = new Date(`${dateOnly}T00:00:00`);
-  if (Number.isNaN(date.getTime())) {
-    return raw;
-  }
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
 function formatCommentDate(value: string) {
   const parsed = new Date(value);

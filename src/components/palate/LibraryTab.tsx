@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Photo from "@/components/Photo";
+import { formatConsumedDate } from "@shared";
 
 const GRENACHE = "#7B1D3A";
 const ROSE = "#C4607A";
@@ -41,13 +42,6 @@ const SORT_OPTIONS: { value: SortMode; label: string }[] = [
 ];
 
 const EMPTY_FILTERS: Filters = { region: null, producer: null, vintage: null, wineType: null };
-
-function formatDate(iso: string | null) {
-  if (!iso) return null;
-  try {
-    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  } catch { return null; }
-}
 
 function ratingDisplay(rating: number | null) {
   if (rating == null) return null;
@@ -452,7 +446,7 @@ export function LibraryTab() {
                   <span className="text-[10px]" style={{ color: `${FOG}90` }}>{entry.vintage}</span>
                 )}
                 {entry.consumed_at && (
-                  <span className="text-[10px]" style={{ color: `${FOG}70` }}>{formatDate(entry.consumed_at)}</span>
+                  <span className="text-[10px]" style={{ color: `${FOG}70` }}>{formatConsumedDate(entry.consumed_at)}</span>
                 )}
               </div>
             </div>
