@@ -73,6 +73,7 @@ type FeedPhoto = {
 };
 
 type FeedEntry = WineEntryWithUrls & {
+  public_rating_label?: string | null;
   author_name: string;
   author_avatar_url?: string | null;
   drinking_now?: boolean | null;
@@ -1449,9 +1450,16 @@ export default function FeedPage() {
                     3. Tasted-with line. */}
                 {(() => {
                   const notes = (entry.notes ?? "").trim();
+                  const isOwnEntry = viewerUserId !== null && viewerUserId === entry.user_id;
+                  // Older cached API responses may predate the projection. Current
+                  // responses already contain the band and have rating: null.
+                  const publicBandLabel = !isOwnEntry
+                    ? entry.public_rating_label ?? getPublicRatingBandLabel(entry.rating)
+                    : null;
                   const hasRating = !entry.entry_group
-                    && typeof entry.rating === "number"
-                    && !Number.isNaN(entry.rating);
+                    && (isOwnEntry
+                      ? typeof entry.rating === "number" && !Number.isNaN(entry.rating)
+                      : Boolean(publicBandLabel));
                   const hasQpr = !entry.entry_group && Boolean(entry.qpr_level);
                   if (!notes && !hasRating && !hasQpr) {
                     return null;
@@ -1461,10 +1469,6 @@ export default function FeedPage() {
                   // private input. Only the entry owner sees their own
                   // number (ScoreBadge, as before); every other viewer sees
                   // a warm qualitative band instead — never the score.
-                  const isOwnEntry = viewerUserId !== null && viewerUserId === entry.user_id;
-                  const publicBandLabel = hasRating && !isOwnEntry
-                    ? getPublicRatingBandLabel(entry.rating)
-                    : null;
                   return (
                     <div className="mt-3 flex items-baseline justify-between gap-3">
                       <div className="min-w-0 max-w-[60%] flex-1">

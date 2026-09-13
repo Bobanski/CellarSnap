@@ -1,0 +1,45 @@
+{
+  "results": [
+    {
+      "payloadAllBands": true,
+      "numericRatingsNull": true,
+      "privateAndOwnExcluded": true,
+      "friendsIncluded": true,
+      "groupSlides": 2
+    },
+    {
+      "cursorPagination": true
+    },
+    {
+      "device": "desktop",
+      "labelsVisible": true,
+      "imagesDecoded": true,
+      "groupRendered": true,
+      "groupSelectionAndCaption": true,
+      "loadMore": true
+    },
+    {
+      "device": "phone",
+      "labelsVisible": true,
+      "imagesDecoded": true,
+      "groupRendered": true,
+      "groupSelectionAndCaption": true,
+      "loadMore": true
+    },
+    {
+      "testAuthorExcluded": true,
+      "blockExcludedAndRestored": true
+    },
+    {
+      "ownerRatingEditAndReload": true,
+      "storedScale": "1–100"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "owner: TypeError: Failed to fetch\n    at http://localhost:3001/_next/static/chunks/1scpb4b6ryiff.js:24:38515\n    at tD (http://localhost:3001/_next/static/chunks/1scpb"
+  ],
+  "failures": [],
+  "fixturesRemoved": true,
+  "profilesRestored": true
+}

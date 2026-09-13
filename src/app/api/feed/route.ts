@@ -14,6 +14,7 @@ import { getTestAccountStatusMap, isTestAccount } from "@/lib/access/testAccount
 import { executeSelectWithFallback } from "@/server/db/compat";
 import { resolveGroupedPostData } from "@/server/entries/groupPosts";
 import { signPhotoUrls } from "@/server/storage/signedUrls";
+import { projectPublicFeedRating } from "@/server/entries/publicFeed";
 
 type FeedEntryRow = {
   id: string;
@@ -969,7 +970,7 @@ export async function GET(request: Request) {
     const groupedPost = groupedPostByEntryId.get(entry.id);
 
     return {
-      ...entry,
+      ...projectPublicFeedRating(entry),
       primary_grapes: primaryGrapeMap.get(entry.id) ?? [],
       drinking_now: entry.drinking_now === true,
       viewer_is_direct_friend: acceptedFriendIdsSet.has(entry.user_id),
