@@ -1,5 +1,8 @@
 # B06b handover — September 13, 2026
 
+> Historical implementation checkpoint. These slices are now merged, the badge migration is deployed, live checks passed and fixtures are cleaned. Use the [combined release handover](b06b-b06d-release.md) for current state; the original checkpoint below preserves history.
+
+
 ## Objective and IDs
 AUD-09: server-controlled award writes and 53 stored-fact badge definitions. Preserve all 85; 32 deliberately deferred, with reasons in [contract](../b06-badge-contract.md). QC-03 and QC-08 remain separate next slices. Issue #112.
 

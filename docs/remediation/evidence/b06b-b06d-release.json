@@ -1,0 +1,131 @@
+{
+  "date": "2026-09-13",
+  "issue": 112,
+  "productMerge": "b51ae782bfd941afeb8c954d58927b9f58965263",
+  "prs": [
+    {
+      "number": 113,
+      "head": "640338eef47fc7cc8095235c756fdf42be8f9339",
+      "merge": "f06fd7f1c6b0029464f454ba0309772a227e041c",
+      "ciRun": 34742827821
+    },
+    {
+      "number": 114,
+      "head": "626ee6057414f52587ac1a486887094257d06cec",
+      "merge": "a75cb89e6860f727c79327170f6a7b21f5dac526",
+      "ciRun": 34743129428
+    },
+    {
+      "number": 115,
+      "head": "a4f20ebca2db88a0c0febb03338a5be006192f94",
+      "merge": "b51ae782bfd941afeb8c954d58927b9f58965263",
+      "ciRun": 34743628811
+    }
+  ],
+  "production": {
+    "id": "dpl_2mmNXsfTW4ztLghCRgmVDoUuCiJ7",
+    "githubDeployment": 6418650956,
+    "url": "https://cellar-snap-ivfglhy88-eitan-sneiders-projects.vercel.app",
+    "alias": "https://cellarsnap.app",
+    "state": "READY",
+    "successAt": "2026-09-13T06:53:56Z"
+  },
+  "sql": {
+    "file": "supabase/sql/20260913061822_server_authoritative_badge_awards.sql",
+    "remoteVersion": "20260913064845",
+    "name": "server_authoritative_badge_awards",
+    "localAndRemoteStatementSha256": "535ab04b29381ed7af478d0a54610e6be4cd9a3bc3257a0251ee271089444846",
+    "clientGrants": [
+      "authenticated:SELECT"
+    ],
+    "clientInsertPolicyRemoved": true
+  },
+  "checks": {
+    "isolated": 385,
+    "schemaSource": 5,
+    "types": true,
+    "lint": true,
+    "nextBuild": true,
+    "expoExports": [
+      "web",
+      "ios-hermes",
+      "android-hermes"
+    ],
+    "liveCookieBearerParity": true,
+    "liveClientAwardWritesDenied": true,
+    "liveConcurrentAwardsExactlyOnce": true,
+    "liveRestrictedEventSlides": true,
+    "browserDesktopPhone": true,
+    "expoWeb": true,
+    "nativeRuntimeAvailable": false,
+    "nativeDeployed": false,
+    "summaryBrowserOutageHarness": "incomplete: Next client did not hydrate",
+    "boundedProductionErrorRecords": 0
+  },
+  "securityAdvisors": {
+    "unchanged": true,
+    "groups": [
+      {
+        "name": "rls_enabled_no_policy",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+      },
+      {
+        "name": "security_definer_view",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0010_security_definer_view"
+      },
+      {
+        "name": "function_search_path_mutable",
+        "count": 2,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+      },
+      {
+        "name": "extension_in_public",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0014_extension_in_public"
+      },
+      {
+        "name": "anon_security_definer_function_executable",
+        "count": 12,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable"
+      },
+      {
+        "name": "authenticated_security_definer_function_executable",
+        "count": 12,
+        "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable"
+      },
+      {
+        "name": "auth_leaked_password_protection",
+        "count": 1,
+        "remediation": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection"
+      }
+    ]
+  },
+  "residuals": [
+    "32 deferred badge definitions",
+    "featured-profile direct award authority",
+    "historical award correctness review",
+    "native runtime/distribution",
+    "summary browser outage visual acceptance",
+    "existing OPS-01 duplicate hosting"
+  ],
+  "cleanup": {
+    "badgeTastings": 15,
+    "qcAwards": 3,
+    "eventEntries": 2,
+    "eventGroups": 1,
+    "eventSlides": 3,
+    "entryPhotos": 2,
+    "storageObjects": 3,
+    "originalAwardsPreserved": 5,
+    "verified": true,
+    "baselineSummary": {
+      "entryCount": 71,
+      "countryCount": 2,
+      "friendCount": 2,
+      "pendingFriendRequests": 0,
+      "badgeCount": 5
+    }
+  }
+}

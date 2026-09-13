@@ -1,5 +1,8 @@
 # B06c handover — September 13, 2026
 
+> Historical implementation checkpoint. These slices are now merged, the badge migration is deployed, live checks passed and fixtures are cleaned. Use the [combined release handover](b06b-b06d-release.md) for current state; the original checkpoint below preserves history.
+
+
 ## Objective and IDs
 QC-03: consistent own-activity summary for web menu/profile/palate and mobile menu/profile/Library. Issue #112. Related AUD-35/39 remain broader work; average rating/top grape/top region and filtered-result totals remain outside this count slice.
 
