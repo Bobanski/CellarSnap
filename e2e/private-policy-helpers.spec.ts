@@ -45,7 +45,7 @@ test('moving policy helper OIDs preserves complete owner/friend/FOF/stranger/tes
       expect((await db.query('select can_access_wine_photo($1) allowed', [`${uid(1)}/${uid(100)}/label-legacy.jpg`])).rows).toEqual([{ allowed: false }]);
     }
     await db.exec('reset role'); await db.exec(await readFile(migration, 'utf8'));
-    expect((await db.query("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname in ('is_test_account','is_user_blocked','are_friends','can_view_test_authored_content','can_view_entry_standard','can_view_entry')")).rows[0].n).toBe(6);
+    expect((await db.query<{n: number}>("select count(*)::int n from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='private' and p.proname in ('is_test_account','is_user_blocked','are_friends','can_view_test_authored_content','can_view_entry_standard','can_view_entry')")).rows[0].n).toBe(6);
   } finally { await db.close(); }
 });
 
