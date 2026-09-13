@@ -168,11 +168,13 @@ export async function persistEntryResolution({
   entryId,
   userId,
   input,
+  preserveWineType = false,
 }: {
   supabase: ResolverSupabaseClient;
   entryId: string;
   userId: string;
   input: ResolverInput;
+  preserveWineType?: boolean;
 }): Promise<{
   entry: PersistedEntryRow;
   resolution: ResolverOutput;
@@ -193,8 +195,12 @@ export async function persistEntryResolution({
     resolution = createStubResolution(input);
   }
 
+  const resolutionPayload: Record<string, unknown> = buildEntryResolutionPayload(input, resolution);
+  // An explicit atomic editor choice (including clearing it) is authoritative.
+  // Keep derived resolution, but don't overwrite a submitted field after commit.
+  if (preserveWineType) delete resolutionPayload.wine_type;
   const updateResult = await executeWithColumnFallback({
-    initialPayload: buildEntryResolutionPayload(input, resolution),
+    initialPayload: resolutionPayload,
     removableColumns: ENTRY_RESOLUTION_COLUMNS,
     maxAttempts: 3,
     attempt: async (payload) => {

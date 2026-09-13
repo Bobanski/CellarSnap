@@ -909,6 +909,43 @@ test.describe("Phase 6 route handler regressions", () => {
     });
   });
 
+  test("adopted web edits use one command, preserve replay semantics and never fall back on failure", async () => {
+    for (const failure of [null, "PT409", "22023", "42501", "PGRST202"]) {
+      const fixture = makeEntryPutSupabase({ viewerUserId: "owner-1", existingRating: 92 });
+      const calls: unknown[] = [];
+      const client = { ...fixture.client, rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return failure ? { data: null, error: { code: failure, message: "Fixture" } }
+          : { data: { entry: { id: "entry-1", user_id: "owner-1", rating: 92, notes: "After", entry_group_id: null }, replayed: true }, error: null };
+      } };
+      const handler = createEntryPutHandler({
+        createSupabaseServerClient: async () => client as never,
+        fetchPrimaryGrapesByEntryId: async () => new Map([["entry-1", []]]),
+        persistEntryResolution: async () => { throw new Error("Replay must not repeat resolution"); },
+      });
+      const response = await handler(new Request("http://localhost/api/entries/entry-1", {
+        method: "PUT", headers: { "content-type": "application/json", "X-CellarSnap-Entry-Edit": "atomic-v1" },
+        body: JSON.stringify({ notes: "After", expected_entry: { notes: "Before" } }),
+      }), { params: Promise.resolve({ id: "entry-1" }) });
+      expect(response.status).toBe(failure === "PT409" ? 409 : failure === "22023" ? 400 : failure === "42501" ? 403 : failure ? 503 : 200);
+      expect(calls).toEqual([{ name: "save_entry_details", args: { p_entry_id: "entry-1", p_updates: { notes: "After" }, p_expected: { notes: "Before" } } }]);
+      expect(fixture.getLastUpdatePayload()).toBeNull();
+    }
+  });
+
+  test("atomic web malformed snapshots and group requests fail before mutation", async () => {
+    for (const body of [{ notes: "After" }, { primary_grape_ids: [], expected_entry: {} }, { notes: "After", expected_entry: {}, expected_grape_ids: [] },
+      { entry_group_title: "Changed", expected_entry: {} }]) {
+      const fixture = makeEntryPutSupabase({ viewerUserId: "owner-1", existingRating: 92 });
+      const handler = createEntryPutHandler({ createSupabaseServerClient: async () => fixture.client as never });
+      const response = await handler(new Request("http://localhost/api/entries/entry-1", {
+        method: "PUT", headers: { "content-type": "application/json", "X-CellarSnap-Entry-Edit": "atomic-v1" }, body: JSON.stringify(body),
+      }), { params: Promise.resolve({ id: "entry-1" }) });
+      expect([400, 409]).toContain(response.status);
+      expect(fixture.getLastUpdatePayload()).toBeNull();
+    }
+  });
+
   test("entry delete route deletes via the admin client after confirming ownership", async () => {
     const clients = makeEntryDeleteClients({
       viewerUserId: "owner-1",

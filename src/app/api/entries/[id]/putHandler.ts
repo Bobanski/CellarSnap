@@ -16,6 +16,13 @@ import { isValidWineType } from "@/server/algorithm/resolver";
 import { invalidateUserScoreCache } from "@/server/algorithm/scoreCache";
 import { refreshRecentUserScoreCache } from "@/server/algorithm/cacheRefresh";
 import { resolveEntrySensoryProfile } from "@/server/algorithm/resolveEntrySensory";
+import { z } from "zod";
+import type { Json } from "@shared";
+
+const atomicSnapshotSchema = z.object({
+  expected_entry: z.record(z.string(), z.unknown()),
+  expected_grape_ids: z.array(z.string().uuid()).max(3).optional(),
+});
 
 function isPrimaryGrapeSchemaMissing(message: string) {
   return (
@@ -71,6 +78,7 @@ export function createEntryPutHandler(
     { params }: { params: Promise<{ id: string }> }
   ) {
     const { id } = await params;
+    const atomicEdit = request.headers.get("X-CellarSnap-Entry-Edit") === "atomic-v1";
 
     const supabase = await resolvedDependencies.createSupabaseServerClient();
     const {
@@ -94,6 +102,10 @@ export function createEntryPutHandler(
         { error: payload.error.flatten() },
         { status: 400 }
       );
+    }
+    const snapshot = atomicEdit ? atomicSnapshotSchema.safeParse(body) : null;
+    if (snapshot && !snapshot.success) {
+      return NextResponse.json({ error: "Entry edit data is incomplete. Refresh before saving." }, { status: 400 });
     }
 
     const normalizedData = {
@@ -140,7 +152,7 @@ export function createEntryPutHandler(
     if (
       Object.keys(updates).length === 0 &&
       primaryGrapeIds === undefined &&
-      !hasGroupUpdates
+      !hasGroupUpdates && !atomicEdit
     ) {
       return NextResponse.json(
         { error: "No updates provided" },
@@ -168,6 +180,9 @@ export function createEntryPutHandler(
     if (targetEntry.user_id !== user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    if (atomicEdit && (hasGroupUpdates || targetEntry.entry_group_id)) {
+      return NextResponse.json({ error: "This entry is now grouped. Refresh before editing the group." }, { status: 409 });
+    }
 
     const persistedRating = resolvePersistedEntryRating({
       existingRating: targetEntry.rating,
@@ -188,249 +203,279 @@ export function createEntryPutHandler(
     }
 
     let updatedEntry: ({ id: string } & Record<string, unknown>) | null = null;
+    let replayed = false;
 
-    if (Object.keys(updates).length > 0) {
-      const updateResult = await resolvedDependencies.executeWithColumnFallback({
-        initialPayload: updates,
-        removableColumns: ENTRY_OPTIONAL_UPDATE_COLUMNS,
-        maxAttempts: 3,
-        attempt: async (payloadToApply) => {
-          if (Object.keys(payloadToApply).length === 0) {
-            const existingEntry = await supabase
-              .from("wine_entries")
-              .select("*")
-              .eq("id", id)
-              .eq("user_id", user.id)
-              .maybeSingle();
-            return {
-              data: existingEntry.data,
-              error: existingEntry.error,
-            };
-          }
-
-          const updateAttempt = await supabase
-            .from("wine_entries")
-            .update(payloadToApply)
-            .eq("id", id)
-            .eq("user_id", user.id)
-            .select("*")
-            .maybeSingle();
-
-          return {
-            data: updateAttempt.data,
-            error: updateAttempt.error,
-          };
-        },
+    if (atomicEdit && snapshot?.success) {
+      if ((primaryGrapeIds === undefined) !== (snapshot.data.expected_grape_ids === undefined)) {
+        return NextResponse.json({ error: "Entry grape snapshot is incomplete. Refresh before saving." }, { status: 400 });
+      }
+      const { data, error } = await supabase.rpc("save_entry_details", {
+        p_entry_id: id, p_updates: updates as Json,
+        p_expected: snapshot.data.expected_entry as Json,
+        ...(primaryGrapeIds !== undefined ? {
+          p_grape_ids: primaryGrapeIds, p_expected_grape_ids: snapshot.data.expected_grape_ids,
+        } : {}),
       });
-      const data = updateResult.data;
-      const error = updateResult.error;
-
-      if (!error && !data) {
-        return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+      if (error) {
+        const conflict = error.code === "PT409";
+        const invalid = ["22023", "23514", "22P02", "22007", "22008"].includes(error.code);
+        return NextResponse.json({ error: conflict
+          ? "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+          : invalid ? "Invalid entry details. Check the fields and try again."
+          : "Unable to confirm the save. Your changes are still here; please retry.", code: error.code },
+        { status: conflict ? 409 : invalid ? 400 : error.code === "42501" ? 403 : 503 });
       }
-
-      if (error || !data) {
-        if (error && isMissingDbColumnError(error, "advanced_notes")) {
-          return NextResponse.json(
-            {
-              error:
-                "Advanced notes are temporarily unavailable. Please try again later. (ADVANCED_NOTES_UNAVAILABLE)",
-              code: "ADVANCED_NOTES_UNAVAILABLE",
-            },
-            { status: 503 }
-          );
-        }
-        if (
-          error?.message.includes(
-            "wine_entries_price_source_requires_price_check"
-          )
-        ) {
-          return NextResponse.json(
-            {
-              error:
-                "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
-            },
-            { status: 400 }
-          );
-        }
-        if (
-          (error && isMissingDbColumnError(error, "price_paid")) ||
-          (error && isMissingDbColumnError(error, "price_paid_currency")) ||
-          (error && isMissingDbColumnError(error, "price_paid_source")) ||
-          (error && isMissingDbColumnError(error, "qpr_level"))
-        ) {
-          return NextResponse.json(
-            {
-              error:
-                "Entry pricing and QPR are temporarily unavailable. Please try again later. (ENTRY_PRICING_UNAVAILABLE)",
-              code: "ENTRY_PRICING_UNAVAILABLE",
-            },
-            { status: 503 }
-          );
-        }
-        return NextResponse.json(
-          { error: error?.message ?? "Update failed" },
-          { status: 500 }
-        );
+      if (!data?.entry || data.entry.id !== id) {
+        return NextResponse.json({ error: "Unable to confirm the save. Please retry." }, { status: 503 });
       }
-
-      updatedEntry = data;
-    } else {
-      const { data, error } = await supabase
-        .from("wine_entries")
-        .select("*")
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .single();
-
-      if (error || !data) {
-        return NextResponse.json({ error: "Entry not found" }, { status: 404 });
-      }
-
-      updatedEntry = data;
+      updatedEntry = data.entry;
+      replayed = data.replayed === true;
     }
 
-    if (primaryGrapeIds !== undefined) {
-      let primaryGrapeSchemaAvailable = true;
+    if (!atomicEdit) {
+      if (Object.keys(updates).length > 0) {
+        const updateResult = await resolvedDependencies.executeWithColumnFallback({
+          initialPayload: updates,
+          removableColumns: ENTRY_OPTIONAL_UPDATE_COLUMNS,
+          maxAttempts: 3,
+          attempt: async (payloadToApply) => {
+            if (Object.keys(payloadToApply).length === 0) {
+              const existingEntry = await supabase
+                .from("wine_entries")
+                .select("*")
+                .eq("id", id)
+                .eq("user_id", user.id)
+                .maybeSingle();
+              return {
+                data: existingEntry.data,
+                error: existingEntry.error,
+              };
+            }
 
-      if (primaryGrapeIds.length > 0) {
-        const { data: grapeRows, error: grapeLookupError } = await supabase
-          .from("grape_varieties")
-          .select("id")
-          .in("id", primaryGrapeIds);
+            const updateAttempt = await supabase
+              .from("wine_entries")
+              .update(payloadToApply)
+              .eq("id", id)
+              .eq("user_id", user.id)
+              .select("*")
+              .maybeSingle();
 
-        if (grapeLookupError) {
-          if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
-            primaryGrapeSchemaAvailable = false;
-          } else {
+            return {
+              data: updateAttempt.data,
+              error: updateAttempt.error,
+            };
+          },
+        });
+        const data = updateResult.data;
+        const error = updateResult.error;
+
+        if (!error && !data) {
+          return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+        }
+
+        if (error || !data) {
+          if (error && isMissingDbColumnError(error, "advanced_notes")) {
             return NextResponse.json(
-              { error: grapeLookupError.message },
-              { status: 500 }
+              {
+                error:
+                  "Advanced notes are temporarily unavailable. Please try again later. (ADVANCED_NOTES_UNAVAILABLE)",
+                code: "ADVANCED_NOTES_UNAVAILABLE",
+              },
+              { status: 503 }
             );
           }
-        } else {
-          const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
-          if (validGrapeIds.size !== primaryGrapeIds.length) {
+          if (
+            error?.message.includes(
+              "wine_entries_price_source_requires_price_check"
+            )
+          ) {
             return NextResponse.json(
-              { error: "One or more selected primary grapes are invalid." },
+              {
+                error:
+                  "Price paid, currency, and source must be set together. Select a currency and retail/restaurant when entering a price.",
+              },
               { status: 400 }
             );
           }
+          if (
+            (error && isMissingDbColumnError(error, "price_paid")) ||
+            (error && isMissingDbColumnError(error, "price_paid_currency")) ||
+            (error && isMissingDbColumnError(error, "price_paid_source")) ||
+            (error && isMissingDbColumnError(error, "qpr_level"))
+          ) {
+            return NextResponse.json(
+              {
+                error:
+                  "Entry pricing and QPR are temporarily unavailable. Please try again later. (ENTRY_PRICING_UNAVAILABLE)",
+                code: "ENTRY_PRICING_UNAVAILABLE",
+              },
+              { status: 503 }
+            );
+          }
+          return NextResponse.json(
+            { error: error?.message ?? "Update failed" },
+            { status: 500 }
+          );
         }
+
+        updatedEntry = data;
+      } else {
+        const { data, error } = await supabase
+          .from("wine_entries")
+          .select("*")
+          .eq("id", id)
+          .eq("user_id", user.id)
+          .single();
+
+        if (error || !data) {
+          return NextResponse.json({ error: "Entry not found" }, { status: 404 });
+        }
+
+        updatedEntry = data;
       }
 
-      if (primaryGrapeSchemaAvailable) {
-        const { error: deletePrimaryGrapesError } = await supabase
-          .from("entry_primary_grapes")
-          .delete()
-          .eq("entry_id", id);
+      if (primaryGrapeIds !== undefined) {
+        let primaryGrapeSchemaAvailable = true;
 
-        if (deletePrimaryGrapesError) {
-          if (isPrimaryGrapeSchemaMissing(deletePrimaryGrapesError.message)) {
-            primaryGrapeSchemaAvailable = false;
+        if (primaryGrapeIds.length > 0) {
+          const { data: grapeRows, error: grapeLookupError } = await supabase
+            .from("grape_varieties")
+            .select("id")
+            .in("id", primaryGrapeIds);
+
+          if (grapeLookupError) {
+            if (isPrimaryGrapeSchemaMissing(grapeLookupError.message)) {
+              primaryGrapeSchemaAvailable = false;
+            } else {
+              return NextResponse.json(
+                { error: grapeLookupError.message },
+                { status: 500 }
+              );
+            }
           } else {
-            return NextResponse.json(
-              { error: deletePrimaryGrapesError.message },
-              { status: 500 }
+            const validGrapeIds = new Set((grapeRows ?? []).map((row) => row.id));
+            if (validGrapeIds.size !== primaryGrapeIds.length) {
+              return NextResponse.json(
+                { error: "One or more selected primary grapes are invalid." },
+                { status: 400 }
+              );
+            }
+          }
+        }
+
+        if (primaryGrapeSchemaAvailable) {
+          const { error: deletePrimaryGrapesError } = await supabase
+            .from("entry_primary_grapes")
+            .delete()
+            .eq("entry_id", id);
+
+          if (deletePrimaryGrapesError) {
+            if (isPrimaryGrapeSchemaMissing(deletePrimaryGrapesError.message)) {
+              primaryGrapeSchemaAvailable = false;
+            } else {
+              return NextResponse.json(
+                { error: deletePrimaryGrapesError.message },
+                { status: 500 }
+              );
+            }
+          }
+        }
+
+        if (primaryGrapeSchemaAvailable && primaryGrapeIds.length > 0) {
+          const { error: insertPrimaryGrapesError } = await supabase
+            .from("entry_primary_grapes")
+            .insert(
+              primaryGrapeIds.map((varietyId, index) => ({
+                entry_id: id,
+                variety_id: varietyId,
+                position: index + 1,
+              }))
             );
+
+          if (insertPrimaryGrapesError) {
+            if (isPrimaryGrapeSchemaMissing(insertPrimaryGrapesError.message)) {
+              // Ignore if migration is not installed yet; entry updates should still succeed.
+            } else {
+              return NextResponse.json(
+                { error: insertPrimaryGrapesError.message },
+                { status: 500 }
+              );
+            }
           }
         }
       }
 
-      if (primaryGrapeSchemaAvailable && primaryGrapeIds.length > 0) {
-        const { error: insertPrimaryGrapesError } = await supabase
-          .from("entry_primary_grapes")
-          .insert(
-            primaryGrapeIds.map((varietyId, index) => ({
-              entry_id: id,
-              variety_id: varietyId,
-              position: index + 1,
-            }))
-          );
+      const targetEntryGroupId =
+        typeof targetEntry.entry_group_id === "string" &&
+        targetEntry.entry_group_id.length > 0
+          ? targetEntry.entry_group_id
+          : null;
 
-        if (insertPrimaryGrapesError) {
-          if (isPrimaryGrapeSchemaMissing(insertPrimaryGrapesError.message)) {
-            // Ignore if migration is not installed yet; entry updates should still succeed.
-          } else {
+      if (hasGroupUpdates && !targetEntryGroupId) {
+        return NextResponse.json(
+          { error: "This entry is not part of a grouped bulk post." },
+          { status: 400 }
+        );
+      }
+
+      if (targetEntryGroupId && (entryGroupMode !== undefined || entryGroupTitle !== undefined)) {
+        const groupUpdatePayload: Record<string, unknown> = {
+          updated_at: new Date().toISOString(),
+        };
+        if (entryGroupMode !== undefined) {
+          groupUpdatePayload.mode = entryGroupMode;
+        }
+        if (entryGroupTitle !== undefined) {
+          groupUpdatePayload.title = entryGroupTitle;
+        }
+
+        const { error: groupUpdateError } = await supabase
+          .from("entry_groups")
+          .update(groupUpdatePayload)
+          .eq("id", targetEntryGroupId)
+          .eq("user_id", user.id);
+
+        if (groupUpdateError) {
+          if (isMissingGroupedPostSchemaError(groupUpdateError.message)) {
             return NextResponse.json(
-              { error: insertPrimaryGrapesError.message },
-              { status: 500 }
+              {
+                error:
+                  "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
+                code: "ENTRY_GROUPS_UNAVAILABLE",
+              },
+              { status: 503 }
             );
           }
-        }
-      }
-    }
-
-    const targetEntryGroupId =
-      typeof targetEntry.entry_group_id === "string" &&
-      targetEntry.entry_group_id.length > 0
-        ? targetEntry.entry_group_id
-        : null;
-
-    if (hasGroupUpdates && !targetEntryGroupId) {
-      return NextResponse.json(
-        { error: "This entry is not part of a grouped bulk post." },
-        { status: 400 }
-      );
-    }
-
-    if (targetEntryGroupId && (entryGroupMode !== undefined || entryGroupTitle !== undefined)) {
-      const groupUpdatePayload: Record<string, unknown> = {
-        updated_at: new Date().toISOString(),
-      };
-      if (entryGroupMode !== undefined) {
-        groupUpdatePayload.mode = entryGroupMode;
-      }
-      if (entryGroupTitle !== undefined) {
-        groupUpdatePayload.title = entryGroupTitle;
-      }
-
-      const { error: groupUpdateError } = await supabase
-        .from("entry_groups")
-        .update(groupUpdatePayload)
-        .eq("id", targetEntryGroupId)
-        .eq("user_id", user.id);
-
-      if (groupUpdateError) {
-        if (isMissingGroupedPostSchemaError(groupUpdateError.message)) {
           return NextResponse.json(
-            {
-              error:
-                "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
-              code: "ENTRY_GROUPS_UNAVAILABLE",
-            },
-            { status: 503 }
+            { error: groupUpdateError.message },
+            { status: 500 }
           );
         }
-        return NextResponse.json(
-          { error: groupUpdateError.message },
-          { status: 500 }
-        );
       }
-    }
 
-    if (targetEntryGroupId && syncGroupConsumedAt && typeof updates.consumed_at === "string") {
-      const { error: syncConsumedAtError } = await supabase
-        .from("wine_entries")
-        .update({ consumed_at: updates.consumed_at })
-        .eq("entry_group_id", targetEntryGroupId)
-        .eq("user_id", user.id);
+      if (targetEntryGroupId && syncGroupConsumedAt && typeof updates.consumed_at === "string") {
+        const { error: syncConsumedAtError } = await supabase
+          .from("wine_entries")
+          .update({ consumed_at: updates.consumed_at })
+          .eq("entry_group_id", targetEntryGroupId)
+          .eq("user_id", user.id);
 
-      if (syncConsumedAtError) {
-        if (isMissingGroupedPostSchemaError(syncConsumedAtError.message)) {
+        if (syncConsumedAtError) {
+          if (isMissingGroupedPostSchemaError(syncConsumedAtError.message)) {
+            return NextResponse.json(
+              {
+                error:
+                  "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
+                code: "ENTRY_GROUPS_UNAVAILABLE",
+              },
+              { status: 503 }
+            );
+          }
           return NextResponse.json(
-            {
-              error:
-                "Grouped bulk posts are unavailable until `supabase/sql/045_entry_groups.sql` is applied.",
-              code: "ENTRY_GROUPS_UNAVAILABLE",
-            },
-            { status: 503 }
+            { error: syncConsumedAtError.message },
+            { status: 500 }
           );
         }
-        return NextResponse.json(
-          { error: syncConsumedAtError.message },
-          { status: 500 }
-        );
       }
     }
 
@@ -441,6 +486,9 @@ export function createEntryPutHandler(
     const primaryGrapesByEntryId =
       await resolvedDependencies.fetchPrimaryGrapesByEntryId(supabase, [id]);
     const currentPrimaryGrapes = primaryGrapesByEntryId.get(id) ?? [];
+    if (replayed) {
+      return NextResponse.json({ entry: { ...updatedEntry, primary_grapes: currentPrimaryGrapes } });
+    }
     const shouldRerunResolution =
       primaryGrapeIds !== undefined ||
       ["region", "producer", "classification", "wine_type", "country"].some(
@@ -455,6 +503,7 @@ export function createEntryPutHandler(
           supabase,
           entryId: id,
           userId: user.id,
+          preserveWineType: atomicEdit && Object.prototype.hasOwnProperty.call(updates, "wine_type"),
           input: {
             region:
               typeof updatedEntry.region === "string" ? updatedEntry.region : null,

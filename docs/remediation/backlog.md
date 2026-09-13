@@ -1,6 +1,6 @@
 # Canonical remediation backlog
 
-Updated September 13, 2026. **69 records: all 50 original audit findings, seventeen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
+Updated September 13, 2026. **70 records: all 50 original audit findings, eighteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
@@ -86,6 +86,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-15 | P2 | Transient local profile JSON parse failure | Not reproducible | B06e resume: clean production build and dev 3004 repeated profile loads pass, no JSON errors. Original cause unknown; retain reproduction history and reopen on recurrence. [QC](../audits/b06e-qc-2026-09-13.md). |
 | QC-14 | P2 | Seeded grape alias normalization drops uppercase letters | Partial | B05e repair applied `20260913080026`; 130 valid keys, unchanged varieties/entry joins, web/cookie/bearer QC passed. Mobile manual alias search implemented and Expo-tested; source #119 merged `67a188f`, primary production verified; native runtime/distribution pending. [Handover](handovers/batch-05e.md). |
 | QC-17 | P1 | Mobile owner editor retains bulk-only search/error guards | Partial | B08a #128 merged `3415e6a`: normal owner search/add works, options survive scroll/keyboard blur, save errors appear beside Save changes. Desktop/phone failure/recovery passed. B08b adds atomic save/retry/conflict/deadline behavior and bulk phone QC. Native runtime/distribution remains. [Current release](handovers/b02e-b02f-b08b-release.md). |
+| QC-18 | P2 | Web entry editor labels are not associated with inputs | Open | B11: give existing notes/rating/detail inputs programmatic names; keyboard and desktop/phone accessibility-tree checks. Found during B08c; separate from atomic save behavior. |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -421,3 +422,15 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 
 ### B02h revocation measurement/contract complete
 - AUD-01 P0/Partial: real disposable raw/transformed Storage URLs were CDN HITs after privacy changes and remained readable 0/5/15/30 seconds after old-object deletion; denial at 60/90 seconds. Copy hash preserved, fixture cleaned. Single host, no global deadline/native retained-copy guarantee. [Contract](b02h-photo-revocation-contract.md), [checkpoint](handovers/batch-02h.md). No production rekey or old-client cutoff; durable rekey plus supported-client/authority adoption remains required.
+
+### B08c active — ordinary web details/grapes
+- AUD-13/15 Partial, branch `codex/b08c-atomic-web-details`, base B02h `a944179`, issue #81. Scope: ordinary (ungrouped) web editor opt-in to existing owner-only atomic details/grapes command; extend allowlist with wine type and entry/reaction/comment privacy, preserve expected raw values, omit untouched grapes, bound saves and expose conflicts. No group/lifecycle/import or side-effect ownership refactor.
+- QC passed — application release pending. Both forward SQL files are live, reviewed full hosted catalog matches; authority/signature/locks preserved. 411 isolated checks, 18 schema tests, actual PG17 replay/races, types/lint/build and desktop/phone web plus Expo counterpart passed. Privacy-domain omission corrected in a forward migration before client release, and all current UI options retested. [Checkpoint](handovers/batch-08c.md) records exact versions/hashes, fault/retry/conflict results and native/scoring limits.
+
+### QC-18 — Web editor inputs have visible labels but no accessible names
+- Priority / status: P2 / Open. Discovered September 13, 2026 during B08c local production browser QC, based on main/B02g source; no input markup changed in B08c.
+- Evidence: `src/features/entries/edit/EditEntryScreenContainer.tsx` Notes and Rating render sibling `<label>` elements without `htmlFor` and fields without matching IDs. Desktop accessibility snapshot contains `text: Notes` followed by unnamed `textbox: Before`; `getByRole('textbox', {name:'Notes'})` fails while `textarea[name=notes]` exists and is editable. Wine detail fields use the same pattern.
+- Impact: assistive technology cannot reliably identify these controls. Confirmed in browser; native editor is a different implementation. Related QC-06, not the same mobile pressable defect.
+- Target batch / owner / issue: B11 / unassigned / no separate GitHub issue.
+- Acceptance: unique label/input associations and useful names across the existing editor; desktop/phone accessibility-tree and keyboard checks, no layout/form-save regression.
+- Deployment / rollback: future web markup change; no data migration. No unrelated label changes included in B08c.

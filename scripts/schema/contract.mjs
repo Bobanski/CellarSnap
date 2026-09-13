@@ -80,6 +80,18 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  // B08c changes only four owner-editable allowlist fields; no signature/grant change.
+  for (const file of ['./b08c-catalog-delta.json', './b08c-privacy-catalog-delta.json']) {
+  const webEditDelta = JSON.parse(await readFile(new URL(file, import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(webEditDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error('Missing reviewed B08c predecessor');
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

@@ -1,0 +1,125 @@
+{
+  "results": [
+    {
+      "device": "desktop",
+      "notesOnlyPreservesGrapeIds": true,
+      "onlyTouchedFields": true
+    },
+    {
+      "device": "desktop",
+      "explicitGrapesAndClearedWineType": true,
+      "explicitLostResponseRetryPreservesLinkIds": true
+    },
+    {
+      "device": "desktop",
+      "privacySnapshotMatchesStoredValues": true,
+      "atomicPrivacySave": true
+    },
+    {
+      "device": "desktop",
+      "outageRetainsInputAndSavedData": true,
+      "lostResponseRetry": true
+    },
+    {
+      "device": "desktop",
+      "conflictPreservesBothStates": true,
+      "refreshRecovery": true
+    },
+    {
+      "device": "phone",
+      "notesOnlyPreservesGrapeIds": true,
+      "onlyTouchedFields": true
+    },
+    {
+      "device": "phone",
+      "explicitGrapesAndClearedWineType": true,
+      "explicitLostResponseRetryPreservesLinkIds": true
+    },
+    {
+      "device": "phone",
+      "privacySnapshotMatchesStoredValues": true,
+      "atomicPrivacySave": true
+    },
+    {
+      "device": "phone",
+      "outageRetainsInputAndSavedData": true,
+      "lostResponseRetry": true
+    },
+    {
+      "device": "phone",
+      "timeoutRetainsDataAndInput": true
+    },
+    {
+      "device": "phone",
+      "conflictPreservesBothStates": true,
+      "refreshRecovery": true
+    },
+    {
+      "expoPhoneReadsWebGrapes": true,
+      "expoSaveVisibleOnWeb": true
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+    "Failed to load resource: the server responded with a status of 409 (Conflict)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+  ],
+  "responses": [
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "Unable to confirm the save. Your changes are still here; please retry."
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "QC temporary save outage"
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "Unable to confirm the save. Your changes are still here; please retry."
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 409,
+      "error": "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "Unable to confirm the save. Your changes are still here; please retry."
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "QC temporary save outage"
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 503,
+      "error": "Unable to confirm the save. Your changes are still here; please retry."
+    },
+    {
+      "path": "/api/entries/fixture",
+      "status": 409,
+      "error": "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+    },
+    {
+      "path": "/api/algorithm/score",
+      "status": 400,
+      "error": "Wine type is required to score this entry. Use direct fields or ensure canonical wine_type is populated."
+    }
+  ],
+  "fixturesRemoved": true,
+  "awardsUnchanged": true,
+  "environment": "Local Next production build against hosted SQL; desktop 1440x1000, phone 390x844; Expo browser counterpart, not native",
+  "knownDiagnostic": "Clearing wine_type leaves sparse fixture not ready for algorithm score: existing 400, AUD-10 remains Partial"
+}

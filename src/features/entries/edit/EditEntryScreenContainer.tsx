@@ -1,6 +1,7 @@
 "use client";
 
 import { authenticatedPhotoUrl } from "@/lib/storage/photoDelivery";
+import { buildEntryEditSnapshot } from "@shared/entryEdit";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -168,7 +169,7 @@ export default function EditEntryPage() {
     setValue,
     setError,
     clearErrors,
-    formState: { errors },
+    formState: { errors, dirtyFields },
   } = useForm<EditEntryForm>({
     defaultValues: {
       consumed_at: getTodayLocalYmd(),
@@ -1761,11 +1762,45 @@ export default function EditEntryPage() {
       updatePayload.is_feed_visible = true;
     }
 
-    const response = await fetch(`/api/entries/${entry.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatePayload),
-    });
+    let requestPayload = updatePayload;
+    if (!entryHasGroupedPost) {
+      // Only touched fields participate in concurrency checks. Form defaults
+      // must not convert nulls or silently overwrite unrelated persisted edits.
+      const changed = Object.fromEntries(Object.entries(updatePayload).filter(([key]) =>
+        Boolean(dirtyFields[key as keyof EditEntryForm]) || (key === "is_feed_visible" && shouldPublishOnSave)));
+      if (["price_paid", "price_paid_currency", "price_paid_source"].some(key => key in changed)) {
+        for (const key of ["price_paid", "price_paid_currency", "price_paid_source"]) changed[key] = updatePayload[key];
+      }
+      if (JSON.stringify(selectedUserIds) !== JSON.stringify(entry.tasted_with_user_ids ?? [])) {
+        changed.tasted_with_user_ids = selectedUserIds;
+      }
+      const originalGrapes = [...(entry.primary_grapes ?? [])].sort((a, b) => a.position - b.position).map(grape => grape.id);
+      const grapes = selectedPrimaryGrapes.map(grape => grape.id);
+      try {
+        const snapshot = buildEntryEditSnapshot(changed, entry);
+        requestPayload = { ...changed, expected_entry: snapshot.expected,
+          ...(JSON.stringify(grapes) !== JSON.stringify(originalGrapes)
+            ? { primary_grape_ids: grapes, expected_grape_ids: originalGrapes } : {}),
+        };
+      } catch {
+        setIsSubmitting(false);
+        setErrorMessage("Entry edit data is incomplete. Refresh the page before saving.");
+        return;
+      }
+    }
+    let response: Response;
+    try {
+      response = await fetch(`/api/entries/${entry.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...(!entryHasGroupedPost ? { "X-CellarSnap-Entry-Edit": "atomic-v1" } : {}) },
+        body: JSON.stringify(requestPayload),
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage("Unable to confirm the save. Your changes are still here; please retry.");
+      return;
+    }
 
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
