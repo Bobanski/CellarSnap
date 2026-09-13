@@ -1,3 +1,6 @@
+import type { SupabaseClient, QueryData } from "@supabase/supabase-js";
+import type { Database } from "@shared/database.types";
+
 type QueryError = {
   message: string;
   code?: string | null;
@@ -50,18 +53,13 @@ type ProducerAliasRow = {
   alias_type: string | null;
 };
 
-type GrapeAliasRow = {
-  variety_id: string | null;
-  alias_type: string | null;
-  grape_varieties:
-    | {
-        name: string | null;
-      }
-    | {
-        name: string | null;
-      }[]
-    | null;
-};
+// Kept as an actual typed query so generated-schema contracts catch missing
+// columns before release. Other resolver tables retain their existing adapters.
+export function selectGrapeAliases(supabase: Pick<SupabaseClient<Database>, "from">) {
+  return supabase.from("grape_aliases").select("variety_id, grape_varieties(name)");
+}
+
+type GrapeAliasRow = QueryData<ReturnType<typeof selectGrapeAliases>>[number];
 
 function normalizeOptionalString(value: string | null | undefined) {
   if (typeof value !== "string") {
@@ -159,12 +157,13 @@ async function lookupGrapeAliasByColumn(
   column: "alias" | "alias_normalized",
   value: string
 ) {
-  const { data, error } = await (supabase
-    .from("grape_aliases") as SelectQueryBuilder)
-    .select("variety_id, alias_type, grape_varieties(name)")
-    .ilike(column, value)
-    .limit(1)
-    .maybeSingle();
+  // The compatibility client exposes unknown builders; narrow only at the
+  // typed query boundary. Escape ILIKE metacharacters in raw user input.
+  const query = selectGrapeAliases(supabase as Pick<SupabaseClient<Database>, "from">);
+  const filtered = column === "alias_normalized"
+    ? query.eq(column, value)
+    : query.ilike(column, value.replace(/[\\%_]/g, "\\$&"));
+  const { data, error } = await filtered.limit(1).maybeSingle();
 
   if (error) {
     throw error;
@@ -179,7 +178,9 @@ async function lookupGrapeAliasByColumn(
   return {
     canonical_name: normalizeOptionalString(variety?.name ?? null),
     variety_id: normalizeOptionalString(row.variety_id),
-    alias_type: normalizeOptionalString(row.alias_type) ?? "exact",
+    // Grape aliases have no alias_type column. Classify from the matched
+    // canonical spelling, preserving exact versus synonym provenance.
+    alias_type: normalizeAliasText(value) === normalizeAliasText(variety?.name ?? "") ? "exact" : "synonym",
     matched: true as const,
   };
 }

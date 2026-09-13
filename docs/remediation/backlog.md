@@ -355,3 +355,6 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 
 ### B06g active — QC-16
 - `fix/b06g-mobile-featured-controls`, stacked on B02c1 `2fafda2`, issue #112. Reachable earned-card feature/unfeature and clear-all controls; preserve ordered multi-selection, cap five, server-confirmed state, serialized saves and visible retryable failures. Badge load failure offers retry and suppresses unknown collection state. No migration/award changes. Combined Expo browser QC and release pending; native acceptance unavailable.
+
+### B07a active — AUD-10 grape resolver schema
+- `fix/b07a-grape-resolver-contract`, stacked on B06g `e8e9cc0`, issue #104. Typed actual grape join removes nonexistent `grape_aliases.alias_type`; derives exact/synonym provenance from canonical spelling, escapes raw ILIKE metacharacters and uses equality for normalized keys. Existing region/producer contracts retained. Hosted lookup, browser save and release pending. Absent `ai_notes_summary`, automatic mobile OCR selection and broader scoring parity remain AUD-10/B07.
