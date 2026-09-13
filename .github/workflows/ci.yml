@@ -44,6 +44,10 @@ jobs:
         working-directory: apps/mobile
         run: npm ci
 
+      - name: Dependency compatibility contracts
+        working-directory: apps/mobile
+        run: npm run test:dependencies
+
       - name: Typecheck
         working-directory: apps/mobile
         run: npm run typecheck
