@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { fetchActivitySummary } from "@/features/profile/activitySummary";
 import { useBadges } from "@/features/badges/useBadges";
 import {
   PalateHeaderCard,
@@ -30,13 +30,12 @@ function parseTab(raw: string | null): PalateSubTab {
 function PalatePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [activeTab, setActiveTab] = useState<PalateSubTab>(() =>
     parseTab(searchParams.get("tab"))
   );
   const [profile, setProfile] = useState<PalateProfile | null>(null);
-  const [stats, setStats] = useState<PalateStats>({ wines: 0, friends: 0, badges: 0, countries: 0 });
+  const [stats, setStats] = useState<PalateStats>({ wines: null, friends: null, badges: null, countries: null });
   const [loading, setLoading] = useState(true);
   // Track which tabs have been activated (for lazy mounting)
   const [mountedTabs, setMountedTabs] = useState<Set<PalateSubTab>>(
@@ -56,9 +55,9 @@ function PalatePageContent() {
     let mounted = true;
 
     const load = async () => {
-      const [profileRes, friendsRes] = await Promise.all([
+      const [profileRes, summary] = await Promise.all([
         fetch("/api/profile", { cache: "no-store" }),
-        fetch("/api/friends", { cache: "no-store" }),
+        fetchActivitySummary(),
       ]);
 
       let profileData: PalateProfile | null = null;
@@ -73,50 +72,23 @@ function PalatePageContent() {
         };
       }
 
-      let friendCount = 0;
-      if (friendsRes.ok) {
-        const data = await friendsRes.json();
-        friendCount = Array.isArray(data.friends) ? data.friends.length : 0;
-      }
-
-      // Get wine + country counts
-      const { data: { user } } = await supabase.auth.getUser();
-      let wineCount = 0;
-      let countryCount = 0;
-      if (user) {
-        const { count } = await supabase
-          .from("wine_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
-        wineCount = count ?? 0;
-
-        const { data: countryData } = await supabase
-          .from("wine_entries")
-          .select("canonical_country")
-          .eq("user_id", user.id)
-          .not("canonical_country", "is", null);
-        if (countryData) {
-          countryCount = new Set(
-            countryData.map((r: { canonical_country: string | null }) => r.canonical_country?.trim()).filter(Boolean)
-          ).size;
-        }
-      }
-
       if (mounted) {
         setProfile(profileData);
         setStats({
-          wines: wineCount,
-          friends: friendCount,
-          badges: earnedBadges.length,
-          countries: countryCount,
+          wines: summary.entryCount,
+          friends: summary.friendCount,
+          badges: summary.badgeCount,
+          countries: summary.countryCount,
         });
         setLoading(false);
       }
     };
 
-    load();
+    load().catch(() => {
+      if (mounted) { setStats({wines:null,friends:null,badges:null,countries:null}); setLoading(false); }
+    });
     return () => { mounted = false; };
-  }, [supabase, earnedBadges.length]);
+  }, [earnedBadges.length]);
 
   return (
     <AppShell>

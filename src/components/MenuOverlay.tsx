@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+import { fetchActivitySummary } from "@/features/profile/activitySummary";
+
 type MenuOverlayProps = {
   open: boolean;
   onClose: () => void;
@@ -21,6 +23,7 @@ type UserStats = {
 export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
   const router = useRouter();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const [statsError, setStatsError] = useState(false);
   const [stats, setStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
@@ -29,59 +32,32 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
     let isMounted = true;
 
     const loadStats = async () => {
+      setStats(null);
+      setStatsError(false);
       try {
         const {
           data: { user },
         } = await supabase.auth.getUser();
-        if (!user || !isMounted) return;
+        if (!isMounted) return;
+        if (!user) throw new Error("Sign in required");
 
-        const [profileRes, entriesRes, friendsRes, requestsRes, countriesRes] =
-          await Promise.all([
-            supabase
-              .from("profiles")
-              .select("display_name")
-              .eq("id", user.id)
-              .single(),
-            supabase
-              .from("wine_entries")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .eq("entry_status", "consumed"),
-            supabase
-              .from("friend_requests")
-              .select("id", { count: "exact", head: true })
-              .eq("status", "accepted")
-              .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`),
-            supabase
-              .from("friend_requests")
-              .select("id", { count: "exact", head: true })
-              .eq("recipient_id", user.id)
-              .eq("status", "pending"),
-            supabase
-              .from("wine_entries")
-              .select("country")
-              .eq("user_id", user.id)
-              .not("country", "is", null),
-          ]);
+        const [profileRes, summary] = await Promise.all([
+          supabase.from("profiles").select("display_name").eq("id", user.id).single(),
+          fetchActivitySummary(),
+        ]);
 
         if (!isMounted) return;
-
-        const uniqueCountries = new Set(
-          (countriesRes.data ?? [])
-            .map((row: { country: string | null }) => row.country?.trim())
-            .filter(Boolean)
-        );
 
         setStats({
           displayName:
             profileRes.data?.display_name ?? user.email ?? "Wine lover",
-          entryCount: entriesRes.count ?? 0,
-          friendCount: friendsRes.count ?? 0,
-          countryCount: uniqueCountries.size,
-          pendingFriendRequests: requestsRes.count ?? 0,
+          entryCount: summary.entryCount,
+          friendCount: summary.friendCount,
+          countryCount: summary.countryCount,
+          pendingFriendRequests: summary.pendingFriendRequests,
         });
       } catch {
-        // Silently fail — menu still works without stats
+        if (isMounted) setStatsError(true);
       }
     };
 
@@ -171,7 +147,7 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
               className="text-base font-semibold"
               style={{ color: "var(--color-text-primary)" }}
             >
-              {stats?.displayName ?? "Loading..."}
+              {stats?.displayName ?? (statsError ? "Counts unavailable" : "Loading...")}
             </p>
             {stats ? (
               <p
