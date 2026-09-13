@@ -3,7 +3,7 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Current revocation checkpoint:** [B02h evidence/contract](handovers/batch-02h.md); synthetic measurement complete, production rekey/client cutover still P0/Partial.
-- **Current session checkpoint:** [B02g bearer/mobile images](handovers/batch-02g.md), implemented and local QC passed; release pending. Next B02h legacy revocation evidence and B08c ordinary web atomic edits.
+- **Current session checkpoint:** [B08c ordinary web atomic edits](handovers/batch-08c.md), QC passed and SQL live; application release pending. B02g #134 and B02h #135 are merged; final combined primary live verification follows B08c.
 - **Latest release and resume point:** [B02e/B02f/B08b](handovers/b02e-b02f-b08b-release.md), [sanitized QC](evidence/b02e-b02f-b08b-release.json). #130/#131/#132 merged, SQL live, primary web live-verified; native distribution and broader privacy/lifecycle residuals remain explicit.
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
 - **Previous release:** [B02c2/B02d/B08a](handovers/b02c2-b02d-b08a-release.md), [sanitized QC](evidence/b02c2-b02d-b08a-release.json).
@@ -61,7 +61,7 @@ For remaining B02 work, start with policy/access fixtures, not a broad code dele
 
 ## Finding intake and local tickets
 
-Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-17 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
+Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-18 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
 
 When a session finds something new:
 

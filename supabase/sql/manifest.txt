@@ -86,3 +86,5 @@
 20260913205430_private_policy_helpers.sql
 20260913210613_atomic_entry_details.sql
 20260913211939_entry_edit_conflict_response.sql
+20260913220317_atomic_web_entry_fields.sql
+20260913222046_entry_edit_privacy_domain.sql
