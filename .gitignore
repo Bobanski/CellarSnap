@@ -57,3 +57,6 @@ scripts/somm-eval/data/*
 !scripts/somm-eval/data/*.template.*
 scripts/somm-eval/results/*
 !scripts/somm-eval/results/live-signal-summary.md
+
+# Independent local agent checkouts (preserve on disk, exclude from scans/staging)
+/.claude/worktrees/
