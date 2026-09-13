@@ -23,9 +23,13 @@ export async function knowledgeDatabase(migrate = true) {
       id uuid primary key, user_id uuid not null references auth.users on delete cascade,
       wine_name text, notes text, rating int, entry_privacy text default 'private'
     );
+    create table public.grape_varieties(id uuid primary key, name text not null);
+    grant select on grape_varieties to authenticated, service_role;
     create table public.entry_primary_grapes (
       id uuid primary key, entry_id uuid not null references wine_entries on delete cascade,
-      variety_id uuid not null, position smallint not null
+      variety_id uuid not null references grape_varieties(id) on delete restrict,
+      position smallint not null check (position between 1 and 3),
+      unique (entry_id, position), unique (entry_id, variety_id)
     );
     alter table wine_entries enable row level security;
     create policy fixture_entry_read on wine_entries for select to authenticated
