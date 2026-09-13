@@ -3,7 +3,8 @@
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
 - **Work queue and current finding status:** [canonical backlog](backlog.md).
-- **Latest release and resume point:** [B06e/B06f/B05e merged and live-verified](handovers/b06e-b06f-b05e-release.md), [sanitized evidence](evidence/b06e-b06f-b05e-release.json). Both forward migrations are applied. Native runtime/distribution and the new Expo badge-control gap remain open.
+- **Current checkpoint:** [B02c1/B06g/B07a/B06h implementation and QC](handovers/b02c1-b06g-b07a-b06h.md), PRs #121–#124; release pending.
+- **Previous release and resume point:** [B06e/B06f/B05e merged and live-verified](handovers/b06e-b06f-b05e-release.md), [sanitized evidence](evidence/b06e-b06f-b05e-release.json). Both forward migrations are applied. Native runtime/distribution and the new Expo badge-control gap remain open.
 - **Previous completed release:** [B06b/B06c/B06d](handovers/b06b-b06d-release.md), [combined QC](../audits/b06b-b06d-qc-2026-09-13.md), [badge contract](b06-badge-contract.md).
 - **Prior releases:** [B05d/B06a](handovers/b05d-b06a-release.md), [B05b/B05c](handovers/b05b-b05c-release.md), [B04d/B05a](handovers/b04d-b05a-release.md), [B04c](handovers/b04c-release.md), [B04a/B04b](handovers/b04-release.md), [B03](handovers/b03-release.md), [B02b](handovers/sql-rollout-b02b.md), [B01/B02a](handovers/sql-rollout-b01-b02a.md).
 - **Original evidence:** [50-finding audit](../audits/codebase-backend-audit-2026-09-12.md), [supporting evidence](../audits/codebase-backend-audit-2026-09-12-evidence.md).
