@@ -1,3 +1,4 @@
+import { resolveEventSelection } from "@cellarsnap/shared";
 import { fetchActivitySummary } from "@/src/lib/api/activitySummary";
 import type { ActivitySummary } from "@cellarsnap/shared";
 import React, {
@@ -383,20 +384,22 @@ function buildGroupedSlideMeta(slide: MobileGroupedEntrySlide | null) {
 }
 
 function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [frameWidth, setFrameWidth] = useState(0);
+  const galleryRef = useRef<ScrollView>(null);
   const slides = item.group_slides;
-  const hasSlides = slides.length > 0;
   const hasMultipleSlides = slides.length > 1;
-  const clampedIndex = hasSlides
-    ? Math.max(0, Math.min(slides.length - 1, activeIndex))
-    : 0;
-  const activeSlide = hasSlides ? slides[clampedIndex] ?? slides[0] ?? null : null;
-  const previewImageUrl = activeSlide?.url ?? item.label_image_url ?? null;
-  const headline = activeSlide?.wine_name ?? activeSlide?.producer ?? item.wine_name ?? null;
-  const headlineMeta = buildGroupedSlideMeta(activeSlide);
+  const selection = resolveEventSelection(slides, selectedSlideId, item);
+  const clampedIndex = selection.index;
+  const previewImageUrl = selection.slide?.url ?? item.label_image_url ?? null;
+  const headline = selection.title;
+  const headlineMeta = selection.entryId ? buildGroupedSlideMeta(selection.slide) : "";
   const modeLabel = getGroupedModeLabel(item.entry_group);
   const title = getGroupedTitle(item);
+  useEffect(() => {
+    galleryRef.current?.scrollTo({x: clampedIndex * frameWidth, animated: false});
+  }, [clampedIndex, frameWidth]);
+  const selectSlide = (index: number) => setSelectedSlideId(slides[index]?.id ?? null);
 
   return (
     <View style={styles.eventCard}>
@@ -429,6 +432,7 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
         {previewImageUrl ? (
           hasMultipleSlides && frameWidth > 0 ? (
             <ScrollView
+              ref={galleryRef}
               horizontal
               snapToInterval={frameWidth}
               snapToAlignment="start"
@@ -447,7 +451,7 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
                 }
                 const rawIndex = Math.round(event.nativeEvent.contentOffset.x / frameWidth);
                 const nextIndex = Math.max(0, Math.min(slides.length - 1, rawIndex));
-                setActiveIndex(nextIndex);
+                selectSlide(nextIndex);
               }}
             >
               {slides.map((slide, slideIndex) => (
@@ -480,13 +484,16 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
       {hasMultipleSlides ? (
         <View style={styles.eventDotRow}>
           {slides.map((_, dotIndex) => (
-            <View
+            <Pressable
               key={`event-dot-${item.id}-${dotIndex}`}
-              style={[
-                styles.eventDot,
-                dotIndex === clampedIndex ? styles.eventDotActive : null,
-              ]}
-            />
+              accessibilityRole="button"
+              accessibilityLabel={`Go to event photo ${dotIndex + 1}`}
+              accessibilityState={{selected: dotIndex === clampedIndex}}
+              onPress={() => selectSlide(dotIndex)}
+              style={{minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center"}}
+            >
+              <View style={[styles.eventDot, dotIndex === clampedIndex ? styles.eventDotActive : null]} />
+            </Pressable>
           ))}
         </View>
       ) : null}
@@ -500,12 +507,14 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
         </View>
       ) : null}
 
-      <Pressable
+      {selection.entryId ? <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`Open details for ${selection.title}`}
         style={styles.eventOpenButton}
-        onPress={() => router.push(`/(app)/entries/${item.id}`)}
+        onPress={() => router.push(`/(app)/entries/${selection.entryId}`)}
       >
         <AppText style={styles.eventOpenButtonText}>Open details</AppText>
-      </Pressable>
+      </Pressable> : <AppText style={styles.eventPreviewMeta}>Select a wine to open its details.</AppText>}
     </View>
   );
 }
@@ -1506,6 +1515,7 @@ const styles = StyleSheet.create({
   },
   eventDotRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "center",
     gap: 6,
     marginTop: -2,

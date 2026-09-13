@@ -38,6 +38,7 @@ export default function SwipePhotoGallery({
   showOrderBadge = false,
   orderBadgeFormatter,
   onIndexChange,
+  activeIndex: controlledActiveIndex,
 }: {
   items: SwipePhotoGalleryItem[];
   heightClassName?: string;
@@ -48,6 +49,7 @@ export default function SwipePhotoGallery({
   showOrderBadge?: boolean;
   orderBadgeFormatter?: (order: number, total: number) => ReactNode;
   onIndexChange?: (index: number) => void;
+  activeIndex?: number;
 }) {
   const [activeItemState, setActiveItemState] = useState<{
     index: number;
@@ -78,7 +80,9 @@ export default function SwipePhotoGallery({
           resolveItemKey(item, itemIndex) === activeItemState.key
       )
     : -1;
-  const activeIndex = persistedActiveIndex >= 0 ? persistedActiveIndex : boundedIndex;
+  const activeIndex = controlledActiveIndex === undefined
+    ? (persistedActiveIndex >= 0 ? persistedActiveIndex : boundedIndex)
+    : Math.max(0, Math.min(controlledActiveIndex, total - 1));
   const active = items[activeIndex]!;
   const setActiveByIndex = (nextIndex: number) => {
     const nextItem = items[nextIndex];

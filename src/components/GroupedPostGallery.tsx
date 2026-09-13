@@ -9,11 +9,13 @@ export default function GroupedPostGallery({
   slides,
   heightClassName = "",
   onIndexChange,
+  activeIndex,
 }: {
   title: string;
   slides: GroupedEntrySlide[];
   heightClassName?: string;
   onIndexChange?: (index: number) => void;
+  activeIndex?: number;
 }) {
   if (slides.length === 0) {
     return null;
@@ -29,6 +31,7 @@ export default function GroupedPostGallery({
       heightClassName={heightClassName}
       wrapperClassName="overflow-hidden bg-black/40"
       onIndexChange={onIndexChange}
+      activeIndex={activeIndex}
       header={(_active, activeIndex) => {
         const slide = slides[activeIndex] ?? slides[0];
         return (

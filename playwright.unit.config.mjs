@@ -31,6 +31,7 @@ export default defineConfig({
     "consumed-dates.spec.ts",
     "badge-contract.spec.ts",
     "activity-summary.spec.ts",
+    "event-selection.spec.ts",
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
     "image-dependency.spec.ts",
