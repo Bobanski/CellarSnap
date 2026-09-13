@@ -1,4 +1,7 @@
 # B02g handover — September 13, 2026
+
+Release update: [B02g/B02h/B08c final handover](b02g-b02h-b08c-release.md) supersedes release-pending statements below; this checkpoint preserves intermediate evidence.
+
 ## Objective and IDs
 AUD-01 P0/Partial: adopted bearer/mobile request-time photo delivery. Related AUD-48/50. Preserve features and Noir Refined. Legacy capability revocation, installed native adoption/distribution and numeric rating privacy remain separate.
 ## Resume here

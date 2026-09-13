@@ -1,4 +1,7 @@
 # B08c handover — September 13, 2026
+
+Release update: [B02g/B02h/B08c final handover](b02g-b02h-b08c-release.md) supersedes release-pending statements below; this checkpoint preserves intermediate evidence.
+
 ## Objective and IDs
 AUD-13/15 Partial: ordinary ungrouped web detail/grape edits adopt the existing owner-only atomic command. Related AUD-19/21/48/50. Group edits, cellar commands, imports, durable receipts and derived-side-effect ownership remain separate. QC-18 records the pre-existing web input-label defect; no unrelated accessibility markup changed.
 ## Resume here
