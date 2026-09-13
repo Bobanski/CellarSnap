@@ -11,7 +11,7 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-**B04a/AUD-05 is merged, migrated, deployed and verified; AUD-05 is Closed.** PR #94/main `db402fe`, SQL version `20260913020752`, 20 live assertions and browser production login passed. B04b/AUD-07 bounded menu fetching is implemented with 249 passing tests and final Expo/release QC in progress. [Current checkpoint](handovers/batch-04b.md). Issue #93 tracks both slices. Next is AUD-08/B04c; native and live delivery coverage limits remain explicit.
+**B04a/AUD-05 is merged, migrated, deployed and verified; AUD-05 is Closed.** PR #94/main `db402fe`, SQL version `20260913020752`, 20 live assertions and browser production login passed. B04b/AUD-07 bounded menu fetching is implemented with 250 passing tests, desktop/phone/Expo QC passed and release pending. [Current checkpoint](handovers/batch-04b.md). Issue #93 tracks both slices. Next is AUD-08/B04c; native and live delivery coverage limits remain explicit.
 
 **B03a/B03b are merged, migrated, deployed and verified; AUD-04 is Closed.** PRs #90/#91, product release `63712c3`, all three exact SQL versions/checksums and actual results are in the [release handover](handovers/b03-release.md). 212 automated tests, live access/concurrency checks, desktop/phone and Expo web flows passed. Final data: 384 original entries with 384 personal chunks, zero orphan/stale/legacy personal chunks; all 3,349 curated wine chunks retained. Fixtures removed. AUD-26 remains Partial for broader retention/jobs; new QC-09 records unsupported sommelier existence/write claims for triage. Next bounded slice: AUD-05/B04 identifier/contact-resolution containment.
 

@@ -18,7 +18,7 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | AUD-04 | P0 | Personal embeddings globally readable/searchable | Closed | B03a/B03b [PR #90](https://github.com/Bobanski/CellarSnap/pull/90)/[PR #91](https://github.com/Bobanski/CellarSnap/pull/91) merged, all three SQL migrations live, primary production `63712c3` verified. Owner/curated boundaries, FK cleanup, synchronous invalidation and stale-publication rejection passed; 212 tests, live HTTP/concurrency/browser/Expo evidence. 384 original entries/384 personal chunks, zero orphan/stale/legacy personal chunks; curated 3,349 retained. [Release handover](handovers/b03-release.md). Native tooling unavailable; unchanged RPCs support existing clients. Broader retention/QC-09 remain separate. |
 | AUD-05 | P1 | Identifier lookup exposes email/phone mappings | Closed | B04a PR #94 merged/deployed `db402fe`, exact SQL live `20260913020752`; 20 production checks and browser login passed. [Release evidence](handovers/batch-04b.md). Service-only RPCs, constant retired resolver, server login/recovery and stable shared limits; deliberate availability booleans retained. Native/delivery limitations documented. |
 | AUD-06 | P1 | Public identity projection overexposes fields | Open | B02: explicit public DTO/projection honoring identity preferences and visibility, verified on web/mobile without breaking legitimate profile reads. Related QC-01. |
-| AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | In progress | B04: validate destination and every redirect; total body deadline and byte limits; accept legitimate restaurant sources and reject disallowed destinations. |
+| AUD-07 | P1 | Unbounded/unsafe wine-list URL fetching | QC passed — release pending | B04: validate destination and every redirect; total body deadline and byte limits; accept legitimate restaurant sources and reject disallowed destinations. |
 | AUD-08 | P1 | Dependency advisories and undeclared runtime imports | Open | B04: recheck advisories, upgrade compatible Next/Expo sets, declare imports; separate build-only exposure and test auth/scanning/images/mobile build compatibility. |
 | AUD-09 | P1 | Badge trigger/evaluator incompatibility and award authority | Open | B06: exhaustive shared trigger union coverage, server-authoritative awards, checked writes, representative fixtures for all supported trigger families; preserve all 85 definitions. |
 | AUD-10 | P1 | Score-loader/schema drift | Partial | B01 fixes nonexistent quality_tier query and preserves wine_type, with tests/QC in PR #80. B07 still must resolve absent ai_notes_summary and the newly reproduced absent grape_aliases.alias_type resolver query, and prove the schema/loader contract. See merge-review evidence below. |
@@ -202,10 +202,10 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 - Deployment / rollback: no product change made. Reload cleared the observed offset. Optional screenshot `/tmp/cellarsnap-b04-qc/expo-recovery-phone.png`; textual reproduction above is canonical.
 
 ### AUD-07 — B04b bounded remote menu transport
-- Priority / status: P1 / In progress; branch `codex/b04b-bounded-menu-fetch`, issue #93.
+- Priority / status: P1 / QC passed — release pending; branch `codex/b04b-bounded-menu-fetch`, issue #93 / PR #95; final product `bc8ac20`.
 - Scope and acceptance: public-only DNS-pinned sockets, every redirect validated, full download deadline and encoded/decoded byte caps; preserve legitimate menu/PDF/image inputs.
-- Evidence: 249 isolated tests, type/lint/build, real HTTPS HTML/PDF downloads and desktop/phone scanning. [Current handover](handovers/batch-04b.md).
-- Remaining: final Expo result/QC, PR merge, deployment and live verification; no migration required. AUD-08 dependency backlog is not closed by adding the pinned address parser.
+- Evidence: 250 isolated tests, type/lint/build, real HTTPS HTML/PDF parsing and desktop/phone/Expo scanning. [QC report](../audits/b04b-remote-menu-qc-2026-09-12.md). [Current handover](handovers/batch-04b.md).
+- Remaining: PR merge, deployment and live verification; no migration required. AUD-08 dependency backlog is not closed by adding the pinned address parser.
 
 ### QC-11 — Script-rendered wine list reports success with no wines
 - Priority / status: P2 / Open; confirmed during B04b against main `db402fe` plus bounded fetch changes.
