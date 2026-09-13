@@ -1,5 +1,7 @@
 # B06e release checkpoint — September 13, 2026
 
+**Released:** This historical checkpoint is superseded by the [combined release handover](b06e-b06f-b05e-release.md); implementation PRs #117/#118/#119 are merged, both migrations applied, primary production verified. Native gaps remain explicit.
+
 ## Objective and IDs
 AUD-09 earned featured-profile authority, #112 / #117. Deferred badge facts, historical review and native acceptance remain open. New QC-16 records an existing unreachable Expo mutation handler; QC-03 outage routing is next B06f.
 

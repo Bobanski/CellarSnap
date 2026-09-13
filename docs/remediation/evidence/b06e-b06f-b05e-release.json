@@ -1,0 +1,194 @@
+{
+  "date": "2026-09-13",
+  "prs": [
+    {
+      "number": 117,
+      "merge": "65a4c1c45f25ec59067bba2593eb76375766c217"
+    },
+    {
+      "number": 118,
+      "merge": "4eb7df807db11918f663761d49a66748c4955ca0"
+    },
+    {
+      "number": 119,
+      "merge": "67a188fc9ca1d8e15530a30ae4b76868c80a8b26"
+    }
+  ],
+  "finalProduction": {
+    "id": "dpl_E3HM9Bs8Dy8yvR71uNkRiNrYPEPn",
+    "githubDeployment": 6419294668,
+    "readyAt": "2026-09-13T08:18:40Z",
+    "state": "READY",
+    "url": "https://cellar-snap-dfcd9954d-eitan-sneiders-projects.vercel.app",
+    "errorLogRowsSinceReady": 0
+  },
+  "migrations": [
+    {
+      "localVersion": "20260913071742",
+      "hostedVersion": "20260913074139",
+      "name": "earned_featured_badges",
+      "sha256": "319f843212eee7da071905ec27657f7bc0cf301ae1bf6f165bba378f4edcf71c"
+    },
+    {
+      "localVersion": "20260913075619",
+      "hostedVersion": "20260913080026",
+      "name": "repair_grape_alias_keys",
+      "sha256": "a749e087d2df016efbd4095ee60057881b7b81d497cf288b2752a541595f35d9"
+    }
+  ],
+  "checks": {
+    "isolated": 385,
+    "schema": 12,
+    "postgresIndependentBackendConcurrencyCases": 4,
+    "featuredLiveCases": 29,
+    "featuredLiveRaces": 10,
+    "aliasFinalLive": {
+      "base": "https://cellarsnap.app",
+      "checks": [
+        {
+          "query": "shiraz",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Syrah"
+          ]
+        },
+        {
+          "query": "SHIRAZ",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Syrah"
+          ]
+        },
+        {
+          "query": "PX",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Pedro Ximenez"
+          ]
+        },
+        {
+          "query": "garnacha",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Grenache"
+          ]
+        },
+        {
+          "query": "cab sauv",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Cabernet Sauvignon"
+          ]
+        },
+        {
+          "query": "Xarel-lo",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Xarel-lo"
+          ]
+        },
+        {
+          "query": "Xarel Lo",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Xarel-lo"
+          ]
+        },
+        {
+          "query": "Nero d'Avola",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": [
+            "Nero d'Avola"
+          ]
+        },
+        {
+          "query": "zzqcnomatch",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": []
+        },
+        {
+          "query": "!!!",
+          "bearerOnly": 200,
+          "cookieOnly": 200,
+          "equal": true,
+          "names": []
+        },
+        {
+          "mode": "anonymous",
+          "status": 401
+        },
+        {
+          "mode": "invalid",
+          "status": 401
+        },
+        {
+          "mode": "invalid bearer with valid cookie fallback",
+          "status": 200
+        },
+        {
+          "limit": "default",
+          "count": 8,
+          "status": 200
+        },
+        {
+          "limit": "&limit=2",
+          "count": 2,
+          "status": 200
+        },
+        {
+          "limit": "&limit=999",
+          "count": 11,
+          "status": 200
+        }
+      ]
+    },
+    "webAndMobileTypesLint": "pass",
+    "databaseTypeContract": "pass",
+    "nextBuild": "pass",
+    "expoWebIOSAndroidExports": "pass",
+    "liveSchemaDrift": "matches",
+    "securityAdvisorMetadata": "unchanged existing advisories"
+  },
+  "restoration": {
+    "aliasesBefore": 131,
+    "aliasesAfter": 130,
+    "onlyEquivalentSpellingRemoved": "Xarel Lo",
+    "allSurvivingAliasIdsAndTimestampsPreserved": true,
+    "originalBadgeProfileAndAwardsRestored": true
+  },
+  "referenceRows": {
+    "canonicalVarietiesUnchanged": 93,
+    "entryGrapeRowsUnchanged": 271
+  },
+  "native": {
+    "xcodeSimulatorAvailable": false,
+    "androidEmulatorAvailable": false,
+    "nativeRuntimeTested": false,
+    "binaryOrOTAReleased": false
+  },
+  "remaining": [
+    "AUD-09 deferred semantics/history/native",
+    "QC-03 native runtime/distribution",
+    "QC-14 native runtime/distribution",
+    "QC-16 Expo feature/clear controls",
+    "OPS-01 duplicate missing-env deployment"
+  ]
+}

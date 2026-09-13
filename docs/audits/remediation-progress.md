@@ -103,3 +103,10 @@ PR #108 (`719ad1d`) restores typed bearer grape autocomplete; PR #110 (`d4e5cd2`
 ## September 13 — B06b / B06c / B06d released
 
 #113 (`f06fd7f`) repairs supported badge triggers and server-only awards; #114 (`a75cb89`) unifies complete owner counts; #115 (`b51ae78`) aligns selected event images/captions/detail targets. All three CI runs, 385 isolated checks, schema/types/lint/build/exports and scoped desktop/phone/Expo checks passed. Primary production Ready/live-verified; forward badge privileges applied and verified, disposable fixtures cleaned. AUD-09 remains Partial for 32 deferred definitions/featured authority/history/native; QC-03/QC-08 Partial for native, with summary-outage browser harness coverage explicitly incomplete. [Release handover](../remediation/handovers/b06b-b06d-release.md), [QC](b06b-b06d-qc-2026-09-13.md).
+
+
+## September 13 — B06e / B06f / B05e released
+
+#117 (`65a4c1c`) enforces earned-only featured badges and transactional cleanup; #118 (`4eb7df8`) fixes unknown-summary palate routing; #119 (`67a188f`) repairs historical alias encodings and Expo manual alias search. Both exact forward migrations applied once; canonical identities/history preserved. Final primary production Ready and scoped live HTTP/browser verification passed.
+
+385 isolated checks, 12 schema tests, real PG17 replay/four independent-backend concurrency cases, types/lint/build/exports and desktop/phone/Expo QC passed, including summary and alias failure/recovery. Badge fixture fields/awards restored exactly; no alias-QC entry saved. QC-15 not reproduced on clean dev/production. New QC-16 records unreachable Expo feature controls. AUD-09 and QC-03/QC-14 retain documented deferred/native scope; no simulator/emulator or native release. [Release handover](../remediation/handovers/b06e-b06f-b05e-release.md), [evidence](../remediation/evidence/b06e-b06f-b05e-release.json).

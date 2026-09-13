@@ -1,5 +1,7 @@
 # B06f summary-outage QC handover — September 13, 2026
 
+**Released:** This historical checkpoint is superseded by the [combined release handover](b06e-b06f-b05e-release.md); implementation PRs #117/#118/#119 are merged, both migrations applied, primary production verified. Native gaps remain explicit.
+
 ## Objective and IDs
 QC-03 remaining browser failure/recovery acceptance, #112. Unknown count was still treated as zero by the profile's My Palate card. Preserve routing for known empty/survey-incomplete accounts. Native acceptance and broad statistics/session ownership remain separate.
 
