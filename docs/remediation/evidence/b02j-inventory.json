@@ -1,0 +1,39 @@
+{
+  "capturedAt": "2026-09-13T23:01:00Z",
+  "mode": "read-only hosted SQL, aggregates only",
+  "summary": {
+    "paths": 894,
+    "objects": 882,
+    "originals": 277,
+    "references": 650,
+    "referenceColumns": {
+      "entry_photos.path": 480,
+      "profiles.avatar_path": 9,
+      "entry_group_slides.path": 113,
+      "wine_entries.label_image_path": 16,
+      "wine_entries.place_image_path": 7,
+      "wine_entries.pairing_image_path": 7,
+      "user_collection_items.snapshot_label_image_path": 9,
+      "user_collection_items.snapshot_preview_image_path": 9
+    },
+    "multiReferencePaths": 140,
+    "pendingOrUrlReferences": 0,
+    "missingReferencedObjects": 12,
+    "unreferencedNonOriginalObjects": 118
+  },
+  "checks": {
+    "schema": 21,
+    "realPostgres": "17.6",
+    "unicodeCliSnapshot": true,
+    "exclusivePrivatePublication": true,
+    "opaqueCandidateColumnsChecked": 8,
+    "opaqueCandidateRows": 0
+  },
+  "limits": [
+    "Canonical physical reference fields only; public_profiles derives profiles.avatar_path",
+    "Opaque checks are candidates, not proof about every external consumer or encoded URL",
+    "No production object copy, rekey, reference mutation or deletion",
+    "Missing/unreferenced keys require review; not a deletion list",
+    "CLI private snapshot publication tested on local PostgreSQL; hosted observation returned aggregates"
+  ]
+}
