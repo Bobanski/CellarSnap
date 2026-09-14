@@ -1,5 +1,7 @@
 # B02t handover — September 14, 2026
 
+**Superseded by the [B02t/B02u release](b02t-b02u-release.md): merged, final-primary verified; original checkpoint below is retained as history.**
+
 ## Objective and IDs
 QC-01 P1/Partial; related AUD-13/15/48/50, issue #81. Add an explicit owner edit source contract before physical rating isolation. No SQL or physical rating transfer. B02u adopts this contract in the mobile editor.
 

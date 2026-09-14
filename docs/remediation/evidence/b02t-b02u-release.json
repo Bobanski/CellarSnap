@@ -1,0 +1,517 @@
+{
+  "date": "2026-09-14 EDT",
+  "scope": [
+    "B02t",
+    "B02u"
+  ],
+  "findings": [
+    "QC-01",
+    "AUD-13",
+    "AUD-15",
+    "AUD-48",
+    "AUD-50"
+  ],
+  "candidate": "62a7de48330543e20a1181f90b005a8cbbe346e4",
+  "productMain": "59cf8d52a57b42cf4e91c71d02cd48d921a4fb2b",
+  "tree": "6dc2154ce8860be3212aee300c0a5d7afef26996",
+  "prs": [
+    155,
+    156
+  ],
+  "checks": {
+    "isolated": 557,
+    "schema": 30,
+    "databaseTypeContract": "pass",
+    "webTypes": "pass",
+    "mobileTypes": "pass",
+    "webLint": "pass",
+    "mobileLint": "pass",
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "applicationCI": "pass",
+    "primaryBuild": "pass",
+    "separateLocalNextProductionBuild": "not run"
+  },
+  "local": {
+    "results": [
+      {
+        "api": "crossOriginOwnerAndTesterNonowner",
+        "ownerMinimalReceipt": true,
+        "anonymousMalformedAndForeignDenied": true
+      },
+      {
+        "api": "atomicRollbackAndOwnerBounds",
+        "invalidGrapeRollsBackRating": true,
+        "ratings1And100AndNull": true,
+        "staleSnapshot409": true
+      },
+      {
+        "validCookieCannotAuthorizeCommand": true,
+        "invalidBearerCannotFallBack": true
+      },
+      {
+        "device": "desktop",
+        "owner91to93": true,
+        "validation101PreventsWrite": true,
+        "notesPreserveGrapeLinkIds": true,
+        "explicitGrapesAtomic": true,
+        "failedSavePreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "conflictPreservesSavedAndLocalText": true,
+        "emptyGrapeSelectionAndRecovery": true,
+        "webRatingNotesAndPhoto": true
+      },
+      {
+        "device": "phone",
+        "timeoutRetainsInputAndSavedData": true
+      },
+      {
+        "device": "phone",
+        "owner91to93": true,
+        "validation101PreventsWrite": true,
+        "notesPreserveGrapeLinkIds": true,
+        "explicitGrapesAtomic": true,
+        "failedSavePreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "conflictPreservesSavedAndLocalText": true,
+        "emptyGrapeSelectionAndRecovery": true,
+        "webRatingNotesAndPhoto": true
+      },
+      {
+        "groupedOwnerDetails": true,
+        "companionUntouched": true
+      },
+      {
+        "foreignReceiptRejected": true,
+        "explicitRetryRecovers": true
+      },
+      {
+        "bulkPhoneFailureRetryPublish": true
+      },
+      {
+        "lateBulkSaveAfterTabNavigationDoesNotNavigateBack": true
+      },
+      {
+        "directSaveRpcOrGrapeWrites": 0,
+        "bearerOnlyCommands": true,
+        "commands": 18
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      },
+      {
+        "phase": "api-transaction",
+        "message": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "api-transaction",
+        "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      },
+      {
+        "phase": "edit-desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "lost-success-desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "conflict-desktop",
+        "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      },
+      {
+        "phase": "edit-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "lost-success-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "conflict-phone",
+        "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      },
+      {
+        "phase": "bulk-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "failures": [
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 403,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-transaction",
+        "status": 400,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-transaction",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "edit-desktop",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "lost-success-desktop",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "conflict-desktop",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "edit-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "lost-success-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "conflict-phone",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "bulk-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      }
+    ],
+    "directWrites": [],
+    "fixturesRemoved": true
+  },
+  "localNavigation": {
+    "results": [
+      {
+        "device": "desktop",
+        "heldSaveDoesNotRedirectAfterBlur": true,
+        "reopenReadsCommittedSaveAndNoopRetryFinishes": true
+      },
+      {
+        "device": "phone",
+        "heldSaveDoesNotRedirectAfterBlur": true,
+        "reopenReadsCommittedSaveAndNoopRetryFinishes": true
+      },
+      {
+        "lateSaveAfterSignoutCannotNavigateOrRepopulate": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failures": [],
+    "fixtureRemoved": true
+  },
+  "production": {
+    "results": [
+      {
+        "api": "crossOriginOwnerAndTesterNonowner",
+        "ownerMinimalReceipt": true,
+        "anonymousMalformedAndForeignDenied": true
+      },
+      {
+        "api": "atomicRollbackAndOwnerBounds",
+        "invalidGrapeRollsBackRating": true,
+        "ratings1And100AndNull": true,
+        "staleSnapshot409": true
+      },
+      {
+        "validCookieCannotAuthorizeCommand": true,
+        "invalidBearerCannotFallBack": true
+      },
+      {
+        "device": "desktop",
+        "owner91to93": true,
+        "validation101PreventsWrite": true,
+        "notesPreserveGrapeLinkIds": true,
+        "explicitGrapesAtomic": true,
+        "failedSavePreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "conflictPreservesSavedAndLocalText": true,
+        "emptyGrapeSelectionAndRecovery": true,
+        "webRatingNotesAndPhoto": true
+      },
+      {
+        "device": "phone",
+        "timeoutRetainsInputAndSavedData": true
+      },
+      {
+        "device": "phone",
+        "owner91to93": true,
+        "validation101PreventsWrite": true,
+        "notesPreserveGrapeLinkIds": true,
+        "explicitGrapesAtomic": true,
+        "failedSavePreservesAllData": true,
+        "lostSuccessRetryPreservesLinkIds": true,
+        "conflictPreservesSavedAndLocalText": true,
+        "emptyGrapeSelectionAndRecovery": true,
+        "webRatingNotesAndPhoto": true
+      },
+      {
+        "groupedOwnerDetails": true,
+        "companionUntouched": true
+      },
+      {
+        "foreignReceiptRejected": true,
+        "explicitRetryRecovers": true
+      },
+      {
+        "bulkPhoneFailureRetryPublish": true
+      },
+      {
+        "lateBulkSaveAfterTabNavigationDoesNotNavigateBack": true
+      },
+      {
+        "directSaveRpcOrGrapeWrites": 0,
+        "bearerOnlyCommands": true,
+        "commands": 18
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "phase": "api-authority",
+        "message": "Failed to load resource: the server responded with a status of 403 ()"
+      },
+      {
+        "phase": "api-transaction",
+        "message": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "api-transaction",
+        "message": "Failed to load resource: the server responded with a status of 409 ()"
+      },
+      {
+        "phase": "edit-desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "lost-success-desktop",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "conflict-desktop",
+        "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      },
+      {
+        "phase": "edit-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "lost-success-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "conflict-phone",
+        "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+      },
+      {
+        "phase": "bulk-phone",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "failures": [
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 401,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-authority",
+        "status": 403,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-transaction",
+        "status": 400,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "api-transaction",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "edit-desktop",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "lost-success-desktop",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "conflict-desktop",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "edit-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "lost-success-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "conflict-phone",
+        "status": 409,
+        "path": "/api/entries/fixture/details"
+      },
+      {
+        "phase": "bulk-phone",
+        "status": 503,
+        "path": "/api/entries/fixture/details"
+      }
+    ],
+    "directWrites": [],
+    "fixturesRemoved": true
+  },
+  "productionNavigation": {
+    "results": [
+      {
+        "device": "desktop",
+        "heldSaveDoesNotRedirectAfterBlur": true,
+        "reopenReadsCommittedSaveAndNoopRetryFinishes": true
+      },
+      {
+        "device": "phone",
+        "heldSaveDoesNotRedirectAfterBlur": true,
+        "reopenReadsCommittedSaveAndNoopRetryFinishes": true
+      },
+      {
+        "lateSaveAfterSignoutCannotNavigateOrRepopulate": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failures": [],
+    "fixtureRemoved": true
+  },
+  "deployment": {
+    "id": "dpl_3TD8zFXYXqv2eybHaWQQHH1MAhMr",
+    "url": "cellar-snap-p9gci90lv-eitan-sneiders-projects.vercel.app",
+    "readyState": "READY",
+    "githubDeployment": 6437837228,
+    "commit": "59cf8d52a57b42cf4e91c71d02cd48d921a4fb2b",
+    "readyAt": "2026-09-14T13:15:51Z",
+    "alias": "cellarsnap.app"
+  },
+  "schema": {
+    "changed": false,
+    "readOnlyHostedCommandCatalog": {
+      "invoker": true,
+      "authenticatedExecute": true,
+      "anonExecute": false,
+      "ownerPredicate": true,
+      "PT409": true,
+      "friendsOfFriends": true
+    }
+  },
+  "native": {
+    "xcodeSelect": "CommandLineTools",
+    "simctl": "unavailable",
+    "androidEmulator": "unavailable",
+    "adb": "unavailable",
+    "standardAndroidSDK": "absent",
+    "binaryOrOTAReleased": false
+  },
+  "cleanup": {
+    "sessionEntries": 0,
+    "sessionGroups": 0,
+    "sessionPhotos": 0,
+    "winePhotoObjects": 882,
+    "testers": 4,
+    "testerFlagsChanged": false,
+    "userFilesPreserved": true,
+    "sessionServersStopped": true
+  },
+  "limitations": [
+    "Physical ratings and direct Data API access remain QC-01 Partial",
+    "Owner creation/import, privileged scoring/knowledge/operator contracts and installed native rollout remain",
+    "Photo retirement/native and legacy-signing-cutoff prerequisites remain AUD-01 P0/Partial",
+    "Legacy queue-exit branch has no UI caller and was not browser-tested",
+    "Expo header and broad control roles/targets remain QC-05/06; other B11 findings unchanged",
+    "Aborting acceptance cannot undo a transaction already committed",
+    "Existing separate bulk queue publication/lifecycle semantics remain AUD-13/15"
+  ],
+  "runtimeLogs": {
+    "deployment": "dpl_3TD8zFXYXqv2eybHaWQQHH1MAhMr",
+    "environment": "production",
+    "level": "error",
+    "since": "2026-09-14T13:15:51Z",
+    "untilApproximate": "2026-09-14T13:20:25.092531+00:00",
+    "limit": 100,
+    "entries": 0,
+    "noBranchFilter": true
+  }
+}
