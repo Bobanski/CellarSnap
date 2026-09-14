@@ -1,6 +1,6 @@
 # Canonical remediation backlog
 
-Updated September 14, 2026. **70 records: all 50 original audit findings, eighteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
+Updated September 14, 2026. **71 records: all 50 original audit findings, nineteen browser/mobile QC findings, and two operational/reconciliation items.** This file is the work queue; do not maintain competing unchecked lists in successive handovers.
 
 Read the [batch plan and workflow](README.md) and the latest handover linked there first. Original `AUD-NN` IDs map directly to section NN of the [September 12 audit](../audits/codebase-backend-audit-2026-09-12.md), which supplies detailed evidence and recommendations. QC sources are the [browser/mobile report](../audits/batch-1-browser-mobile-qc-2026-09-12.md). This index adds status, remaining scope, batch and a closure test; it does not replace those technical details.
 
@@ -21,6 +21,8 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 **Earlier B02b release boundary:** AUD-02/03 are Closed. B02b1/B02b2 are merged, both exact SQL files are applied, and the primary web release is verified live. The broad authenticated Storage read policy has been removed. AUD-01 remains Partial for measured cache/revocation and supported-client acceptance; see [release handover](handovers/sql-rollout-b02b.md) and [live QC](../audits/b02b-production-rollout-qc-2026-09-12.md). Native binaries/OTA were not released. Recheck current deployment state when resuming.
 
 ## Active privacy pass — B02v/B02w
+
+**Owner clarification, September 14:** Current product is web-only; iOS/Android have not launched. Native device testing/distribution is deferred to mobile launch and does not block this web privacy rollout. Temporary photo unavailability is acceptable; permanent loss is not. Release work is in progress on `fix/privacy-cutover` / #158: private hash-verified backup, staged hosted SQL, desktop/phone web acceptance, deployment, explicit activation and reviewed photo retirement. AUD-01/QC-01 remain Partial until live acceptance; no closure is inferred from the scope clarification.
 
 September 14: `fix/privacy-cutover`, implementation `cb2e19f`, base `854dcff`, issue #81. **Implemented / local QC passed; not deployed.** Owner-only numeric source and adopted readers/writes, staged activation, operation-aware Storage cutoff, all-reference tombstones, avatar rekey and restartable retirement/evidence recording. 557 isolated/39 schema checks, real PostgreSQL catalog/races, web/mobile types/lint/build/export and actual desktop/phone browser/Expo flows pass within documented coverage. Native 1.0.1/build 2 candidates submitted; actual device acceptance/distribution remains. No hosted migrations, activation or ordinary photo deletion. QC-01/AUD-01 remain Partial for live/installed acceptance. [Handover](handovers/b02v-b02w-privacy-cutover.md), [runbook](b02v-b02w-cutover.md), [QC](evidence/b02v-b02w-qc.json).
 
