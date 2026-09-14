@@ -1,3 +1,4 @@
+import { PHOTO_DELIVERY_HEADER } from "@shared/photoDelivery";
 import { NextResponse } from "next/server";
 import { getPublicProfileName } from "@/lib/publicProfiles";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
@@ -15,14 +16,26 @@ import { createEntryPutHandler } from "./putHandler";
 import { createEntryDeleteHandler } from "./deleteHandler";
 import { projectEntryRatingForViewer } from "@/server/entries/publicFeed";
 
-export async function GET(
+const DETAIL_HEADERS = {
+  "Cache-Control": "private, no-store", Vary: "Cookie, Authorization",
+  "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": `Authorization, ${PHOTO_DELIVERY_HEADER}`,
+};
+export function OPTIONS() { return new Response(null, { status: 204, headers: DETAIL_HEADERS }); }
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+  const response = await getEntry(request, context);
+  for (const [key, value] of Object.entries(DETAIL_HEADERS)) response.headers.set(key, value);
+  return response;
+}
+
+async function getEntry(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   let auth;
   try {
-    auth = await requireRequestAuth(request);
+    auth = await requireRequestAuth(request, { allowCookieFallback: !request.headers.has("authorization") });
   } catch (error) {
     if (error instanceof RequestAuthError) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -221,6 +234,7 @@ export async function GET(
   const groupedPost = groupedPostData.get(data.id);
 
   return NextResponse.json({
+    viewer_user_id: user.id,
     entry: groupedPost
       ? {
           ...entry,

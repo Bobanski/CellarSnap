@@ -1,3 +1,5 @@
+import { fetchMobileEntryDetail } from "@/src/lib/api/detail";
+import type { MobileEntryDetail as EntryDetailRow } from "@/src/lib/api/detailRequest";
 import { buildEntryEditSnapshot } from "@cellarsnap/shared";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import * as ImagePicker from "expo-image-picker";
@@ -83,43 +85,6 @@ type EntryPhotoType =
   | "lineup"
   | "other_bottles";
 
-type EntryDetailRow = {
-  id: string;
-  user_id: string;
-  root_entry_id?: string | null;
-  wine_name: string | null;
-  producer: string | null;
-  vintage: string | null;
-  wine_type?: string | null;
-  country: string | null;
-  region: string | null;
-  appellation: string | null;
-  classification: string | null;
-  canonical_region?: string | null;
-  canonical_sub_region?: string | null;
-  canonical_country?: string | null;
-  rating: number | null;
-  price_paid: number | null;
-  price_paid_currency: string | null;
-  price_paid_source: "retail" | "restaurant" | null;
-  qpr_level: QprLevel | null;
-  notes: string | null;
-  advanced_notes: Record<string, unknown> | null;
-  location_text: string | null;
-  location_place_id: string | null;
-  consumed_at: string;
-  tasted_with_user_ids: string[] | null;
-  label_image_path: string | null;
-  place_image_path: string | null;
-  pairing_image_path: string | null;
-  created_at: string;
-  is_feed_visible: boolean;
-  entry_group_id?: string | null;
-  entry_privacy: PrivacyLevel;
-  reaction_privacy?: PrivacyLevel | null;
-  viewer_log_entry_id?: string | null;
-};
-
 type EntryGroupMode = "event" | "catch_up";
 
 type EntryGroupSummary = {
@@ -199,15 +164,6 @@ type EntryComment = {
   created_at: string;
   is_deleted?: boolean;
   replies: EntryCommentReply[];
-};
-
-type EntryDetailApiEntry = Partial<EntryDetailRow> & {
-  reaction_counts?: Record<string, number>;
-  my_reactions?: string[];
-  reaction_users?: Record<string, string[]>;
-  comment_count?: number;
-  can_react?: boolean;
-  can_comment?: boolean;
 };
 
 type EntryAlgorithmScoreResponse = {
@@ -941,341 +897,318 @@ export default function EntryDetailScreen() {
     return () => clearTimeout(timer);
   }, [shareToast]);
 
+  const detailLoadGeneration = useRef(0);
+  const invalidateDetailLoad = useCallback(() => { detailLoadGeneration.current++; }, []);
   const loadEntry = useCallback(async () => {
-    if (!entryId) {
-      setErrorMessage("Entry not found.");
+    const generation = ++detailLoadGeneration.current;
+    setEntry(null);
+    setPhotos([]);
+    if (!entryId || !user?.id) {
+      setErrorMessage("Entry unavailable. Please sign in again.");
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setErrorMessage(null);
+    try {
+      const response = await fetchMobileEntryDetail(entryId, user.id);
+      if (detailLoadGeneration.current !== generation) return;
+      if (!response.ok) {
+        setEntryGroup(null);
+        setErrorMessage(response.errorMessage);
+        return;
+      }
+      const nextEntry = response.payload.entry;
+      const webEntry = nextEntry;
+      const nextEntryGroupId =
+        typeof nextEntry.entry_group_id === "string" && nextEntry.entry_group_id.length > 0
+          ? nextEntry.entry_group_id
+          : null;
 
-    const { data: entryData, error: entryError } = await supabase
-      .from("wine_entries")
-      .select(
-        "id, user_id, wine_name, producer, vintage, country, region, appellation, classification, rating, price_paid, price_paid_currency, price_paid_source, qpr_level, notes, advanced_notes, location_text, location_place_id, consumed_at, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, created_at, is_feed_visible, entry_group_id, entry_privacy, reaction_privacy"
-      )
-      .eq("id", entryId)
-      .maybeSingle();
+      const [{ data: photoRows }, grapeResponse, groupResponse] = await Promise.all([
+        supabase
+          .from("entry_photos")
+          .select("id, entry_id, type, path, position, created_at")
+          .eq("entry_id", entryId)
+          .order("position", { ascending: true })
+          .order("created_at", { ascending: true }),
+        loadEntryPrimaryGrapes(supabaseDatabase.from('entry_primary_grapes')
+          .select('position, grape_varieties(id, name)').eq('entry_id', entryId)
+          .order('position', {ascending: true})),
+        nextEntryGroupId
+          ? supabase
+              .from("entry_groups")
+              .select("id, mode, title")
+              .eq("id", nextEntryGroupId)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      if (detailLoadGeneration.current !== generation) return;
+      const nextEntryGroup =
+        groupResponse?.data &&
+        typeof groupResponse.data.id === "string" &&
+        (groupResponse.data.mode === "event" || groupResponse.data.mode === "catch_up")
+          ? {
+              id: groupResponse.data.id,
+              mode: groupResponse.data.mode as EntryGroupMode,
+              title:
+                typeof groupResponse.data.title === "string" ? groupResponse.data.title : "",
+            }
+          : null;
 
-    if (entryError || !entryData) {
-      setEntryGroup(null);
-      setErrorMessage(entryError?.message ?? "Entry unavailable.");
-      setLoading(false);
-      return;
-    }
+      if (grapeResponse.grapes === null) {
+        setEntry(null);
+        setErrorMessage(grapeResponse.error);
+        setLoading(false);
+        return;
+      }
+      const primaryGrapes = grapeResponse.grapes;
 
-    const nextEntry = entryData as EntryDetailRow;
-    const nextEntryGroupId =
-      typeof nextEntry.entry_group_id === "string" && nextEntry.entry_group_id.length > 0
-        ? nextEntry.entry_group_id
-        : null;
+      const profileIds = Array.from(
+        new Set([
+          nextEntry.user_id,
+          ...(nextEntry.tasted_with_user_ids ?? []),
+          ...(user?.id ? [user.id] : []),
+        ])
+      );
 
-    const [{ data: photoRows }, grapeResponse, groupResponse] = await Promise.all([
-      supabase
-        .from("entry_photos")
-        .select("id, entry_id, type, path, position, created_at")
-        .eq("entry_id", entryId)
-        .order("position", { ascending: true })
-        .order("created_at", { ascending: true }),
-      loadEntryPrimaryGrapes(supabaseDatabase.from('entry_primary_grapes')
-        .select('position, grape_varieties(id, name)').eq('entry_id', entryId)
-        .order('position', {ascending: true})),
-      nextEntryGroupId
-        ? supabase
-            .from("entry_groups")
-            .select("id, mode, title")
-            .eq("id", nextEntryGroupId)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
-    const nextEntryGroup =
-      groupResponse?.data &&
-      typeof groupResponse.data.id === "string" &&
-      (groupResponse.data.mode === "event" || groupResponse.data.mode === "catch_up")
-        ? {
-            id: groupResponse.data.id,
-            mode: groupResponse.data.mode as EntryGroupMode,
-            title:
-              typeof groupResponse.data.title === "string" ? groupResponse.data.title : "",
-          }
-        : null;
-
-    if (grapeResponse.grapes === null) {
-      setEntry(null);
-      setErrorMessage(grapeResponse.error);
-      setLoading(false);
-      return;
-    }
-    const primaryGrapes = grapeResponse.grapes;
-
-    const profileIds = Array.from(
-      new Set([
-        nextEntry.user_id,
-        ...(nextEntry.tasted_with_user_ids ?? []),
-        ...(user?.id ? [user.id] : []),
-      ])
-    );
-
-    const profileResponse = profileIds.length
-      ? await supabase
-          .from("public_profiles")
-          .select("id, display_name, email, avatar_path")
-          .in("id", profileIds)
-      : { data: [] as ProfileRow[], error: null };
-
-    let profileRows = (profileResponse.data ?? []) as ProfileRow[];
-    if (profileResponse.error && isMissingAvatarColumn(profileResponse.error.message)) {
-      const fallback = profileIds.length
+      const profileResponse = profileIds.length
         ? await supabase
             .from("public_profiles")
-            .select("id, display_name, email")
+            .select("id, display_name, email, avatar_path")
             .in("id", profileIds)
-        : { data: [] };
-      profileRows = (fallback.data ?? []) as ProfileRow[];
-    }
+        : { data: [] as ProfileRow[], error: null };
 
-    const entryPhotoRows = (photoRows ?? []) as EntryPhotoRow[];
-    const legacyPhotoTuples: Array<{ id: string; type: EntryPhotoType; path: string | null }> = [
-      { id: "legacy-label", type: "label", path: nextEntry.label_image_path },
-      { id: "legacy-place", type: "place", path: nextEntry.place_image_path },
-      { id: "legacy-pairing", type: "pairing", path: nextEntry.pairing_image_path },
-    ];
+      let profileRows = (profileResponse.data ?? []) as ProfileRow[];
+      if (profileResponse.error && isMissingAvatarColumn(profileResponse.error.message)) {
+        const fallback = profileIds.length
+          ? await supabase
+              .from("public_profiles")
+              .select("id, display_name, email")
+              .in("id", profileIds)
+          : { data: [] };
+        profileRows = (fallback.data ?? []) as ProfileRow[];
+      }
 
-    const signedUrlMap = await createSignedUrlMap([
-      ...entryPhotoRows.map((photo) => photo.path),
-      ...legacyPhotoTuples
-        .map((photo) => photo.path)
-        .filter((path): path is string => Boolean(path)),
-      ...profileRows
-        .map((profile) => profile.avatar_path ?? null)
-        .filter((path): path is string => Boolean(path)),
-    ]);
+      const entryPhotoRows = (photoRows ?? []) as EntryPhotoRow[];
+      const legacyPhotoTuples: Array<{ id: string; type: EntryPhotoType; path: string | null }> = [
+        { id: "legacy-label", type: "label", path: nextEntry.label_image_path },
+        { id: "legacy-place", type: "place", path: nextEntry.place_image_path },
+        { id: "legacy-pairing", type: "pairing", path: nextEntry.pairing_image_path },
+      ];
 
-    const nextPhotos: EntryPhotoItem[] =
-      entryPhotoRows.length > 0
-        ? entryPhotoRows.map((photo) => ({
-            id: photo.id,
-            type: photo.type,
-            url: resolvePhotoUrl(photo.path, signedUrlMap),
-            editable: true,
-          }))
-        : legacyPhotoTuples
-            .filter((photo) => Boolean(photo.path))
-            .map((photo) => ({
+      const signedUrlMap = await createSignedUrlMap([
+        ...entryPhotoRows.map((photo) => photo.path),
+        ...legacyPhotoTuples
+          .map((photo) => photo.path)
+          .filter((path): path is string => Boolean(path)),
+        ...profileRows
+          .map((profile) => profile.avatar_path ?? null)
+          .filter((path): path is string => Boolean(path)),
+      ]);
+
+      const nextPhotos: EntryPhotoItem[] =
+        entryPhotoRows.length > 0
+          ? entryPhotoRows.map((photo) => ({
               id: photo.id,
               type: photo.type,
-              url: photo.path ? resolvePhotoUrl(photo.path, signedUrlMap) : null,
-              editable: false,
-            }));
+              url: resolvePhotoUrl(photo.path, signedUrlMap),
+              editable: true,
+            }))
+          : legacyPhotoTuples
+              .filter((photo) => Boolean(photo.path))
+              .map((photo) => ({
+                id: photo.id,
+                type: photo.type,
+                url: photo.path ? resolvePhotoUrl(photo.path, signedUrlMap) : null,
+                editable: false,
+              }));
 
-    const profileMap = new Map(profileRows.map((row) => [row.id, row]));
-    const authorProfile = profileMap.get(nextEntry.user_id);
-    const viewerProfile = user?.id ? profileMap.get(user.id) : null;
-    const socialAudience = user?.id
-      ? await loadSocialAudience(user.id, supabase)
-      : {
-          socialAuthorIds: [],
-          acceptedFriendIds: new Set<string>(),
-          friendsOfFriendsIds: new Set<string>(),
-        };
-    const resolvedReactionPrivacy = (nextEntry.reaction_privacy ??
-      nextEntry.entry_privacy ??
-      "public") as PrivacyLevel;
-    let canEntryReact = user?.id
-      ? canViewerAccessByPrivacy({
-          viewerUserId: user.id,
-          ownerUserId: nextEntry.user_id,
-          privacy: resolvedReactionPrivacy,
-          acceptedFriendIds: socialAudience.acceptedFriendIds,
-          friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
-        })
-      : false;
-    let nextReactionCounts: Record<string, number> = {};
-    let nextMyReactions: string[] = [];
-    const reactionUserIds: Record<string, string[]> = {};
+      const profileMap = new Map(profileRows.map((row) => [row.id, row]));
+      const authorProfile = profileMap.get(nextEntry.user_id);
+      const viewerProfile = user?.id ? profileMap.get(user.id) : null;
+      const socialAudience = user?.id
+        ? await loadSocialAudience(user.id, supabase)
+        : {
+            socialAuthorIds: [],
+            acceptedFriendIds: new Set<string>(),
+            friendsOfFriendsIds: new Set<string>(),
+          };
+      const resolvedReactionPrivacy = (nextEntry.reaction_privacy ??
+        nextEntry.entry_privacy ??
+        "public") as PrivacyLevel;
+      let canEntryReact = user?.id
+        ? canViewerAccessByPrivacy({
+            viewerUserId: user.id,
+            ownerUserId: nextEntry.user_id,
+            privacy: resolvedReactionPrivacy,
+            acceptedFriendIds: socialAudience.acceptedFriendIds,
+            friendsOfFriendsIds: socialAudience.friendsOfFriendsIds,
+          })
+        : false;
+      let nextReactionCounts: Record<string, number> = {};
+      let nextMyReactions: string[] = [];
+      const reactionUserIds: Record<string, string[]> = {};
 
-    const { data: reactionRows } = await supabase
-      .from("entry_reactions")
-      .select("user_id, emoji")
-      .eq("entry_id", entryId);
+      const { data: reactionRows } = await supabase
+        .from("entry_reactions")
+        .select("user_id, emoji")
+        .eq("entry_id", entryId);
 
-    const reactorIds = new Set<string>();
-    (reactionRows ?? []).forEach((row) => {
-      nextReactionCounts[row.emoji] = (nextReactionCounts[row.emoji] ?? 0) + 1;
-      reactorIds.add(row.user_id);
-      if (user?.id === row.user_id && !nextMyReactions.includes(row.emoji)) {
-        nextMyReactions.push(row.emoji);
-      }
-      const list = reactionUserIds[row.emoji] ?? [];
-      if (!list.includes(row.user_id)) {
-        list.push(row.user_id);
-      }
-      reactionUserIds[row.emoji] = list;
-    });
-
-    const missingReactorIds = Array.from(reactorIds).filter((id) => !profileMap.has(id));
-    if (missingReactorIds.length > 0) {
-      const { data: reactorProfiles } = await supabase
-        .from("public_profiles")
-        .select("id, display_name, email")
-        .in("id", missingReactorIds);
-
-      (reactorProfiles ?? []).forEach((row) => {
-        const typedRow = row as ProfileRow;
-        profileMap.set(typedRow.id, typedRow);
+      const reactorIds = new Set<string>();
+      (reactionRows ?? []).forEach((row) => {
+        nextReactionCounts[row.emoji] = (nextReactionCounts[row.emoji] ?? 0) + 1;
+        reactorIds.add(row.user_id);
+        if (user?.id === row.user_id && !nextMyReactions.includes(row.emoji)) {
+          nextMyReactions.push(row.emoji);
+        }
+        const list = reactionUserIds[row.emoji] ?? [];
+        if (!list.includes(row.user_id)) {
+          list.push(row.user_id);
+        }
+        reactionUserIds[row.emoji] = list;
       });
-    }
 
-    let nextReactionUsers: Record<string, string[]> = {};
-    Object.entries(reactionUserIds).forEach(([emoji, ids]) => {
-      nextReactionUsers[emoji] = ids.map((id) => getPublicProfileName(profileMap.get(id)));
-    });
+      const missingReactorIds = Array.from(reactorIds).filter((id) => !profileMap.has(id));
+      if (missingReactorIds.length > 0) {
+        const { data: reactorProfiles } = await supabase
+          .from("public_profiles")
+          .select("id, display_name, email")
+          .in("id", missingReactorIds);
 
-    let webEntry: EntryDetailApiEntry | null = null;
-    if (WEB_API_BASE_URL) {
-      const response = await fetchWebApiJson<{ entry?: EntryDetailApiEntry }>(
-        `/api/entries/${entryId}`
-      );
-      if (response.ok && response.payload.entry) {
-        webEntry = response.payload.entry;
+        (reactorProfiles ?? []).forEach((row) => {
+          const typedRow = row as ProfileRow;
+          profileMap.set(typedRow.id, typedRow);
+        });
       }
-    }
 
-    if (webEntry?.reaction_counts) {
-      nextReactionCounts = webEntry.reaction_counts;
-    }
-    if (Array.isArray(webEntry?.my_reactions)) {
-      nextMyReactions = webEntry.my_reactions;
-    }
-    if (webEntry?.reaction_users) {
-      nextReactionUsers = webEntry.reaction_users;
-    }
-    if (typeof webEntry?.can_react === "boolean") {
-      canEntryReact = webEntry.can_react;
-    }
+      let nextReactionUsers: Record<string, string[]> = {};
+      Object.entries(reactionUserIds).forEach(([emoji, ids]) => {
+        nextReactionUsers[emoji] = ids.map((id) => getPublicProfileName(profileMap.get(id)));
+      });
 
-    const mergedEntry: EntryDetailRow = {
-      ...nextEntry,
-      root_entry_id:
-        typeof webEntry?.root_entry_id === "string" ? webEntry.root_entry_id : null,
-      wine_type: typeof webEntry?.wine_type === "string" ? webEntry.wine_type : null,
-      canonical_region:
-        typeof webEntry?.canonical_region === "string"
-          ? webEntry.canonical_region
-          : null,
-      canonical_sub_region:
-        typeof webEntry?.canonical_sub_region === "string"
-          ? webEntry.canonical_sub_region
-          : null,
-      canonical_country:
-        typeof webEntry?.canonical_country === "string"
-          ? webEntry.canonical_country
-          : null,
-      viewer_log_entry_id:
-        typeof webEntry?.viewer_log_entry_id === "string"
-          ? webEntry.viewer_log_entry_id
-          : null,
-    };
+      if (webEntry?.reaction_counts) {
+        nextReactionCounts = webEntry.reaction_counts;
+      }
+      if (Array.isArray(webEntry?.my_reactions)) {
+        nextMyReactions = webEntry.my_reactions;
+      }
+      if (webEntry?.reaction_users) {
+        nextReactionUsers = webEntry.reaction_users;
+      }
+      if (typeof webEntry?.can_react === "boolean") {
+        canEntryReact = webEntry.can_react;
+      }
 
-    setAuthorName(
-      getPublicProfileName(authorProfile)
-    );
-    setAuthorAvatarUrl(
-      authorProfile?.avatar_path
-        ? resolvePhotoUrl(authorProfile.avatar_path, signedUrlMap)
-        : null
-    );
+      const mergedEntry = nextEntry;
+      if (detailLoadGeneration.current !== generation) return;
 
-    setTastedWithNames(
-      (nextEntry.tasted_with_user_ids ?? []).map((id) => {
-        const profile = profileMap.get(id);
-        return profile ? formatProfileName(profile) : "Unknown";
-      })
-    );
-    setViewerReactionName(
-      viewerProfile ? getPublicProfileName(viewerProfile) : user?.email ?? null
-    );
-    setCanReact(canEntryReact);
-    setMyReactions(canEntryReact ? nextMyReactions : []);
-    setReactionCounts(canEntryReact ? nextReactionCounts : {});
-    setReactionUsers(canEntryReact ? nextReactionUsers : {});
-    setCanComment(typeof webEntry?.can_comment === "boolean" ? webEntry.can_comment : false);
-    setCommentCount(typeof webEntry?.comment_count === "number" ? webEntry.comment_count : 0);
-    setAddToLogEntryId(mergedEntry.viewer_log_entry_id ?? null);
-    setAddToLogMessage(null);
-    setAddToLogError(null);
-    setReactionPickerOpen(false);
-    setEntry({ ...mergedEntry, primary_grapes: primaryGrapes });
-    setEntryGroup(nextEntryGroup);
-    setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
-    setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
-    setBulkAdvancedNotes(toAdvancedNotesFormState(nextEntry.advanced_notes));
-    setPrimaryGrapeQuery("");
-    setPrimaryGrapeSuggestions([]);
-    setPrimaryGrapeError(null);
-    setBulkReviewForm({
-      wine_name: resolveEntryWineName(nextEntry),
-      producer: nextEntry.producer ?? "",
-      vintage: nextEntry.vintage ?? "",
-      country: nextEntry.country ?? "",
-      region: nextEntry.region ?? "",
-      appellation: nextEntry.appellation ?? "",
-      classification: nextEntry.classification ?? "",
-      rating:
-        typeof nextEntry.rating === "number" && Number.isFinite(nextEntry.rating)
-          ? String(Math.round(nextEntry.rating))
-          : "",
-      price_paid:
-        typeof nextEntry.price_paid === "number" && Number.isFinite(nextEntry.price_paid)
-          ? String(nextEntry.price_paid)
-          : "",
-      price_paid_currency:
-        nextEntry.price_paid_currency &&
-        PRICE_PAID_CURRENCY_VALUES.includes(nextEntry.price_paid_currency as PricePaidCurrency)
-          ? (nextEntry.price_paid_currency as PricePaidCurrency)
-          : "",
-      price_paid_source:
-        nextEntry.price_paid_source &&
-        PRICE_PAID_SOURCE_VALUES.includes(nextEntry.price_paid_source as PricePaidSource)
-          ? (nextEntry.price_paid_source as PricePaidSource)
-          : "",
-      qpr_level:
-        nextEntry.qpr_level && QPR_LEVEL_VALUES.includes(nextEntry.qpr_level)
-          ? nextEntry.qpr_level
-          : "",
-      location_text: nextEntry.location_text ?? "",
-      location_place_id: nextEntry.location_place_id ?? "",
-      consumed_at: nextEntry.consumed_at ?? "",
-      notes: nextEntry.notes ?? "",
-    });
-    setBulkReviewError(null);
-    setLocationSuggestions([]);
-    setLocationApiMessage(null);
-    setPhotos(nextPhotos);
-    setFailedPhotoIds(new Set());
-    setActivePhotoIndex(0);
-    setAdvancedNotesOpen(false);
-    setEditExpanded({
-      wine_details: false,
-      location_date: false,
-      tasted_with: false,
-      advanced_notes: false,
-      price: false,
-    });
-    setPhotoEditError(null);
-    setPhotoTypePickerOpen(false);
-    setPhotoOrderPickerOpen(false);
-    if (galleryScrollRef.current) {
-      galleryScrollRef.current.scrollTo({ x: 0, animated: false });
+      setAuthorName(
+        getPublicProfileName(authorProfile)
+      );
+      setAuthorAvatarUrl(
+        authorProfile?.avatar_path
+          ? resolvePhotoUrl(authorProfile.avatar_path, signedUrlMap)
+          : null
+      );
+
+      setTastedWithNames(
+        (nextEntry.tasted_with_user_ids ?? []).map((id) => {
+          const profile = profileMap.get(id);
+          return profile ? formatProfileName(profile) : "Unknown";
+        })
+      );
+      setViewerReactionName(
+        viewerProfile ? getPublicProfileName(viewerProfile) : user?.email ?? null
+      );
+      setCanReact(canEntryReact);
+      setMyReactions(canEntryReact ? nextMyReactions : []);
+      setReactionCounts(canEntryReact ? nextReactionCounts : {});
+      setReactionUsers(canEntryReact ? nextReactionUsers : {});
+      setCanComment(typeof webEntry?.can_comment === "boolean" ? webEntry.can_comment : false);
+      setCommentCount(typeof webEntry?.comment_count === "number" ? webEntry.comment_count : 0);
+      setAddToLogEntryId(mergedEntry.viewer_log_entry_id ?? null);
+      setAddToLogMessage(null);
+      setAddToLogError(null);
+      setReactionPickerOpen(false);
+      setEntry({ ...mergedEntry, primary_grapes: primaryGrapes });
+      setEntryGroup(nextEntryGroup);
+      setSelectedPrimaryGrapes(primaryGrapes.map((grape) => ({ ...grape })));
+      setSelectedTastedWithIds(nextEntry.tasted_with_user_ids ?? []);
+      setBulkAdvancedNotes(toAdvancedNotesFormState(nextEntry.advanced_notes));
+      setPrimaryGrapeQuery("");
+      setPrimaryGrapeSuggestions([]);
+      setPrimaryGrapeError(null);
+      setBulkReviewForm({
+        wine_name: resolveEntryWineName(nextEntry),
+        producer: nextEntry.producer ?? "",
+        vintage: nextEntry.vintage ?? "",
+        country: nextEntry.country ?? "",
+        region: nextEntry.region ?? "",
+        appellation: nextEntry.appellation ?? "",
+        classification: nextEntry.classification ?? "",
+        rating:
+          typeof nextEntry.rating === "number" && Number.isFinite(nextEntry.rating)
+            ? String(Math.round(nextEntry.rating))
+            : "",
+        price_paid:
+          typeof nextEntry.price_paid === "number" && Number.isFinite(nextEntry.price_paid)
+            ? String(nextEntry.price_paid)
+            : "",
+        price_paid_currency:
+          nextEntry.price_paid_currency &&
+          PRICE_PAID_CURRENCY_VALUES.includes(nextEntry.price_paid_currency as PricePaidCurrency)
+            ? (nextEntry.price_paid_currency as PricePaidCurrency)
+            : "",
+        price_paid_source:
+          nextEntry.price_paid_source &&
+          PRICE_PAID_SOURCE_VALUES.includes(nextEntry.price_paid_source as PricePaidSource)
+            ? (nextEntry.price_paid_source as PricePaidSource)
+            : "",
+        qpr_level:
+          nextEntry.qpr_level && QPR_LEVEL_VALUES.includes(nextEntry.qpr_level)
+            ? nextEntry.qpr_level
+            : "",
+        location_text: nextEntry.location_text ?? "",
+        location_place_id: nextEntry.location_place_id ?? "",
+        consumed_at: nextEntry.consumed_at ?? "",
+        notes: nextEntry.notes ?? "",
+      });
+      setBulkReviewError(null);
+      setLocationSuggestions([]);
+      setLocationApiMessage(null);
+      setPhotos(nextPhotos);
+      setFailedPhotoIds(new Set());
+      setActivePhotoIndex(0);
+      setAdvancedNotesOpen(false);
+      setEditExpanded({
+        wine_details: false,
+        location_date: false,
+        tasted_with: false,
+        advanced_notes: false,
+        price: false,
+      });
+      setPhotoEditError(null);
+      setPhotoTypePickerOpen(false);
+      setPhotoOrderPickerOpen(false);
+      if (galleryScrollRef.current) {
+        galleryScrollRef.current.scrollTo({ x: 0, animated: false });
+      }
+    } catch {
+      if (detailLoadGeneration.current === generation) {
+        setEntry(null);
+        setEntryGroup(null);
+        setErrorMessage("Unable to load entry. Please try again.");
+      }
+    } finally {
+      if (detailLoadGeneration.current === generation) setLoading(false);
     }
-    setLoading(false);
   }, [entryId, user?.email, user?.id]);
 
   useEffect(() => {
     void loadEntry();
-  }, [loadEntry]);
+    return invalidateDetailLoad;
+  }, [loadEntry, invalidateDetailLoad]);
 
   useEffect(() => {
     if (!entryId || loading || isBulkReview || !openEditOnLoad || !isOwner) {
@@ -2048,7 +1981,7 @@ export default function EntryDetailScreen() {
   const canRemoveActivePhoto = Boolean(
     canManagePhotoContent && activePhoto?.editable
   );
-  const displayRating = getDisplayRating(entry?.rating ?? null);
+  const displayRating = isOwner ? getDisplayRating(entry?.rating ?? null) : entry?.public_rating_label ?? null;
   const advancedNoteRows = useMemo(
     () => getAdvancedNoteRows(entry?.advanced_notes),
     [entry?.advanced_notes]
