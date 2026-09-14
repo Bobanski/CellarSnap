@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { log } from '@/server/log';
 import { PHOTO_DELIVERY_HEADER } from '@shared/photoDelivery';
 import { OWNER_LIBRARY_PAGE_SIZE, ownerLibraryPageSchema } from '@shared/ownerLibrary';
 import { requireRequestAuth, RequestAuthError } from '@/server/auth/requestAuth';
@@ -20,6 +21,7 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
   const deps = { ...defaults, ...dependencies };
   return async (request: Request) => {
     const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: HEADERS });
+    let stage = 'auth';
     try {
       const { user, supabase } = await deps.requireRequestAuth(request, {
         allowCookieFallback: !request.headers.has('authorization'),
@@ -33,6 +35,7 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
       if (!Number.isInteger(limit) || limit < 1 || limit > OWNER_LIBRARY_PAGE_SIZE) {
         return json({ error: 'Invalid library limit' }, 400);
       }
+      stage = 'entries';
       let query = supabase.from('wine_entries').select(FIELDS)
         .eq('user_id', user.id).eq('entry_status', 'consumed')
         .order('consumed_at', { ascending: false }).order('created_at', { ascending: false })
@@ -45,6 +48,7 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
       if (rows.some(row => row.user_id !== user.id)) throw new Error('Owner mismatch');
       const page = rows.slice(0, limit);
       const ids = page.map(row => row.id);
+      stage = 'metadata';
       const [grapes, groups, labels] = await Promise.all([
         deps.fetchPrimaryGrapesByEntryId(supabase, ids, { strict: true }),
         deps.resolveGroupedPostData(supabase, page, { strict: true }),
@@ -57,8 +61,10 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
       const labelMap = new Map<string, string>();
       for (const label of labels.data ?? []) if (!labelMap.has(label.entry_id)) labelMap.set(label.entry_id, label.path);
       const paths = page.map(row => labelMap.get(row.id) ?? row.label_image_path);
+      stage = 'photos';
       const urls = await deps.signPhotoUrls(paths.filter((path): path is string => !!path), supabase);
       const last = page.at(-1);
+      stage = 'projection';
       const payload = ownerLibraryPageSchema.parse({
         viewer_user_id: user.id,
         entries: page.map((row, index) => ({ ...row,
@@ -71,9 +77,12 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
           id: last.id, consumed_at: last.consumed_at, created_at: last.created_at,
         }) : null,
       });
+      log.debug('owner_library.loaded', { entries: payload.entries.length, has_more: payload.has_more });
       return json(payload);
     } catch (error) {
       if (error instanceof RequestAuthError) return json({ error: 'Unauthorized' }, error.status);
+      // Keep tokens, source rows and raw database diagnostics out of logs/responses.
+      log.error('owner_library.load_failed', { stage });
       return json({ error: 'Unable to load your library. Please try again.' }, 500);
     }
   };
