@@ -71,3 +71,18 @@ test('library auth disables cookie fallback for any supplied authorization; pref
   }
   const r=OPTIONS();expect(r.status).toBe(204);expect(r.headers.get('access-control-allow-methods')).toBe('GET, OPTIONS');
 });
+
+test('required grape hydration surfaces database failure while legacy callers preserve their fallback',async()=>{
+  const {fetchPrimaryGrapesByEntryId}=await import('../src/lib/primaryGrapes');
+  const query={in:()=>query,order:async()=>({data:null,error:{message:'fixture grape outage'}})};
+  const client={from:()=>({select:()=>query})} as unknown as Awaited<ReturnType<typeof requireRequestAuth>>['supabase'];
+  expect(await fetchPrimaryGrapesByEntryId(client,[row.id])).toEqual(new Map());
+  await expect(fetchPrimaryGrapesByEntryId(client,[row.id],{strict:true})).rejects.toThrow('fixture grape outage');
+});
+test('required event hydration rejects missing-schema fallback instead of silently dropping events',async()=>{
+  const {resolveGroupedPostData}=await import('../src/server/entries/groupPosts');
+  const client={from:()=>({select:()=>({in:async()=>({data:null,error:{message:'relation entry_groups does not exist'}})})})} as unknown as Awaited<ReturnType<typeof requireRequestAuth>>['supabase'];
+  const anchors=[{id:row.id,entry_group_id:row.id}];
+  expect(await resolveGroupedPostData(client,anchors)).toEqual(new Map());
+  await expect(resolveGroupedPostData(client,anchors,{strict:true})).rejects.toThrow('relation entry_groups does not exist');
+});
