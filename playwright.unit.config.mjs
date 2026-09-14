@@ -43,6 +43,7 @@ export default defineConfig({
     "mobile-home-request.spec.ts",
     "mobile-detail-request.spec.ts",
     "owner-library.spec.ts",
+    "mobile-library-request.spec.ts",
     "image-dependency.spec.ts",
   ],
 });
