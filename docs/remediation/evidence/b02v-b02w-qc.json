@@ -746,5 +746,19 @@
     "QC-12 Expo single-photo detail gap despite decoded image bytes; library/events/web photos visible",
     "QC-19 unbroken public profile display name overflows phone header"
   ],
-  "pullRequest": "https://github.com/Bobanski/CellarSnap/pull/158"
+  "pullRequest": "https://github.com/Bobanski/CellarSnap/pull/158",
+  "releaseChecks": {
+    "observedAt": "2026-09-14T14:45:16Z",
+    "primaryVercelPreview": "SUCCESS",
+    "mobileCI": "SUCCESS",
+    "webCI": "IN_PROGRESS",
+    "duplicateVercel": "FAILURE: Missing Supabase environment variables; existing OPS-01",
+    "productionDeployment": "unchanged"
+  },
+  "workspace": {
+    "ownedLocalServicesStopped": true,
+    "originalTsconfigRestored": true,
+    "userReportsPreserved": true,
+    "envFilesModified": false
+  }
 }

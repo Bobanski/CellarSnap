@@ -4,7 +4,7 @@
 User requested the full planned privacy pass: QC-01 private numeric ratings, AUD-01 legacy photo cutoff/retirement and native rollout preparation. Both remain **Partial** because implementation/QC does not establish a production cutoff or installed-client acceptance. B02v implements the rating source; B02w implements photo authority/fencing/retirement. Broader AUD-13/15 create/import idempotency and B11 rendering remain separate. QC-19 was added from visual evidence; QC-05/12 were reconfirmed.
 
 ## Resume here
-Branch `fix/privacy-cutover`, base `854dcff`, implementation `cb2e19f44ed5b5c7a214cf2e5465c89f0e5ee2ae`, issue #81. See the [cutoff runbook](../b02v-b02w-cutover.md) and [sanitized evidence](../evidence/b02v-b02w-qc.json). [PR #158](https://github.com/Bobanski/CellarSnap/pull/158) is open for review; **neither new SQL file is deployed and neither production cutoff is active**. Native 1.0.1/build 2 candidates were submitted to EAS. They require the staged backend and actual device acceptance before distribution/cutoff. The user's installed-build/channel clarification was requested but not answered during this pass.
+Branch `fix/privacy-cutover`, base `854dcff`, implementation `cb2e19f44ed5b5c7a214cf2e5465c89f0e5ee2ae`, issue #81. See the [cutoff runbook](../b02v-b02w-cutover.md) and [sanitized evidence](../evidence/b02v-b02w-qc.json). [PR #158](https://github.com/Bobanski/CellarSnap/pull/158) is open for review; **neither new SQL file is deployed and neither production cutoff is active**. Native 1.0.1/build 2 candidates were submitted to EAS; iOS finished and Android remains queued at 14:45 UTC. They require the staged backend and actual device acceptance before distribution/cutoff. The user's installed-build/channel clarification was requested but not answered during this pass.
 
 ## State and decisions
 - Owner-only `wine_entry_ratings` with FKs/RLS, stored public bands, invoker read view and transactional write capture. All rating consumers—including server algorithm/knowledge/operators and native direct readers—adopt the view. Badge fact queries remain unchanged because they do not read ratings. The input table retains numbers only during staging; explicit activation clears them and enables isolation. Testers do not bypass private-rating RLS.
@@ -32,7 +32,7 @@ Native runtime inventory: CommandLineTools only; no Xcode/simctl, Android SDK, a
 
 ## Release state
 - Implementation: committed, [PR #158](https://github.com/Bobanski/CellarSnap/pull/158) open.
-- QC: local/source and builds as above; hosted integration, native device and multi-region CDN acceptance remain.
+- QC: local/source and builds as above; hosted integration, native device and multi-region CDN acceptance remain. At 14:45 UTC primary Vercel preview and mobile CI pass; web CI is running. The duplicate `cellarsnap` Vercel failure was independently rechecked: missing Supabase environment variables, existing OPS-01. No hosting configuration was changed.
 - Merge: not merged. Primary web deployment: unchanged.
 - SQL: both files only staged in the repository manifest, not applied to hosted project `rbmkypbqavmnuycznssv`.
 - `20260914134821_private_rating_source.sql`: SHA-256 `037374f8f593c6b8046e6b5b93ced35d24b103eb54a9694effa6e25639faa64d`.
