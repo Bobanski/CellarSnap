@@ -132,3 +132,13 @@ test('Storage adapter uses explicit origin, non-upsert copy, bounded image reads
  assert.throws(()=>storageAdapter('http://fixture.example','secret'));
  assert.throws(()=>psqlAdapter({PGHOST:'remote.example',PGUSER:'operator',PGDATABASE:'postgres'}),/verify-full/);
 });
+test('missing referenced originals and oversized reference cohorts cannot create an operation',async()=>{
+ const f=await fixture(false);try{
+  await f.db.query("insert into entry_photos(entry_id,path,type) values($1,$2,'label')",[entry,original]);
+  await assert.rejects(f.api.plan(id,path),/Referenced original is missing/);
+  await f.db.query('delete from entry_photos where path=$1',[original]);
+  await f.db.query("insert into entry_photos(entry_id,path,type) select $1,$2,'label' from generate_series(1,1001)",[entry,path]);
+  await assert.rejects(f.api.plan(id,path),{code:'54000'});
+  assert.equal((await f.db.query('select count(*)::int n from private.photo_rekey_operations')).rows[0].n,0);
+ }finally{await f.db.close();}
+});

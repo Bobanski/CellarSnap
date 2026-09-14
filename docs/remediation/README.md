@@ -2,7 +2,8 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
-- **Latest release and resume point:** [B02i/B02j/B02k](handovers/b02i-b02j-b02k-release.md), [sanitized QC](evidence/b02i-b02j-b02k-release.json). #138/#139/#140 merged; adopted metadata signing removed, canonical photo inventory available, web feed ratings projected. SQL and primary application live-verified; broader privacy/native rollout remains explicit.
+- **Latest B02l checkpoint:** [resumable photo copy/reference swaps](handovers/batch-02l.md), [operator contract](b02l-photo-rekey-operator.md), [QC](evidence/b02l-qc.json). #142 implementation/QC complete; private SQL live; merge/release pending. No production retirement or native cutoff.
+- **Previous release and resume point:** [B02i/B02j/B02k](handovers/b02i-b02j-b02k-release.md), [sanitized QC](evidence/b02i-b02j-b02k-release.json). #138/#139/#140 merged; adopted metadata signing removed, canonical photo inventory available, web feed ratings projected. SQL and primary application live-verified; broader privacy/native rollout remains explicit.
 - **Photo inventory:** [B02j](handovers/batch-02j.md), [sanitized counts](evidence/b02j-inventory.json); review twelve missing references before any rekey/retirement.
 - **Previous release:** [B02g/B02h/B08c](handovers/b02g-b02h-b08c-release.md), [sanitized QC](evidence/b02g-b02h-b08c-release.json). #134/#135/#136 merged; bearer/mobile source adopted, legacy revocation measured, ordinary web atomic edits and SQL released. Native distribution and broader privacy/lifecycle residuals remain explicit.
 - **Legacy-photo migration contract:** [B02h](b02h-photo-revocation-contract.md); synthetic measurement is complete, production rekey/client cutoff remains P0/Partial.
@@ -19,6 +20,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B02l is QC passed — release pending in #142.** Private resumable entry-photo copy/hash/reference-CAS machinery is live and tested on disposable fixtures; 412 isolated / 30 schema tests, actual PostgreSQL races and desktop/phone web/Expo-browser photo/crop checks pass. Inventory anomalies were triaged without repair/deletion. Successful swaps stop at pending_revocation; native adoption, late-write fencing, avatar/external consumers and retirement remain P0/Partial. [Checkpoint](handovers/batch-02l.md).
 
 **B02i/B02j/B02k are merged through #138/#139/#140, product main `c7dcfd2`.** Adopted server photo payloads authorize existing objects without minting Storage signatures; the additive invoker RPC is live and full-catalog verified. Read-only inventory tooling covers all nine canonical path fields and original siblings. Web feed JSON now transports qualitative bands with `rating: null`, preserving owner inputs elsewhere. [Release and resume steps](handovers/b02i-b02j-b02k-release.md).
 
