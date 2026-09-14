@@ -1,0 +1,482 @@
+{
+  "release": "B02v/B02w web privacy",
+  "date": "2026-09-14",
+  "issue": 81,
+  "implementationPR": 158,
+  "applicationCommit": "90e4dd29cc37551340440481813c85b04a01924e",
+  "testedTree": "f735bc14da592240ee462700067707a5a262ef31",
+  "primaryDeployment": "dpl_HWksZqA8MHWzzF72x2Z1fbF4Nc6B",
+  "domain": "https://cellarsnap.app",
+  "scope": {
+    "webOnly": true,
+    "nativeAcceptance": "Deferred by owner until mobile launch; responsive browser checks are not native acceptance"
+  },
+  "sql": [
+    {
+      "file": "20260914134821_private_rating_source.sql",
+      "sha256": "037374f8f593c6b8046e6b5b93ced35d24b103eb54a9694effa6e25639faa64d",
+      "hostedVersion": "20260914150233"
+    },
+    {
+      "file": "20260914135415_photo_authority_fence.sql",
+      "sha256": "38a0ffc7a603fb3d075a5ad470f4c45c0e41ef64b5b409d20c9d11aba526b871",
+      "hostedVersion": "20260914150255"
+    }
+  ],
+  "automation": {
+    "isolatedChecks": 557,
+    "schemaChecks": 39,
+    "realPostgresReplayAndRaces": true,
+    "ciRun": 34859819092,
+    "webAndMobileCI": "success",
+    "primaryPreview": "success",
+    "duplicateVercelTarget": "Known OPS-01 missing environment failure"
+  },
+  "backup": {
+    "objects": 882,
+    "bytes": 2320713813,
+    "allArchivedWithSha256": true,
+    "allDecodeWithinRendererBounds": true,
+    "location": "Private durable local backup outside Git; see handover"
+  },
+  "retirement": {
+    "cohorts": 487,
+    "oldObjectsRetired": 684,
+    "databaseVerified": 487,
+    "warming": {
+      "at": "2026-09-14T15:24:00.429Z",
+      "cohorts": 487,
+      "objects": 684,
+      "observations": 2736,
+      "regions": [
+        "us-east-1",
+        "eu-west-1"
+      ],
+      "retried": 9,
+      "allPassed": true
+    },
+    "denials": 2736,
+    "regions": {
+      "us-east-1": 1368,
+      "eu-west-1": 1368
+    },
+    "httpStatuses": {
+      "400": 2736
+    },
+    "firstObserved": "2026-09-14T15:27:06.169Z",
+    "lastObserved": "2026-09-14T15:51:33.059Z",
+    "proof": "Each denial matches the prewarmed capability digest, region, source digest and raw/transformed surface; database evidence accepted. No universal CDN timing guarantee.",
+    "temporaryRetirementFailures": 4,
+    "allRetriedSuccessfully": true
+  },
+  "residual": {
+    "retainedLegacyObjects": 198,
+    "unreferencedBases": 118,
+    "originalsWithoutBase": 80,
+    "preexistingMissingReferences": 12,
+    "missingWithRetainedOriginal": 9,
+    "missingWithoutKnownBytes": 3,
+    "ids": [
+      "AUD-01",
+      "AUD-22"
+    ],
+    "policy": "No automatic historical deletion or reconstruction; retained objects also match backup."
+  },
+  "browser": {
+    "viewports": {
+      "desktop": [
+        1440,
+        1000
+      ],
+      "phone": [
+        390,
+        844
+      ]
+    },
+    "visualReview": true,
+    "actualMigratedPhotoScreenshots": "Private only; sanitized read-only report included"
+  },
+  "reports": {
+    "staging": {
+      "entries": "390",
+      "ratings": "272",
+      "rating_hash": "fd88e7e9a3504328ded5dd1e5d003770",
+      "knowledge_hash": "52b1848500500d3954337ca19d5cf434",
+      "objects": "882",
+      "publications": "0",
+      "states": {
+        "isolated": false,
+        "legacy_disabled": false
+      },
+      "catalogDelta": [],
+      "versions": [
+        {
+          "version": "20260914150255",
+          "name": "photo_authority_fence"
+        },
+        {
+          "version": "20260914150233",
+          "name": "private_rating_source"
+        }
+      ]
+    },
+    "rating-activation": {
+      "at": "2026-09-14T15:15:26.856Z",
+      "raw_ratings": "0",
+      "ratings": "272",
+      "knowledge_hash": "52b1848500500d3954337ca19d5cf434",
+      "publications": "0"
+    },
+    "photo-activation": {
+      "isolated": true,
+      "activated_at": "2026-09-14T15:14:50.364Z",
+      "legacy_disabled": true,
+      "fence_epoch": "1",
+      "observed_at": "2026-09-14T15:24:26.730Z"
+    },
+    "direct-rest-qc": {
+      "results": [
+        {
+          "viewer": "owner",
+          "directRawNull": true,
+          "privateRelationAndEmbeddedOwnerOnly": true,
+          "filtersCannotInferForeignNumber": true
+        },
+        {
+          "viewer": "foreignTester",
+          "directRawNull": true,
+          "privateRelationAndEmbeddedOwnerOnly": true,
+          "filtersCannotInferForeignNumber": true
+        }
+      ],
+      "fixturesRemoved": true
+    },
+    "storage-qc": {
+      "results": [
+        {
+          "ownerUploadUpsertCopyDelete": true,
+          "directRawAndTransformedSigningDenied": true,
+          "directDownloadDenied": true,
+          "listingEmpty": true,
+          "metadataAndProtectedDisplayOriginalWork": true
+        }
+      ],
+      "fixturesRemoved": true
+    },
+    "live-isolated-create": {
+      "results": [
+        {
+          "device": "desktop",
+          "createAndDetail96": true,
+          "publicSourceNull": true
+        },
+        {
+          "device": "phone",
+          "createAndDetail96": true,
+          "publicSourceNull": true
+        },
+        {
+          "avatarUniqueReplacement": true,
+          "oldBytesPreservedForVerifiedRetirement": true,
+          "profileImageDecoded": true
+        }
+      ],
+      "errors": [],
+      "failures": [],
+      "fixturesRemoved": true
+    },
+    "live-isolated-owner": {
+      "results": [
+        {
+          "device": "desktop",
+          "ownerRatingSavedAndReloaded": true,
+          "grapeLinkIdsPreserved": true
+        },
+        {
+          "device": "phone",
+          "ownerRatingSavedAndReloaded": true,
+          "grapeLinkIdsPreserved": true
+        },
+        {
+          "ratingBoundsAndNull": true,
+          "invalidGrapeAtomicRollback": true,
+          "staleConflict409": true,
+          "foreignTesterWrite403": true,
+          "retryNoDuplicateGrapeLinks": true,
+          "foreignApiRatingNull": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "owner-edit-desktop",
+          "message": "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/immutable/chunks/1es"
+        }
+      ],
+      "httpErrors": [],
+      "fixturesRemoved": true
+    },
+    "rekey-browser-final": {
+      "results": [
+        {
+          "rekeyedBeforeBrowser": true,
+          "baseAndOriginal": true
+        },
+        {
+          "device": "desktop",
+          "imageLoaded": true,
+          "storageRequests": 0,
+          "signatureFreePayload": true
+        },
+        {
+          "device": "phone",
+          "imageLoaded": true,
+          "storageRequests": 0,
+          "signatureFreePayload": true
+        },
+        {
+          "initial": {
+            "status": 200,
+            "noStore": true,
+            "bytes": 91828
+          }
+        },
+        {
+          "reason": "photoPrivacy",
+          "denied": {
+            "status": 404,
+            "noStore": true,
+            "bytes": 0
+          }
+        },
+        {
+          "reason": "entryPrivacy",
+          "denied": {
+            "status": 404,
+            "noStore": true,
+            "bytes": 0
+          }
+        },
+        {
+          "reason": "testAuthor",
+          "denied": {
+            "status": 404,
+            "noStore": true,
+            "bytes": 0
+          }
+        },
+        {
+          "anonymous": 401
+        },
+        {
+          "cropSaveAndOriginalReopen": true
+        },
+        {
+          "ownerEditor": "desktop",
+          "cropOpened": true
+        },
+        {
+          "ownerEditor": "phone",
+          "cropOpened": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/immutable/chunks/1es",
+        "Failed to load resource: the server responded with a status of 400 ()"
+      ],
+      "failedRequests": [
+        {
+          "path": "/sommelier",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/palate/distill",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/auth/v1/user",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/feed",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/notifications",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/notifications",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/notifications",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/feed",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/palate",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/photos/image",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/api/photos/image",
+          "error": "net::ERR_ABORTED"
+        },
+        {
+          "path": "/sommelier",
+          "error": "net::ERR_ABORTED"
+        }
+      ],
+      "httpFailures": [
+        {
+          "path": "/storage/v1/object/copy",
+          "status": 400,
+          "error": "Duplicate"
+        }
+      ],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "share-qc": {
+      "results": [
+        {
+          "device": "desktop",
+          "anonymousBandWithoutNumericRating": true,
+          "authorizedShareImageVisible": true
+        },
+        {
+          "device": "phone",
+          "anonymousBandWithoutNumericRating": true,
+          "authorizedShareImageVisible": true
+        },
+        {
+          "photoPrivacyRevokesImage": true,
+          "entryPrivacyRevokesPageAndImage": true,
+          "ogFallsBackAfterRevocation": true
+        }
+      ],
+      "errors": [],
+      "fixturesRemoved": true
+    },
+    "actual-photo-browser": {
+      "results": [
+        {
+          "device": "desktop",
+          "actualRekeyedLabelVisible": true,
+          "decodedAtNonzeroSize": true,
+          "protectedUrl": true,
+          "oldReferenceAbsent": true
+        },
+        {
+          "device": "phone",
+          "actualRekeyedLabelVisible": true,
+          "decodedAtNonzeroSize": true,
+          "protectedUrl": true,
+          "oldReferenceAbsent": true
+        }
+      ],
+      "errors": [],
+      "readOnly": true
+    },
+    "final-integrity": {
+      "at": "2026-09-14T15:52:21.849Z",
+      "entries": 390,
+      "ratingsPreserved": 272,
+      "rawNumericRatings": 0,
+      "publicationRelations": 0,
+      "referencesPreserved": 650,
+      "sourceChecks": [
+        {
+          "table": "wine_entries",
+          "rows": 390,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "entry_photos",
+          "rows": 480,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "entry_group_slides",
+          "rows": 113,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "entry_groups",
+          "rows": 36,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "profiles",
+          "rows": 64,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "user_collection_items",
+          "rows": 9,
+          "sourceFieldsPreserved": true
+        },
+        {
+          "table": "user_collections",
+          "rows": 5,
+          "sourceFieldsPreserved": true
+        }
+      ],
+      "objects": 882,
+      "objectsRekeyed": 684,
+      "objectsRetained": 198,
+      "allRemoteBytesComparedToBackup": true,
+      "remoteHashChecks": 882,
+      "failures": [],
+      "knowledgeBefore": 384,
+      "knowledgeAfter": 368,
+      "operations": {
+        "verified": 487
+      }
+    },
+    "profile-flags-restored": {
+      "restored": true,
+      "accounts": 2,
+      "at": "2026-09-14T15:49:43.078Z"
+    }
+  },
+  "diagnostics": {
+    "successfulBrowserPageExceptions": 0,
+    "knownOwnerFetchConsoleDiagnostic": "AUD-50",
+    "ownerControlsLoadingDelay": "AUD-39; completed-profile wait passed after initial 5-second timeout",
+    "expectedCopy400": "Duplicate original during crop; retained and crop/reopen passed",
+    "navigationAbortedRequests": "Recorded separately in browser report",
+    "productionLogWindow30Minutes": {
+      "errors": 1,
+      "at": "2026-09-14T15:36:12.166Z",
+      "path": "/api/photos/image",
+      "status": 401,
+      "cause": "Supabase connection timeout at 10 seconds during retirement; originals retained until retry passed"
+    },
+    "finalProductionLogWindow10Minutes": {
+      "errors": 0
+    },
+    "harnessRetests": [
+      "Await optional comparison or detail navigation",
+      "Wait for actual avatar decode and visible opacity",
+      "Expired share intentionally renders HTTP 200 Link expired; image 404 and generic OG verified",
+      "Reduce regional-observer connections to respect pool maximum"
+    ]
+  },
+  "cleanup": {
+    "temporaryRegionalProbeDeleted": true,
+    "edgeFunctionsAfter": [],
+    "operatorProfileFlagsRestored": true,
+    "disposableFixturesRemoved": true,
+    "ownedPort3009Stopped": true,
+    "envFilesUnchanged": true
+  }
+}
