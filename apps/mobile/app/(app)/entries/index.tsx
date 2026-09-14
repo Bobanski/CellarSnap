@@ -61,9 +61,7 @@ import {
   type EntryLibraryViewMode as LibraryViewMode,
   type EventTypeValue,
   type EntryCollectionSummary,
-  type QprLevel,
   type UserCollectionSummary,
-  type WineEntrySummary,
   formatConsumedDate,
 } from "@cellarsnap/shared";
 import {
@@ -74,22 +72,15 @@ import { fetchCellarEntries, drinkFromCellar } from "@/src/lib/api/cellar";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { DoneTextInput } from "@/src/components/DoneTextInput";
 import {
-  resolveMobileGroupedPostData,
   type MobileEntryGroup,
   type MobileGroupedEntrySlide,
 } from "@/src/lib/entries/groupedPosts";
-import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
-import { supabase } from "@/src/lib/supabase";
+import { fetchMobileLibrary } from "@/src/lib/api/library";
+import type { OwnerLibraryEntry } from "../../../../../packages/shared/src/ownerLibrary";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
-
-type PrimaryGrape = {
-  id: string;
-  name: string;
-  position: number;
-};
 
 const VISIBLE_CELLAR_TABS: EntryStatus[] = ["consumed", "cellaring", "events"];
 const COLLECTIONS_HEADER = {
@@ -107,43 +98,7 @@ function normalizeRequestedEntryTab(
     ? candidate
     : "consumed";
 }
-type EntryPrimaryGrapeRow = {
-  entry_id: string;
-  position: number;
-  grape_varieties:
-    | {
-        id: string;
-        name: string;
-      }
-    | {
-        id: string;
-        name: string;
-      }[]
-    | null;
-};
-type MobileEntryRow = WineEntrySummary & {
-  label_image_path: string | null;
-  country: string | null;
-  region: string | null;
-  appellation: string | null;
-  classification: string | null;
-  qpr_level: QprLevel | null;
-  entry_group_id?: string | null;
-};
-type MobileEntry = WineEntrySummary & {
-  label_image_path: string | null;
-  label_image_url?: string | null;
-  country: string | null;
-  region: string | null;
-  appellation: string | null;
-  classification: string | null;
-  primary_grapes?: PrimaryGrape[];
-  qpr_level: QprLevel | null;
-  entry_group_id?: string | null;
-  entry_group?: MobileEntryGroup | null;
-  group_slides?: MobileGroupedEntrySlide[] | null;
-  collections?: EntryCollectionSummary[];
-};
+type MobileEntry = OwnerLibraryEntry & { collections?: EntryCollectionSummary[] };
 
 type EntryGroup = {
   id: string;
@@ -195,18 +150,6 @@ function CollectionListCard({ item }: { item: UserCollectionSummary }) {
       <Feather name="chevron-right" size={18} color={colors.textSecondary} />
     </Pressable>
   );
-}
-
-function normalizeVariety(
-  variety: EntryPrimaryGrapeRow["grape_varieties"]
-): { id: string; name: string } | null {
-  if (!variety) {
-    return null;
-  }
-  if (Array.isArray(variety)) {
-    return variety[0] ?? null;
-  }
-  return variety;
 }
 
 function getPrimaryCollectionLabel(collections?: EntryCollectionSummary[]) {
@@ -519,54 +462,6 @@ function EventHistoryCard({ item }: { item: EventHistoryEntry }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Helpers for enriching a batch of raw rows into MobileEntry[]
-// ---------------------------------------------------------------------------
-
-async function enrichPageRows(
-  pageRows: MobileEntryRow[],
-  existingGrapeMap: Map<string, PrimaryGrape[]>
-): Promise<MobileEntry[]> {
-  if (pageRows.length === 0) return [];
-
-  const entryIds = pageRows.map((e) => e.id);
-
-  // Fetch grapes for this page in parallel with label photos + grouped posts
-  const [primaryGrapeRows, labelByEntryId, groupedPostByEntryId] = await Promise.all([
-    supabase
-      .from("entry_primary_grapes")
-      .select("entry_id, position, grape_varieties(id, name)")
-      .in("entry_id", entryIds)
-      .order("position", { ascending: true })
-      .then((res) => (res.error ? null : (res.data as EntryPrimaryGrapeRow[] | null))),
-    resolveEntryLabelPhotos(pageRows, { supabaseClient: supabase }),
-    resolveMobileGroupedPostData(pageRows, { supabaseClient: supabase }),
-  ]);
-
-  // Merge grapes from this page into the running map
-  if (primaryGrapeRows) {
-    primaryGrapeRows.forEach((row) => {
-      const variety = normalizeVariety(row.grape_varieties);
-      if (!variety) return;
-      const current = existingGrapeMap.get(row.entry_id) ?? [];
-      current.push({ id: variety.id, name: variety.name, position: row.position });
-      existingGrapeMap.set(row.entry_id, current);
-    });
-  }
-
-  return pageRows.map((entry) => {
-    const groupedPost = groupedPostByEntryId.get(entry.id);
-    return {
-      ...entry,
-      label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-      primary_grapes: existingGrapeMap.get(entry.id) ?? [],
-      entry_group_id: entry.entry_group_id ?? null,
-      entry_group: groupedPost?.entry_group ?? null,
-      group_slides: groupedPost?.group_slides ?? null,
-    };
-  });
-}
-
 async function attachCollectionMembershipsToItems<T extends { id: string }>(
   items: T[]
 ): Promise<Array<T & { collections?: EntryCollectionSummary[] }>> {
@@ -580,13 +475,16 @@ async function attachCollectionMembershipsToItems<T extends { id: string }>(
 }
 
 export default function EntriesScreen() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const params = useLocalSearchParams<{ tab?: string | string[] }>();
   const [activeTab, setActiveTab] = useState<EntryStatus>(() =>
     normalizeRequestedEntryTab(params.tab)
   );
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const [entries, setEntries] = useState<MobileEntry[]>([]);
+  const [loadedEntries, setEntries] = useState<MobileEntry[]>([]);
+  const [librarySession, setLibrarySession] = useState<string | null>(null);
+  const sessionKey = session?.access_token ?? null;
+  const entries = useMemo(() => librarySession === sessionKey ? loadedEntries : [], [librarySession, sessionKey, loadedEntries]);
   const [cellarEntries, setCellarEntries] = useState<CellarEntry[]>([]);
   const [collectionsList, setCollectionsList] = useState<UserCollectionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -780,27 +678,24 @@ export default function EntriesScreen() {
 
   const loadEntries = useCallback(
     async (refresh = false) => {
-      if (!user) return;
-
-      // Bump generation so any previous background loop knows to stop
-      const gen = loadGenRef.current + 1;
-      loadGenRef.current = gen;
+      const gen = ++loadGenRef.current;
+      setEntries([]);
+      setActivitySummary(null);
+      setLibrarySession(sessionKey);
+      if (!user) { setIsLoading(false); return; }
 
       if (refresh) {
         setIsRefreshing(true);
-        setEntries([]);
       } else {
         setIsLoading(true);
       }
       setErrorMessage(null);
 
-      setActivitySummary(null);
       void fetchActivitySummary().then(summary => {
         if (loadGenRef.current === gen) setActivitySummary(summary);
       }).catch(() => { /* Unknown counts remain unavailable, never zero. */ });
-      const grapeMap = new Map<string, PrimaryGrape[]>();
-      const pageSize = 100;
-      let start = 0;
+      let cursor: string | null = null;
+      const seenCursors = new Set<string>();
       let firstPage = true;
 
       try {
@@ -808,35 +703,29 @@ export default function EntriesScreen() {
           // Bail if a newer load has started
           if (loadGenRef.current !== gen) return;
 
-          const { data, error } = await supabase
-            .from("wine_entries")
-            .select("id, user_id, wine_name, producer, vintage, rating, consumed_at, created_at, label_image_path, country, region, appellation, classification, qpr_level, entry_group_id")
-            .eq("user_id", user.id)
-            .eq("entry_status", "consumed")
-            .order("consumed_at", { ascending: false })
-            .order("created_at", { ascending: false })
-            .range(start, start + pageSize - 1);
-
-          // Bail again after await
+          const result = await fetchMobileLibrary(user.id, cursor);
           if (loadGenRef.current !== gen) return;
-
-          if (error) {
-            setErrorMessage(error.message);
-            break;
-          }
-
-          const pageRows = (data ?? []) as MobileEntryRow[];
-          const isLastPage = pageRows.length < pageSize;
+          if (!result.ok) throw new Error(result.errorMessage);
+          const pageRows = result.payload.entries;
+          const isLastPage = !result.payload.has_more;
 
           if (pageRows.length > 0) {
-            // Enrich this page (grapes + labels + grouped posts) in parallel
-            const hydratedPage = await enrichPageRows(pageRows, grapeMap);
-
-            // Bail after enrichment awaits
-            if (loadGenRef.current !== gen) return;
+            const hydratedPage = pageRows;
 
             // Attach collection memberships per page
-            const withCollections = await attachCollectionMembershipsToItems(hydratedPage);
+            // Optional collection labels must not strand the required library load.
+            let collectionTimer: ReturnType<typeof setTimeout> | undefined;
+            let withCollections: MobileEntry[];
+            try {
+              withCollections = await Promise.race([
+                attachCollectionMembershipsToItems(hydratedPage).catch(() => hydratedPage),
+                new Promise<MobileEntry[]>(resolve => {
+                  collectionTimer = setTimeout(() => resolve(hydratedPage), 5_000);
+                }),
+              ]);
+            } finally {
+              clearTimeout(collectionTimer);
+            }
 
             if (loadGenRef.current !== gen) return;
 
@@ -864,7 +753,15 @@ export default function EntriesScreen() {
           }
 
           if (isLastPage) break;
-          start += pageSize;
+          cursor = result.payload.next_cursor;
+          if (!cursor || seenCursors.has(cursor)) throw new Error("Unable to load. Please try again.");
+          seenCursors.add(cursor);
+        }
+      } catch (error) {
+        if (loadGenRef.current === gen) {
+          setEntries([]);
+          setActivitySummary(null);
+          setErrorMessage(error instanceof Error ? error.message : "Unable to load. Please try again.");
         }
       } finally {
         // Ensure spinners always clear even if we returned early or threw
@@ -874,7 +771,7 @@ export default function EntriesScreen() {
         }
       }
     },
-    [user]
+    [user, sessionKey]
   );
 
   const loadCellarEntries = useCallback(
@@ -928,11 +825,15 @@ export default function EntriesScreen() {
   }, []);
 
   useEffect(() => {
+    const generation = loadGenRef;
     const timeoutId = setTimeout(() => {
       void loadEntries();
     }, 0);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      ++generation.current;
+    };
   }, [loadEntries]);
 
   useEffect(() => {
@@ -1092,10 +993,15 @@ export default function EntriesScreen() {
         <AppText style={styles.countText}>{getEntriesCountLabel(sortedEntries.length)}</AppText>
       </View>
 
-      {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+      {errorMessage ? <View>
+        <AppText style={styles.errorText}>{errorMessage}</AppText>
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={[styles.pill, styles.libraryRetry]}>
+          <AppText style={styles.pillText}>Retry</AppText>
+        </Pressable>
+      </View> : null}
 
       {/* Empty state or grouped view live in the header; flat-all mode is virtualized below */}
-      {sortedEntries.length === 0 ? (
+      {errorMessage ? null : sortedEntries.length === 0 ? (
         <View style={styles.emptyCard}>
           <AppText style={styles.emptyText}>
             {getEntriesEmptyStateMessage({
@@ -1288,9 +1194,14 @@ export default function EntriesScreen() {
 
           {activeTab === "events" ? (
             <>
-              {errorMessage ? <AppText style={styles.errorText}>{errorMessage}</AppText> : null}
+              {errorMessage ? <View>
+        <AppText style={styles.errorText}>{errorMessage}</AppText>
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={[styles.pill, styles.libraryRetry]}>
+          <AppText style={styles.pillText}>Retry</AppText>
+        </Pressable>
+      </View> : null}
 
-              {eventEntries.length === 0 ? (
+              {errorMessage ? null : eventEntries.length === 0 ? (
                 <View style={styles.emptyCard}>
                   <AppText style={styles.cellarEmptyTitle}>{CELLAR_COPY.eventsEmptyTitle}</AppText>
                   <AppText style={styles.emptyText}>{CELLAR_COPY.eventsEmptySubtitle}</AppText>
@@ -1376,6 +1287,7 @@ export default function EntriesScreen() {
 }
 
 const styles = StyleSheet.create({
+  libraryRetry: { minHeight: 44, justifyContent: "center" },
   screen: { flex: 1, backgroundColor: colors.screenBg },
   loadingScreen: { flex: 1, backgroundColor: colors.screenBg, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
