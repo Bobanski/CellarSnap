@@ -19,13 +19,11 @@ import { lightImpact } from "@/src/lib/haptics";
 import {
   FEED_REACTION_EMOJIS,
   HOME_ACTION_LABELS,
-  HOME_CIRCLE_ENTRIES_LIMIT,
   HOME_EMPTY_STATE_COPY,
   HOME_HEADER_COPY,
   HOME_PRIVACY_ONBOARDING_COPY,
   HOME_PRIVACY_OPTION_DESCRIPTIONS,
   HOME_PRIVACY_OPTION_VALUES,
-  HOME_RECENT_ENTRIES_LIMIT,
   HOME_SECTION_LABELS,
   PRIVACY_LEVEL_LABELS,
   QPR_LEVEL_LABELS,
@@ -35,110 +33,24 @@ import {
   type HomeApiCircleEntry,
   type HomeApiRecentEntry,
   type PrivacyLevel,
-  type QprLevel,
 } from "@cellarsnap/shared";
 import { AppTopBar } from "@/src/components/AppTopBar";
 import { ReactionSummaryPills } from "@/src/components/ReactionSummaryPills";
 import { AppText } from "@/src/components/AppText";
 import { fetchMobileHomeFromApi } from "@/src/lib/api/home";
-import { getPublicProfileName } from "@/src/lib/publicProfiles";
 import {
   DRINKING_NOW_REFRESH_INTERVAL_MS,
   isDrinkingNowActive,
 } from "@/src/lib/drinkingNow";
-import { resolveEntryLabelPhotos } from "@/src/lib/storage/entryLabels";
-import { signPhotoUrls } from "@/src/lib/storage/signedUrls";
 import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
 
-type HomeEntryRow = {
-  id: string;
-  user_id: string;
-  wine_name: string | null;
-  producer: string | null;
-  vintage: string | null;
-  rating: number | null;
-  qpr_level: QprLevel | null;
-  consumed_at: string;
-  created_at: string;
-  tasted_with_user_ids: string[] | null;
-  label_image_path: string | null;
-  entry_privacy: PrivacyLevel;
-  drinking_now?: boolean | null;
-};
-
-type ProfileWithPrivacyRow = {
-  display_name: string | null;
-  first_name: string | null;
-  default_entry_privacy: string | null;
-  privacy_confirmed_at: string | null;
-};
-
-type FallbackProfileRow = {
-  display_name: string | null;
-  first_name: string | null;
-  created_at: string | null;
-};
-
-type FriendRelationRow = {
-  requester_id: string;
-  recipient_id: string;
-};
-
-type FriendProfileRow = {
-  id: string;
-  display_name: string | null;
-  email: string | null;
-  avatar_path?: string | null;
-};
-
-type HomeReactionRow = {
-  entry_id: string;
-  user_id: string;
-  emoji: string;
-};
-
-type HomeInteractionSettingsRow = {
-  id: string;
-  reaction_privacy?: string | null;
-};
-
 type RecentEntry = HomeApiRecentEntry;
 type CircleEntry = HomeApiCircleEntry;
 
 const BACKGROUND_REFRESH_STALE_MS = 90_000;
-
-function isMissingAvatarColumn(message: string) {
-  return message.includes("avatar_path") || message.includes("column");
-}
-
-function canViewerAccessByHomePrivacy({
-  viewerUserId,
-  ownerUserId,
-  privacy,
-  acceptedFriendIds,
-}: {
-  viewerUserId: string;
-  ownerUserId: string;
-  privacy: PrivacyLevel;
-  acceptedFriendIds: Set<string>;
-}) {
-  if (viewerUserId === ownerUserId) {
-    return true;
-  }
-
-  const normalized = normalizePrivacyLevel(privacy, "public");
-  if (normalized === "public") {
-    return true;
-  }
-  if (normalized === "private") {
-    return false;
-  }
-
-  return acceptedFriendIds.has(ownerUserId);
-}
 
 const PRIVACY_TONES: Record<
   PrivacyLevel,
@@ -236,7 +148,7 @@ function HomeEntryCard({
   const hideProducer = shouldHideProducerInEntryTile(entry.wine_name, entry.producer);
   const producer = hideProducer ? null : entry.producer?.trim() || null;
   const vintage = entry.vintage?.trim() || null;
-  const displayRating = getFeedDisplayRatingLabel(entry.rating);
+  const displayRating = entry.public_rating_label ?? (variant === "own" ? getFeedDisplayRatingLabel(entry.rating) : null);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const ownerWithCompanionsLabel = buildOwnerWithCompanionsLabel(
     ownerLabel,
@@ -468,8 +380,20 @@ export default function HomeScreen() {
     setCircleEntries(payload.circleEntries ?? []);
   }, []);
 
+  const loadGeneration = useRef(0);
+  const invalidateLoad = useCallback(() => { loadGeneration.current++; }, []);
+  useEffect(() => {
+    invalidateLoad();
+    setRecentEntries([]);
+    setCircleEntries([]);
+    hasLoadedHomeRef.current = false;
+    lastLoadedAtRef.current = 0;
+    return invalidateLoad;
+  }, [user?.id, invalidateLoad]);
+
   const loadHome = useCallback(
     async (refresh = false) => {
+      const generation = ++loadGeneration.current;
       if (!user) {
         setIsLoading(false);
         return;
@@ -483,403 +407,29 @@ export default function HomeScreen() {
       setErrorMessage(null);
 
       try {
-        const apiResult = await fetchMobileHomeFromApi();
+        const apiResult = await fetchMobileHomeFromApi(user.id);
+        if (loadGeneration.current !== generation) return;
         if (apiResult.ok) {
           applyHomePayload(apiResult.payload);
           lastLoadedAtRef.current = Date.now();
           return;
         }
 
-        const { data: profileWithPrivacy, error: profileError } = await supabase
-          .from("profiles")
-          .select("display_name, first_name, default_entry_privacy, privacy_confirmed_at")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        let profile = profileWithPrivacy as ProfileWithPrivacyRow | null;
-
-        if (profileError) {
-          if (
-            profileError.message.includes("default_entry_privacy") ||
-            profileError.message.includes("privacy_confirmed_at")
-          ) {
-            const fallback = await supabase
-              .from("profiles")
-              .select("display_name, first_name, created_at")
-              .eq("id", user.id)
-              .maybeSingle();
-
-            if (fallback.error) {
-              throw fallback.error;
-            }
-
-            const fallbackData = fallback.data as FallbackProfileRow | null;
-            profile = fallbackData
-              ? {
-                  display_name: fallbackData.display_name ?? null,
-                  first_name: fallbackData.first_name ?? null,
-                  default_entry_privacy: "public",
-                  privacy_confirmed_at:
-                    fallbackData.created_at ?? new Date().toISOString(),
-                }
-              : null;
-          } else {
-            throw profileError;
-          }
-        }
-
-        const { count: totalCount, error: totalCountError } = await supabase
-          .from("wine_entries")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
-
-        if (totalCountError) {
-          throw totalCountError;
-        }
-
-        const baseHomeSelectFields =
-          "id, user_id, wine_name, producer, vintage, rating, qpr_level, consumed_at, created_at, tasted_with_user_ids, label_image_path, entry_privacy";
-        const selectHomeRows = async ({
-          includeDrinkingNow,
-        }: {
-          includeDrinkingNow: boolean;
-        }) => {
-          const fields = includeDrinkingNow
-            ? `${baseHomeSelectFields}, drinking_now`
-            : baseHomeSelectFields;
-          const response = await supabase
-            .from("wine_entries")
-            .select(fields)
-            .eq("user_id", user.id)
-            .order("consumed_at", { ascending: false })
-            .order("created_at", { ascending: false })
-            .limit(HOME_RECENT_ENTRIES_LIMIT);
-          return {
-            data: (response.data ?? []).map((row) => ({
-              ...(row as unknown as HomeEntryRow),
-              drinking_now: includeDrinkingNow
-                ? (row as unknown as HomeEntryRow).drinking_now ?? false
-                : false,
-            })),
-            error: response.error,
-          };
-        };
-
-        const ownAttempt = await selectHomeRows({ includeDrinkingNow: true });
-        let ownEntries = ownAttempt.data;
-        if (ownAttempt.error) {
-          if (
-            ownAttempt.error.message.includes("drinking_now") ||
-            ownAttempt.error.message.includes("column")
-          ) {
-            const fallback = await selectHomeRows({ includeDrinkingNow: false });
-            if (fallback.error) {
-              throw fallback.error;
-            }
-            ownEntries = fallback.data;
-          } else {
-            throw ownAttempt.error;
-          }
-        }
-
-        const { data: friendRows, error: friendRowsError } = await supabase
-          .from("friend_requests")
-          .select("requester_id, recipient_id")
-          .eq("status", "accepted")
-          .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`);
-
-        if (friendRowsError) {
-          throw friendRowsError;
-        }
-
-        const friendIds = Array.from(
-          new Set(
-            ((friendRows ?? []) as FriendRelationRow[]).map((row) =>
-              row.requester_id === user.id ? row.recipient_id : row.requester_id
-            )
-          )
-        );
-
-        let friendEntries: HomeEntryRow[] = [];
-        if (friendIds.length > 0) {
-          const buildFriendQuery = ({
-            includeDrinkingNow,
-            includeFeedVisibility,
-          }: {
-            includeDrinkingNow: boolean;
-            includeFeedVisibility: boolean;
-          }) => {
-            const fields = includeDrinkingNow
-              ? `${baseHomeSelectFields}, drinking_now`
-              : baseHomeSelectFields;
-            let query = supabase
-              .from("wine_entries")
-              .select(fields)
-              .in("user_id", friendIds)
-              .in("entry_privacy", ["public", "friends_of_friends", "friends"])
-              .order("created_at", { ascending: false })
-              .limit(HOME_CIRCLE_ENTRIES_LIMIT);
-
-            if (includeFeedVisibility) {
-              query = query.eq("is_feed_visible", true);
-            }
-
-            return query;
-          };
-
-          const friendAttempts = [
-            { includeDrinkingNow: true, includeFeedVisibility: true },
-            { includeDrinkingNow: false, includeFeedVisibility: true },
-            { includeDrinkingNow: true, includeFeedVisibility: false },
-            { includeDrinkingNow: false, includeFeedVisibility: false },
-          ] as const;
-
-          let lastFriendError: Error | { message: string } | null = null;
-          for (const attempt of friendAttempts) {
-            const response = await buildFriendQuery(attempt);
-            if (!response.error) {
-              friendEntries = (response.data ?? []).map((row) => ({
-                ...(row as unknown as HomeEntryRow),
-                drinking_now: attempt.includeDrinkingNow
-                  ? (row as unknown as HomeEntryRow).drinking_now ?? false
-                  : false,
-              }));
-              lastFriendError = null;
-              break;
-            }
-
-            lastFriendError = response.error;
-            const message = response.error.message ?? "";
-            if (
-              !message.includes("drinking_now") &&
-              !message.includes("is_feed_visible") &&
-              !message.includes("column")
-            ) {
-              throw response.error;
-            }
-          }
-
-          if (lastFriendError) {
-            throw lastFriendError;
-          }
-        }
-
-        const allEntries = [...ownEntries, ...friendEntries];
-        const allEntryIds = allEntries.map((entry) => entry.id);
-        const labelByEntryId = await resolveEntryLabelPhotos(allEntries, {
-          supabaseClient: supabase,
-        });
-
-        const reactionCountsByEntryId = new Map<string, Record<string, number>>();
-        const myReactionsByEntryId = new Map<string, string[]>();
-        const reactionUserIdsByEntryId = new Map<string, Record<string, string[]>>();
-        const reactorUserIds = new Set<string>();
-        if (allEntryIds.length > 0) {
-          const { data: reactionRows, error: reactionsError } = await supabase
-            .from("entry_reactions")
-            .select("entry_id, user_id, emoji")
-            .in("entry_id", allEntryIds);
-
-          if (reactionsError) {
-            throw reactionsError;
-          }
-
-          (reactionRows ?? []).forEach((row) => {
-            const typedRow = row as HomeReactionRow;
-            const counts = reactionCountsByEntryId.get(typedRow.entry_id) ?? {};
-            counts[typedRow.emoji] = (counts[typedRow.emoji] ?? 0) + 1;
-            reactionCountsByEntryId.set(typedRow.entry_id, counts);
-
-            const emojiUsers = reactionUserIdsByEntryId.get(typedRow.entry_id) ?? {};
-            const list = emojiUsers[typedRow.emoji] ?? [];
-            if (!list.includes(typedRow.user_id)) {
-              list.push(typedRow.user_id);
-            }
-            emojiUsers[typedRow.emoji] = list;
-            reactionUserIdsByEntryId.set(typedRow.entry_id, emojiUsers);
-            reactorUserIds.add(typedRow.user_id);
-
-            if (typedRow.user_id === user.id) {
-              const mine = myReactionsByEntryId.get(typedRow.entry_id) ?? [];
-              if (!mine.includes(typedRow.emoji)) {
-                mine.push(typedRow.emoji);
-              }
-              myReactionsByEntryId.set(typedRow.entry_id, mine);
-            }
-          });
-        }
-
-        const interactionSettingsByEntryId = new Map<string, HomeInteractionSettingsRow>();
-        if (allEntryIds.length > 0) {
-          const selectAttempts = ["id, reaction_privacy", "id"];
-
-          for (let index = 0; index < selectAttempts.length; index += 1) {
-            const { data, error } = await supabase
-              .from("wine_entries")
-              .select(selectAttempts[index])
-              .in("id", allEntryIds);
-
-            if (!error) {
-              (data ?? []).forEach((row) => {
-                const typedRow = row as unknown as HomeInteractionSettingsRow;
-                interactionSettingsByEntryId.set(typedRow.id, typedRow);
-              });
-              break;
-            }
-
-            if (index === 0 && error.message.includes("reaction_privacy")) {
-              continue;
-            }
-          }
-        }
-
-        const profileLookupIds = Array.from(
-          new Set([
-            ...friendEntries.map((entry) => entry.user_id),
-            ...allEntries.flatMap((entry) => entry.tasted_with_user_ids ?? []),
-            ...Array.from(reactorUserIds),
-          ])
-        );
-        const acceptedFriendIds = new Set(friendIds);
-        let friendProfiles: FriendProfileRow[] = [];
-        if (profileLookupIds.length > 0) {
-          const { data, error } = await supabase
-            .from("public_profiles")
-            .select("id, display_name, email, avatar_path")
-            .in("id", profileLookupIds);
-          if (!error && data) {
-            friendProfiles = data as FriendProfileRow[];
-          } else if (error && isMissingAvatarColumn(error.message)) {
-            const fallback = await supabase
-              .from("public_profiles")
-              .select("id, display_name, email")
-              .in("id", profileLookupIds);
-            if (!fallback.error && fallback.data) {
-              friendProfiles = fallback.data as FriendProfileRow[];
-            }
-          }
-        }
-
-        const profileNameById = new Map(
-          friendProfiles.map((row) => [row.id, getPublicProfileName(row)])
-        );
-        const profileAvatarUrlById = new Map<string, string | null>();
-        const signedAvatarUrlByPath = await signPhotoUrls(
-          friendProfiles.map((row) => row.avatar_path ?? null),
-          { supabaseClient: supabase }
-        );
-        friendProfiles.forEach((row) => {
-          const avatarPath = row.avatar_path ?? null;
-          profileAvatarUrlById.set(
-            row.id,
-            avatarPath ? signedAvatarUrlByPath.get(avatarPath) ?? null : null
-          );
-        });
-
-        const recent = ownEntries.map((entry) => {
-          const reactionPrivacy = normalizePrivacyLevel(
-            interactionSettingsByEntryId.get(entry.id)?.reaction_privacy,
-            entry.entry_privacy
-          );
-          const canReact = canViewerAccessByHomePrivacy({
-            viewerUserId: user.id,
-            ownerUserId: entry.user_id,
-            privacy: reactionPrivacy,
-            acceptedFriendIds,
-          });
-          return {
-            id: entry.id,
-            wine_name: entry.wine_name,
-            producer: entry.producer,
-            vintage: entry.vintage,
-            rating: entry.rating,
-            qpr_level: entry.qpr_level,
-            consumed_at: entry.consumed_at,
-            created_at: entry.created_at,
-            drinking_now: entry.drinking_now === true,
-            tasted_with_names: (entry.tasted_with_user_ids ?? []).map(
-              (id) => profileNameById.get(id) ?? "Unknown"
-            ),
-            label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-            can_react: canReact,
-            my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-            reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-            reaction_users: canReact
-              ? Object.fromEntries(
-              Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
-                ([emoji, ids]) => [emoji, ids.map((id) => profileNameById.get(id) ?? "Unknown")]
-              )
-              )
-              : {},
-          };
-        });
-
-        const circle = friendEntries.map((entry) => {
-          const reactionPrivacy = normalizePrivacyLevel(
-            interactionSettingsByEntryId.get(entry.id)?.reaction_privacy,
-            entry.entry_privacy
-          );
-          const canReact = canViewerAccessByHomePrivacy({
-            viewerUserId: user.id,
-            ownerUserId: entry.user_id,
-            privacy: reactionPrivacy,
-            acceptedFriendIds,
-          });
-          return {
-            id: entry.id,
-            user_id: entry.user_id,
-            wine_name: entry.wine_name,
-            producer: entry.producer,
-            vintage: entry.vintage,
-            rating: entry.rating,
-            qpr_level: entry.qpr_level,
-            consumed_at: entry.consumed_at,
-            created_at: entry.created_at,
-            drinking_now: entry.drinking_now === true,
-            tasted_with_names: (entry.tasted_with_user_ids ?? []).map(
-              (id) => profileNameById.get(id) ?? "Unknown"
-            ),
-            author_name: profileNameById.get(entry.user_id) ?? "Unknown",
-            author_avatar_url: profileAvatarUrlById.get(entry.user_id) ?? null,
-            label_image_url: labelByEntryId.get(entry.id)?.signedUrl ?? null,
-            can_react: canReact,
-            my_reactions: canReact ? myReactionsByEntryId.get(entry.id) ?? [] : [],
-            reaction_counts: canReact ? reactionCountsByEntryId.get(entry.id) ?? {} : {},
-            reaction_users: canReact
-              ? Object.fromEntries(
-              Object.entries(reactionUserIdsByEntryId.get(entry.id) ?? {}).map(
-                ([emoji, ids]) => [emoji, ids.map((id) => profileNameById.get(id) ?? "Unknown")]
-              )
-              )
-              : {},
-          };
-        });
-
-        applyHomePayload({
-          firstName: typeof profile?.first_name === "string" ? profile.first_name : null,
-          displayName:
-            typeof profile?.display_name === "string" ? profile.display_name : null,
-          defaultEntryPrivacy: normalizePrivacyLevel(
-            profile?.default_entry_privacy,
-            "public"
-          ),
-          privacyConfirmedAt:
-            typeof profile?.privacy_confirmed_at === "string"
-              ? profile.privacy_confirmed_at
-              : null,
-          totalEntryCount: totalCount ?? 0,
-          friendCount: friendIds.length,
-          recentEntries: recent,
-          circleEntries: circle,
-        });
-        lastLoadedAtRef.current = Date.now();
+        setRecentEntries([]);
+        setCircleEntries([]);
+        setErrorMessage(apiResult.errorMessage);
       } catch (error) {
+        if (loadGeneration.current !== generation) return;
+        setRecentEntries([]);
+        setCircleEntries([]);
         setErrorMessage(
           error instanceof Error ? error.message : "Unable to load home right now."
         );
       } finally {
-        setIsLoading(false);
-        setIsRefreshing(false);
+        if (loadGeneration.current === generation) {
+          setIsLoading(false);
+          setIsRefreshing(false);
+        }
       }
     },
     [applyHomePayload, user]
@@ -1083,6 +633,10 @@ export default function HomeScreen() {
         {errorMessage ? (
           <View style={styles.errorCard}>
             <AppText style={styles.errorText}>{errorMessage}</AppText>
+            <Pressable accessibilityRole="button" accessibilityLabel="Retry home" style={styles.secondaryButton}
+              onPress={() => void loadHome(true)} disabled={isRefreshing}>
+              <AppText style={styles.secondaryButtonText}>Try again</AppText>
+            </Pressable>
           </View>
         ) : null}
 

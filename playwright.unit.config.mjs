@@ -40,6 +40,7 @@ export default defineConfig({
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
     "mobile-feed-request.spec.ts",
+    "mobile-home-request.spec.ts",
     "image-dependency.spec.ts",
   ],
 });
