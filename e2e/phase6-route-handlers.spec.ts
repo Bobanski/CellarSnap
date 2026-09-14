@@ -1077,3 +1077,41 @@ test.describe("Phase 6 route handler regressions", () => {
     });
   });
 });
+
+for (const viewerUserId of ['author', 'tagged-viewer']) {
+  for (const endpoint of ['entries', 'tagged'] as const) {
+    test(`${endpoint} rating response honors each row owner for ${viewerUserId}`, async () => {
+      const source = [
+        { id: 'their-entry', user_id: 'author', rating: 92, entry_privacy: 'public', label_image_path: null, place_image_path: null },
+        { id: 'viewer-entry', user_id: 'tagged-viewer', rating: 65, entry_privacy: 'public', label_image_path: null, place_image_path: null },
+      ];
+      const supabase = {
+        from(table: string) {
+          const rows = table === 'wine_entries' ? source : [];
+          const query = {
+            select: () => query, eq: () => query, in: () => query,
+            contains: () => query, order: () => query,
+            then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: rows, error: null }).then(resolve),
+          };
+          return query;
+        },
+      };
+      const shared = {
+        requireRequestAuth: async () => ({ user: { id: viewerUserId }, supabase, authMode: 'bearer' }) as never,
+        resolveProfileEntryAccess: async () => ({ blocked: false, isOwnProfile: false, allowedPrivacies: ['public'] }) as never,
+        signPhotoUrl: async () => null,
+      };
+      const handler = endpoint === 'entries'
+        ? createUserEntriesGetHandler({ ...shared, signPhotoUrls: async () => new Map() })
+        : createTaggedEntriesGetHandler({ ...shared, getAcceptedFriendIds: async () => new Set(), canUserViewEntry: async () => true });
+      const response = await handler(new Request(`http://localhost/api/users/author/${endpoint}`), {
+        params: Promise.resolve({ id: 'author' }),
+      });
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload.entries.map((row: { rating: number | null; public_rating_label: string }) => [row.rating, row.public_rating_label]))
+        .toEqual([[viewerUserId === 'author' ? 92 : null, 'Loved it'], [viewerUserId === 'tagged-viewer' ? 65 : null, 'Liked it']]);
+      expect(source.map(row => row.rating)).toEqual([92, 65]);
+    });
+  }
+}

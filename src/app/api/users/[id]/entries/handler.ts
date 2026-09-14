@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveProfileEntryAccess } from "@/server/users/profileVisibility";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { signPhotoUrl, signPhotoUrls } from "@/server/storage/signedUrls";
+import { projectEntryRatingForViewer } from "@/server/entries/publicFeed";
 
 type UserEntriesGetHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
@@ -138,7 +139,7 @@ export function createUserEntriesGetHandler(
       const labelPath = labelPaths[i];
       const placePath = placePaths[i];
       return {
-        ...entry,
+        ...projectEntryRatingForViewer(entry, user.id),
         label_image_url: labelPath
           ? (signedUrlMap.get(labelPath) ?? null)
           : null,

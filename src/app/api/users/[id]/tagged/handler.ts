@@ -7,6 +7,7 @@ import {
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 import { resolveProfileEntryAccess } from "@/server/users/profileVisibility";
+import { projectEntryRatingForViewer } from "@/server/entries/publicFeed";
 
 type TaggedEntriesGetHandlerDependencies = {
   createSupabaseServerClient: typeof createSupabaseServerClient;
@@ -164,7 +165,7 @@ export function createTaggedEntriesGetHandler(
 
     const result = await Promise.all(
       visibleEntries.map(async (entry) => ({
-        ...entry,
+        ...projectEntryRatingForViewer(entry, user.id),
         author_name: authorMap.get(entry.user_id) ?? "Unknown",
         label_image_url: await resolvedDependencies.signPhotoUrl(
           labelMap.get(entry.id) ?? entry.label_image_path,

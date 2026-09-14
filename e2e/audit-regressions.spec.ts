@@ -1,4 +1,4 @@
-import { projectPublicFeedRating } from '../src/server/entries/publicFeed';
+import { projectEntryRatingForViewer, projectPublicFeedRating } from '../src/server/entries/publicFeed';
 import { expect, test } from "@playwright/test";
 import { signPhotoPaths } from "../packages/shared/src/storage";
 import { defaultLoadEntryForScoring } from "../src/app/api/algorithm/score/handler";
@@ -97,4 +97,16 @@ test('public feed payloads preserve enjoyment bands while excluding every privat
     expect(source.rating).toBe(rating);
   }
   expect(projectPublicFeedRating({ rating: null }).public_rating_label).toBeNull();
+});
+
+test('entry rating projection uses row ownership, preserving every owner input and public band', () => {
+  for (const rating of [null, ...Array.from({ length: 100 }, (_, i) => i + 1)]) {
+    const row = { id: 'fixture', user_id: 'author', rating, tasted_with_user_ids: ['viewer'] };
+    const owner = JSON.parse(JSON.stringify(projectEntryRatingForViewer(row, 'author')));
+    const taggedViewer = JSON.parse(JSON.stringify(projectEntryRatingForViewer(row, 'viewer')));
+    expect(owner.rating).toBe(rating);
+    expect(taggedViewer.rating).toBeNull();
+    expect(taggedViewer.public_rating_label).toBe(owner.public_rating_label);
+    expect(row.rating).toBe(rating);
+  }
 });

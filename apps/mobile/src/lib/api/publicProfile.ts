@@ -20,6 +20,7 @@ export type MobilePublicProfileEntry = {
   producer: string | null;
   vintage: string | null;
   rating: number | null;
+  public_rating_label?: string | null;
   qpr_level: string | null;
   consumed_at: string;
   label_image_url: string | null;
