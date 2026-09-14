@@ -1,0 +1,413 @@
+{
+  "date": "2026-09-13 EDT",
+  "scope": [
+    "B02r",
+    "B02s"
+  ],
+  "findings": [
+    "QC-01",
+    "AUD-19",
+    "AUD-48",
+    "AUD-50"
+  ],
+  "candidate": "db3225f23bccb79a1cee10606ffd6928e8a27fd0",
+  "productMain": "05f912d0ed722ff48e28fc3f00cce8afb3a8b081",
+  "tree": "0cd0530b267368fdde309e0945b0fc1e13275835",
+  "prs": [
+    152,
+    153
+  ],
+  "checks": {
+    "isolated": 509,
+    "schema": 30,
+    "databaseTypeContract": "pass",
+    "webTypes": "pass",
+    "mobileTypes": "pass",
+    "webLint": "pass",
+    "mobileLint": "pass",
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "applicationCi": "pass",
+    "primaryBuild": "pass",
+    "separateLocalNextProductionBuild": "not run"
+  },
+  "local": {
+    "results": [
+      {
+        "otherOwnerIsolated": true,
+        "crossOwnerCursorRejected": true
+      },
+      {
+        "ownerOnlyIncludingTester": true,
+        "ownerNumbers": true,
+        "grapes": true,
+        "groupBands": true,
+        "signatureFree": true,
+        "tiedMicrosecondPagination": {
+          "pages": 11,
+          "fixtureCount": 105,
+          "duplicates": 0
+        },
+        "badInputRejected": true
+      },
+      {
+        "device": "desktop",
+        "photoDecoded": true,
+        "privateRatingFilter": true,
+        "ratingSort": true,
+        "varietalGrouping": true,
+        "eventSelectionAndDetail": true
+      },
+      {
+        "device": "phone",
+        "photoDecoded": true,
+        "privateRatingFilter": true,
+        "ratingSort": true,
+        "varietalGrouping": true,
+        "eventSelectionAndDetail": true
+      },
+      {
+        "directLibraryEntryReads": 0,
+        "bearerWithoutCookies": true
+      },
+      {
+        "outageClears": true,
+        "retry": true
+      },
+      {
+        "rejected": "owner"
+      },
+      {
+        "rejected": "group"
+      },
+      {
+        "rejected": "viewer"
+      },
+      {
+        "laterPageFailureClearsPartialLibrary": true
+      },
+      {
+        "optionalMembershipDoesNotStrandLibrary": true
+      },
+      {
+        "cookieApi": true,
+        "invalidBearerNoCookieFallback": true,
+        "anonymousDenied": true,
+        "preflight": true,
+        "webOwnerDetailDesktopPhone": true
+      },
+      {
+        "unmountAndSignoutRejectHeldResult": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+      },
+      {
+        "phase": "library-outage",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "library-outage",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "library-late-page-failure",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "failures": [
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "library-outage",
+        "path": "/api/entries/library",
+        "status": 503
+      },
+      {
+        "phase": "library-outage",
+        "path": "/api/entries/library",
+        "status": 503
+      },
+      {
+        "phase": "library-late-page-failure",
+        "path": "/api/entries/library",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "directEntryReads": 0,
+    "libraryRequests": 42
+  },
+  "production": {
+    "results": [
+      {
+        "otherOwnerIsolated": true,
+        "crossOwnerCursorRejected": true
+      },
+      {
+        "ownerOnlyIncludingTester": true,
+        "ownerNumbers": true,
+        "grapes": true,
+        "groupBands": true,
+        "signatureFree": true,
+        "tiedMicrosecondPagination": {
+          "pages": 11,
+          "fixtureCount": 105,
+          "duplicates": 0
+        },
+        "badInputRejected": true
+      },
+      {
+        "device": "desktop",
+        "photoDecoded": true,
+        "privateRatingFilter": true,
+        "ratingSort": true,
+        "varietalGrouping": true,
+        "eventSelectionAndDetail": true
+      },
+      {
+        "device": "phone",
+        "photoDecoded": true,
+        "privateRatingFilter": true,
+        "ratingSort": true,
+        "varietalGrouping": true,
+        "eventSelectionAndDetail": true
+      },
+      {
+        "directLibraryEntryReads": 0,
+        "bearerWithoutCookies": true
+      },
+      {
+        "outageClears": true,
+        "retry": true
+      },
+      {
+        "rejected": "owner"
+      },
+      {
+        "rejected": "group"
+      },
+      {
+        "rejected": "viewer"
+      },
+      {
+        "laterPageFailureClearsPartialLibrary": true
+      },
+      {
+        "optionalMembershipDoesNotStrandLibrary": true
+      },
+      {
+        "cookieApi": true,
+        "invalidBearerNoCookieFallback": true,
+        "anonymousDenied": true,
+        "preflight": true,
+        "webOwnerDetailDesktopPhone": true
+      },
+      {
+        "unmountAndSignoutRejectHeldResult": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "api-pagination",
+        "text": "Failed to load resource: the server responded with a status of 400 ()"
+      },
+      {
+        "phase": "library-outage",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "library-outage",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "phase": "library-late-page-failure",
+        "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "failures": [
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "api-pagination",
+        "path": "/api/entries/library",
+        "status": 400
+      },
+      {
+        "phase": "library-outage",
+        "path": "/api/entries/library",
+        "status": 503
+      },
+      {
+        "phase": "library-outage",
+        "path": "/api/entries/library",
+        "status": 503
+      },
+      {
+        "phase": "library-late-page-failure",
+        "path": "/api/entries/library",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "directEntryReads": 0,
+    "libraryRequests": 42
+  },
+  "webPhotoSupplement": {
+    "results": [
+      {
+        "device": "desktop",
+        "privateOwnerRating": true,
+        "photoDecoded": true
+      },
+      {
+        "device": "phone",
+        "privateOwnerRating": true,
+        "photoDecoded": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "TypeError: Failed to fetch\n    at https://cellarsnap.app/_next/static/immutable/chunks/1esb5dwyvlqoy.js:24:38515\n    at tD (https://cellarsnap.app/_next/static/immutable/chunks/1es"
+    ],
+    "failures": [],
+    "fixturesRemoved": true
+  },
+  "deployment": {
+    "id": "dpl_933bno3mVsxmfnv9X2HS35r4qbxc",
+    "githubDeployment": 6429282439,
+    "readyAt": "2026-09-14T02:21:57Z",
+    "alias": "https://cellarsnap.app",
+    "state": "READY"
+  },
+  "runtimeLogQuery": {
+    "since": "2026-09-14T02:21:33Z",
+    "queriedAt": "2026-09-14T02:26:37Z",
+    "level": "error",
+    "limit": 100,
+    "lines": 0,
+    "scope": "bounded exact production deployment; not universal error-free proof"
+  },
+  "native": {
+    "simctl": "unavailable; CommandLineTools only",
+    "android": "emulator/adb/standard SDK absent",
+    "acceptance": "Expo browser only; native exports are not installed-native tests"
+  },
+  "cleanup": {
+    "entries": 0,
+    "groups": 0,
+    "sessionPhotoObjects": 0,
+    "totalWinePhotoObjects": 882,
+    "testers": 4,
+    "profilesMutated": false,
+    "originalUserFilesPreserved": true,
+    "sessionServersStopped": true
+  },
+  "hostedRatingGrants": {
+    "authenticatedTableSelect": true,
+    "authenticatedRatingSelect": true,
+    "physicalPrivacy": "still Partial"
+  },
+  "sqlChanges": false,
+  "nativeRelease": false,
+  "productionPhotoRetirement": false,
+  "knownResiduals": [
+    "AUD-01 supported-client adoption/legacy cutoff/retirement",
+    "QC-01 physical/direct/native rating privacy and remaining owner/server/operator contracts",
+    "AUD-35 progressive search/averages until all pages load",
+    "QC-05 app header and broader B11/QC-06 polish",
+    "OPS-01 duplicate Vercel project missing Supabase environment"
+  ],
+  "harnessCorrections": [
+    "canonical variety_id and one-based grape position",
+    "observed sort/tab/rating labels",
+    "wait for decoded photos and full bounded page loads",
+    "disposed live interception recovered exact fixture manifest and complete suite rerun",
+    "Storage HEAD error verified via directory listing and independent catalog"
+  ],
+  "supabaseReferences": [
+    "https://supabase.com/changelog.md",
+    "https://supabase.com/docs/reference/javascript/select"
+  ]
+}
