@@ -1,8 +1,14 @@
 # Audit remediation progress
 
-**Current planning and status:** [remediation hub](../remediation/README.md), [canonical backlog](../remediation/backlog.md), and [batch-one handover](../remediation/handovers/batch-01.md). This document records historical implementation/QC evidence; update the canonical backlog for ongoing work.
+**Current planning and status:** [remediation hub](../remediation/README.md), [canonical backlog](../remediation/backlog.md), and [latest release handover](../remediation/handovers/b11a-b11c-release.md). This document records historical implementation/QC evidence; update the canonical backlog for ongoing work.
 
 September 12, 2026. The original audit is a historical snapshot at commit 40c6f63; it is not a claim that every finding still exists after later changes.
+
+## September 14 — B11a–B11c / B01 release verification
+
+[PR #161](https://github.com/Bobanski/CellarSnap/pull/161), issue #160, merged application `83454a1` is live on cellarsnap.app. Closed QC-11 (empty scan rejection), QC-18 (editor accessible labels), QC-19 (phone profile wrapping), and the previously implemented AUD-17/AUD-27 after completing their live release checks. 562 isolated tests, web/mobile CI, desktop/phone browser interactions and fresh cookie-stripped Expo web scan/retry checks passed. No schema migration or native binary release. Temporary fixtures were removed and profile values restored.
+
+The canonical backlog now has 13 Closed out of 72: five added closures and one newly confirmed pre-existing mobile notes-authentication defect, QC-20, still Open. [Release and coverage limits](../remediation/handovers/b11a-b11c-release.md), [sanitized evidence](../remediation/evidence/b11a-b11c-release.json). Intervening B02–B08 releases and their residuals are linked from the hub; the original implementation notes below remain dated history.
 
 ## Consolidation
 
