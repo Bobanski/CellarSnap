@@ -1,4 +1,7 @@
 # B02p handover — September 13, 2026 (EDT)
+
+**Release follow-up:** merged and final-primary verified; see [B02o/B02p/B02q release](b02o-b02p-b02q-release.md). The checkpoint below preserves its original stopping state.
+
 ## Objective and IDs
 QC-01 Home containment, related AUD-48/50. Circle JSON now carries null ratings and public bands; owner recent rows retain numbers. Mobile requires projected Home API and removes direct raw-row fallback.
 ## Resume here
