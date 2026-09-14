@@ -1,5 +1,7 @@
 # B02u handover — September 14, 2026
 
+**Superseded by the [B02t/B02u release](b02t-b02u-release.md): merged, final-primary verified; original checkpoint below is retained as history.**
+
 ## Objective and IDs
 QC-01 P1/Partial, AUD-13/15/48/50. Required mobile owner edit API adoption, normal and bulk review. No physical rating transfer, SQL, creation/import rewrite or native distribution.
 
