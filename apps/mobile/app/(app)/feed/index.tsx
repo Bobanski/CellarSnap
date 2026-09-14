@@ -1460,6 +1460,9 @@ export default function FeedScreen() {
     setErrorMessage,
   });
   const feedRequestVersion = useRef(0);
+  const invalidateFeedRequests = useCallback(() => {
+    feedRequestVersion.current += 1;
+  }, []);
   const isFeedScrollActiveRef = useRef(false);
   const feedOpenBlockUntilRef = useRef(0);
   const feedScrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1560,9 +1563,9 @@ export default function FeedScreen() {
 
     return () => {
       clearTimeout(timeoutId);
-      feedRequestVersion.current++;
+      invalidateFeedRequests();
     };
-  }, [loadFeed]);
+  }, [loadFeed, invalidateFeedRequests]);
 
   const shareEntryByText = useCallback(
     async (entryId: string) => {
