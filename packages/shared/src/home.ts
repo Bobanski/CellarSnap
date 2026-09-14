@@ -60,10 +60,12 @@ export type HomeApiReactionUsers = Record<string, string[]>;
 
 export type HomeApiRecentEntry = {
   id: string;
+  user_id: string;
   wine_name: string | null;
   producer: string | null;
   vintage: string | null;
   rating: number | null;
+  public_rating_label: string | null;
   qpr_level: QprLevel | null;
   consumed_at: string;
   created_at: string;
@@ -76,13 +78,15 @@ export type HomeApiRecentEntry = {
   reaction_users: HomeApiReactionUsers;
 };
 
-export type HomeApiCircleEntry = HomeApiRecentEntry & {
+export type HomeApiCircleEntry = Omit<HomeApiRecentEntry, "rating"> & {
+  rating: null;
   user_id: string;
   author_name: string;
   author_avatar_url: string | null;
 };
 
 export type HomeApiResponse = {
+  viewer_user_id: string;
   firstName: string | null;
   displayName: string | null;
   defaultEntryPrivacy: PrivacyLevel;

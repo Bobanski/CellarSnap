@@ -1,3 +1,5 @@
+import { PHOTO_DELIVERY_HEADER } from "@shared/photoDelivery";
+import { projectPublicFeedRating } from "@/server/entries/publicFeed";
 import { NextResponse } from "next/server";
 import {
   HOME_CIRCLE_ENTRIES_LIMIT,
@@ -59,10 +61,21 @@ function isMissingAvatarPathColumnError(message: string) {
   return message.includes("avatar_path") || message.includes("column");
 }
 
+const HOME_HEADERS = {
+  "Cache-Control": "private, no-store", Vary: "Cookie, Authorization",
+  "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": `Authorization, ${PHOTO_DELIVERY_HEADER}`,
+};
+export function OPTIONS() { return new Response(null, { status: 204, headers: HOME_HEADERS }); }
 export async function GET(request: Request) {
+  const response = await getHome(request);
+  for (const [key, value] of Object.entries(HOME_HEADERS)) response.headers.set(key, value);
+  return response;
+}
+async function getHome(request: Request) {
   let auth;
   try {
-    auth = await requireRequestAuth(request);
+    auth = await requireRequestAuth(request, { allowCookieFallback: !request.headers.has("authorization") });
   } catch (error) {
     if (error instanceof RequestAuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
@@ -474,9 +487,11 @@ export async function GET(request: Request) {
 
       return {
         id: entry.id,
+        user_id: entry.user_id,
         wine_name: normalizeNullableString(entry.wine_name),
         producer: normalizeNullableString(entry.producer),
         vintage: normalizeNullableString(entry.vintage),
+        ...projectPublicFeedRating({ rating: typeof entry.rating === "number" ? entry.rating : null }),
         rating: typeof entry.rating === "number" ? entry.rating : null,
         qpr_level: normalizeNullableString(entry.qpr_level),
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
@@ -516,7 +531,7 @@ export async function GET(request: Request) {
         wine_name: normalizeNullableString(entry.wine_name),
         producer: normalizeNullableString(entry.producer),
         vintage: normalizeNullableString(entry.vintage),
-        rating: typeof entry.rating === "number" ? entry.rating : null,
+        ...projectPublicFeedRating({ rating: typeof entry.rating === "number" ? entry.rating : null }),
         qpr_level: normalizeNullableString(entry.qpr_level),
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
         created_at: normalizeNullableString(entry.created_at) ?? "",
@@ -549,6 +564,7 @@ export async function GET(request: Request) {
   );
 
   return NextResponse.json({
+    viewer_user_id: user.id,
     firstName: profile?.first_name ?? null,
     displayName: profile?.display_name ?? null,
     defaultEntryPrivacy: profile?.default_entry_privacy ?? "public",
