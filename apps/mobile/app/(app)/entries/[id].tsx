@@ -1,3 +1,5 @@
+import { saveMobileEntryDetails } from "@/src/lib/api/entryEdit";
+import { ownerEntryEditSchema } from "../../../../../packages/shared/src/ownerEntryEdit";
 import { fetchMobileEntryDetail } from "@/src/lib/api/detail";
 import type { MobileEntryDetail as EntryDetailRow } from "@/src/lib/api/detailRequest";
 import { buildEntryEditSnapshot } from "@cellarsnap/shared";
@@ -18,7 +20,7 @@ import {
   View,
 } from "react-native";
 import { PhotoImage as Image } from "@/src/components/PhotoImage";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import {
   COLLECTIONS_COPY,
@@ -897,6 +899,15 @@ export default function EntryDetailScreen() {
     return () => clearTimeout(timer);
   }, [shareToast]);
 
+  const editRequest = useRef<AbortController | null>(null);
+  const editGeneration = useRef(0);
+  // Tabs retain mounted screens. Invalidate completion on blur as well as session/entry changes.
+  const invalidateEdit = useCallback(() => {
+    editGeneration.current++;
+    editRequest.current?.abort();
+  }, []);
+  useEffect(() => invalidateEdit, [entryId, user?.id, invalidateEdit]);
+  useFocusEffect(useCallback(() => invalidateEdit, [invalidateEdit]));
   const detailLoadGeneration = useRef(0);
   const invalidateDetailLoad = useCallback(() => { detailLoadGeneration.current++; }, []);
   const loadEntry = useCallback(async () => {
@@ -3047,28 +3058,22 @@ export default function EntryDetailScreen() {
       };
     const grapesChanged = primaryGrapeSelectionChanged(entry.primary_grapes, selectedPrimaryGrapes);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
+    editRequest.current?.abort();
+    editRequest.current = controller;
     try {
       const snapshot = buildEntryEditSnapshot(updates, entry);
-      const { error: saveError } = await supabaseDatabase.rpc('save_entry_details', {
-        p_entry_id: entry.id,
-        p_updates: snapshot.updates,
-        p_expected: snapshot.expected,
+      const edit = ownerEntryEditSchema.parse({ ...snapshot,
         ...(grapesChanged ? {
-          p_grape_ids: primaryGrapeIds,
-          p_expected_grape_ids: [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id),
+          grape_ids: primaryGrapeIds,
+          expected_grape_ids: [...entry.primary_grapes].sort((a,b) => a.position-b.position).map(grape => grape.id),
         } : {}),
-      }).abortSignal(controller.signal);
-      if (saveError) return saveError.code === 'PT409'
-        ? 'This entry changed elsewhere. Close the editor and refresh before saving again.'
-        : 'Unable to confirm the save. Your changes are still here; please retry.';
+      });
+      return await saveMobileEntryDetails(entry.id, user.id, edit, controller.signal);
     } catch {
       return 'Unable to confirm the save. Your changes are still here; please retry.';
     } finally {
-      clearTimeout(timeout);
+      if (editRequest.current === controller) editRequest.current = null;
     }
-
-    return null;
   }, [
     bulkAdvancedNotes,
     bulkReviewForm,
@@ -3092,13 +3097,14 @@ export default function EntryDetailScreen() {
         return;
       }
 
+      const generation = editGeneration.current;
       setIsSavingBulkReview(true);
       setBulkReviewError(null);
       setDeleteError(null);
 
       const persistError = await persistEditedEntry();
-      if (persistError) {
-        setBulkReviewError(persistError);
+      if (persistError || generation !== editGeneration.current) {
+        setBulkReviewError(persistError ?? "Unable to confirm the save. Your changes are still here; please retry.");
         setIsSavingBulkReview(false);
         return;
       }
@@ -3110,7 +3116,7 @@ export default function EntryDetailScreen() {
         } catch {
           // Best effort; current entry is already published.
         }
-        router.replace("/(app)/entries");
+        if (generation === editGeneration.current) router.replace("/(app)/entries");
         setIsSavingBulkReview(false);
         return;
       }
@@ -3170,13 +3176,14 @@ export default function EntryDetailScreen() {
       return;
     }
 
+    const generation = editGeneration.current;
     setIsSavingOwnerEdit(true);
     setBulkReviewError(null);
     setDeleteError(null);
 
     const persistError = await persistEditedEntry();
-    if (persistError) {
-      setBulkReviewError(persistError);
+    if (persistError || generation !== editGeneration.current) {
+      setBulkReviewError(persistError ?? "Unable to confirm the save. Your changes are still here; please retry.");
       setIsSavingOwnerEdit(false);
       return;
     }
