@@ -28,7 +28,8 @@
       "ios",
       "android",
       "web"
-    ]
+    ],
+    "sourceAstInventory": "Only badge fact reads remain directly on wine_entries; they do not select rating."
   },
   "browser": {
     "edits": {
@@ -687,9 +688,25 @@
       "fixturesRemoved": true
     },
     "expoCreate": {
-      "results": [],
+      "results": [
+        {
+          "device": "desktop",
+          "directCreationAndOwnerDetail98": true,
+          "publicSourceNull": true
+        },
+        {
+          "device": "phone",
+          "directCreationAndOwnerDetail98": true,
+          "publicSourceNull": true
+        }
+      ],
       "errors": [],
-      "failures": [],
+      "failures": [
+        {
+          "status": 400,
+          "path": "/api/algorithm/score"
+        }
+      ],
       "fixturesRemoved": true
     },
     "directRest": {
@@ -717,11 +734,17 @@
     "ios": "d878c8d8-0c6f-43a9-8ec2-0b00d06c2f21",
     "android": "cb90f8d5-4436-4e49-b4ec-5a8a05b676c5",
     "distribution": "internal build candidates; no acceptance/install/store submission",
-    "status": "pending final check"
+    "status": {
+      "ios": "FINISHED",
+      "android": "IN_QUEUE"
+    },
+    "iosBuildUrl": "https://expo.dev/accounts/esneider99/projects/cellarsnap-mobile/builds/d878c8d8-0c6f-43a9-8ec2-0b00d06c2f21",
+    "androidBuildUrl": "https://expo.dev/accounts/esneider99/projects/cellarsnap-mobile/builds/cb90f8d5-4436-4e49-b4ec-5a8a05b676c5"
   },
   "knownVisualLimits": [
     "QC-05 Expo router headings",
     "QC-12 Expo single-photo detail gap despite decoded image bytes; library/events/web photos visible",
     "QC-19 unbroken public profile display name overflows phone header"
-  ]
+  ],
+  "pullRequest": "https://github.com/Bobanski/CellarSnap/pull/158"
 }
