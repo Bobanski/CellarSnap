@@ -679,7 +679,7 @@ export default function ListScanIntakeScreen() {
             </div>
 
             {errorMessage ? (
-              <div className="rounded-2xl border border-[var(--color-error)]/20 bg-[var(--color-error)]/10 px-4 py-3 text-sm text-[var(--color-error)]">
+              <div role="alert" className="rounded-2xl border border-[var(--color-error)]/20 bg-[var(--color-error)]/10 px-4 py-3 text-sm text-[var(--color-error)]">
                 {errorMessage}
               </div>
             ) : null}

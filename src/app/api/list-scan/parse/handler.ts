@@ -1,3 +1,4 @@
+import { assertReadableWineList } from "@/server/listScan/readability";
 import { NextResponse } from "next/server";
 import { applyRateLimit, rateLimitHeaders } from "@/lib/rateLimit";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
@@ -144,6 +145,8 @@ export function createListScanParseHandler(
           userSupabase: auth.supabase,
         });
       }
+
+      assertReadableWineList(result.wines);
 
       try {
         await resolvedDependencies.saveListScanResult(

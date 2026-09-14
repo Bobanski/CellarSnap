@@ -146,6 +146,7 @@ export default function PrimaryGrapeSelector({
 
           {canSelectMore ? (
             <input
+              aria-label="Search primary grapes"
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}

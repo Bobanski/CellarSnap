@@ -1,3 +1,4 @@
+import { assertReadableWineList, UNREADABLE_WINE_LIST_MESSAGE } from "../src/server/listScan/readability";
 import { expect, test } from "@playwright/test";
 import {
   buildListScanRationale,
@@ -84,6 +85,34 @@ function buildParsedWine(
 }
 
 test.describe("WS3 list scan parse handler", () => {
+  for (const sourceType of ["url", "image", "pdf"] as const) {
+    test(`empty ${sourceType} scans return upload guidance without saving history`, async () => {
+      let saves = 0;
+      const handler = createListScanParseHandler({
+        requireRequestAuth: async () => ({ supabase: {}, user: { id: "empty-scan-user" }, authMode: "bearer" }) as never,
+        applyRateLimit: async () => ({ allowed: true }) as never,
+        parseWineListSource: async () => ({ ...baseResult, source_type: sourceType, wines: [] }),
+        saveListScanResult: async () => { saves += 1; },
+      });
+      const form = new FormData();
+      if (sourceType === "url") form.set("url", "https://example.com/scripted-menu");
+      else form.set("file", new File(["fixture"], sourceType === "pdf" ? "list.pdf" : "list.jpg", { type: sourceType === "pdf" ? "application/pdf" : "image/jpeg" }));
+      const response = await handler(new Request("http://localhost/api/list-scan/parse", { method: "POST", body: form }));
+      expect(response.status).toBe(422);
+      expect(await response.json()).toEqual({ error: UNREADABLE_WINE_LIST_MESSAGE });
+      expect(saves).toBe(0);
+    });
+  }
+
+  test("script-only wine content is not treated as a readable extracted menu", () => {
+    const html = '<html><title>Wine list</title><body><p>Our menu</p><script>window.wines = [{ name: "Syrah", price: 25 }]</script></body></html>';
+    const extracted = __listScanTestUtils.extractWineListTextFromHtml(html, "");
+    expect(extracted.text).not.toContain("Syrah");
+    const parsed = __listScanTestUtils.buildHeuristicParsedResponse({ text: extracted.text, title: extracted.title, venueName: extracted.venueName, fallbackWarning: "fixture" });
+    expect(() => assertReadableWineList(parsed.wines)).toThrow(UNREADABLE_WINE_LIST_MESSAGE);
+    expect(() => assertReadableWineList(baseResult.wines)).not.toThrow();
+  });
+
   test("authenticated scans are persisted after parsing", async () => {
     let savedUserId: string | null = null;
     let parsedUserId: string | null | undefined;

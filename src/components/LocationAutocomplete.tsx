@@ -13,6 +13,7 @@ type Prediction = {
 };
 
 type LocationAutocompleteProps = {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   onSelectPlaceId?: (placeId: string | null) => void;
@@ -32,6 +33,7 @@ function getGoogleMaps(): typeof google.maps | undefined {
 }
 
 export default function LocationAutocomplete({
+  id,
   value,
   onChange,
   onSelectPlaceId,
@@ -199,6 +201,7 @@ export default function LocationAutocomplete({
   return (
     <div ref={containerRef} className="relative">
       <input
+        id={id}
         type="text"
         value={value ?? ""}
         onChange={handleChange}

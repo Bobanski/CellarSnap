@@ -374,7 +374,7 @@ export default function FriendProfilePage() {
               <div className="h-3 w-28 rounded-md bg-surface-raised" />
               <div className="h-2.5 w-20 rounded-md bg-surface-raised" />
               <div className="flex flex-wrap items-start justify-between gap-4 pt-1">
-                <div className="flex min-w-0 items-center gap-4">
+                <div className="flex min-w-0 max-w-full flex-1 basis-64 items-center gap-4">
                   <div className="h-14 w-14 shrink-0 rounded-full bg-surface-raised sm:h-16 sm:w-16" />
                   <div className="min-w-0 space-y-2">
                     <div className="h-6 w-40 rounded-md bg-surface-raised" />
@@ -442,7 +442,7 @@ export default function FriendProfilePage() {
             {isOwnProfile ? "Your profile" : "Profile"}
           </span>
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-4">
+            <div className="flex min-w-0 max-w-full flex-1 basis-64 items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 overflow-hidden rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] ring-2 ring-white/5 sm:h-16 sm:w-16">
                 {profile.avatar_url ? (
                   <AppImage
@@ -457,11 +457,11 @@ export default function FriendProfilePage() {
                 )}
               </div>
               <div className="min-w-0">
-                <h1 className="text-3xl font-semibold text-[var(--color-text-primary)]">
+                <h1 className="[overflow-wrap:anywhere] text-3xl font-semibold text-[var(--color-text-primary)]">
                   {profile.display_name ?? "Unknown"}
                 </h1>
                 {fullName ? (
-                  <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{fullName}</p>
+                  <p className="mt-1 [overflow-wrap:anywhere] text-sm text-[var(--color-text-secondary)]">{fullName}</p>
                 ) : null}
                 <p className="text-sm text-[var(--color-text-secondary)]">
                   {isOwnProfile

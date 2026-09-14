@@ -3,7 +3,7 @@
 import { authenticatedPhotoUrl } from "@/lib/storage/photoDelivery";
 import { buildEntryEditSnapshot } from "@shared/entryEdit";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -127,6 +127,7 @@ function toOrdinal(value: number) {
 }
 
 export default function EditEntryPage() {
+  const fieldId = useId();
   const router = useRouter();
   const searchParams = useSearchParams();
   const params = useParams<{ id: string | string[] }>();
@@ -2006,6 +2007,8 @@ export default function EditEntryPage() {
                 Wine
               </p>
               <input
+                aria-label="Wine name"
+                id={`${fieldId}-wine_name`}
                 className="mt-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-lg font-semibold text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                 {...register("wine_name")}
               />
@@ -2031,6 +2034,7 @@ export default function EditEntryPage() {
                   badge: (
                     <label className="relative block">
                       <select
+                        aria-label={`Category for photo ${index + 1}`}
                         value={photo.type}
                         className="max-w-[9rem] appearance-none rounded-full border border-[var(--color-border)] bg-black/45 py-0.5 pl-2 pr-5 text-[10px] font-medium text-[var(--color-text-secondary)] outline-none transition hover:border-white/20 focus:border-[var(--color-accent-primary)]/50 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={isLegacyPhoto(photo) || savingPhotoId === photo.id}
@@ -2157,8 +2161,9 @@ export default function EditEntryPage() {
           )}
 
           <div>
-            <label className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
+            <label htmlFor={`${fieldId}-notes`} className="text-sm font-medium text-[var(--color-text-primary)]">Notes</label>
             <textarea
+              id={`${fieldId}-notes`}
               className="mt-1 min-h-[120px] w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
               {...register("notes")}
             />
@@ -2166,8 +2171,9 @@ export default function EditEntryPage() {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-[var(--color-text-primary)]">Rating (1-100) <span className="text-[var(--color-error)]">*</span></label>
+              <label htmlFor={`${fieldId}-rating`} className="text-sm font-medium text-[var(--color-text-primary)]">Rating (1-100) <span className="text-[var(--color-error)]">*</span></label>
               <input
+                id={`${fieldId}-rating`}
                 type="text"
                 inputMode="numeric"
                 className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:ring-2 ${
@@ -2201,10 +2207,11 @@ export default function EditEntryPage() {
               )}
             </div>
             <div>
-              <label className="text-sm font-medium text-[var(--color-text-primary)]">
+              <label htmlFor={`${fieldId}-qpr_level`} className="text-sm font-medium text-[var(--color-text-primary)]">
                 QPR (Quality : Price Ratio)
               </label>
               <select
+                id={`${fieldId}-qpr_level`}
                 className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                 {...register("qpr_level")}
               >
@@ -2246,67 +2253,74 @@ export default function EditEntryPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {!isBulkReview ? (
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
+                  <label htmlFor={`${fieldId}-wine_name`} className="text-sm font-medium text-[var(--color-text-primary)]">Wine name</label>
                   <input
+                    id={`${fieldId}-wine_name`}
                     className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register("wine_name")}
                   />
                 </div>
               ) : null}
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
+                <label htmlFor={`${fieldId}-producer`} className="text-sm font-medium text-[var(--color-text-primary)]">Producer</label>
                 <input
+                  id={`${fieldId}-producer`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("producer")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
+                <label htmlFor={`${fieldId}-vintage`} className="text-sm font-medium text-[var(--color-text-primary)]">Vintage</label>
                 <input
+                  id={`${fieldId}-vintage`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("vintage")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
+                <label htmlFor={`${fieldId}-country`} className="text-sm font-medium text-[var(--color-text-primary)]">Country</label>
                 <input
+                  id={`${fieldId}-country`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("country")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
+                <label htmlFor={`${fieldId}-region`} className="text-sm font-medium text-[var(--color-text-primary)]">Region</label>
                 <input
+                  id={`${fieldId}-region`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("region")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">Appellation</label>
+                <label htmlFor={`${fieldId}-appellation`} className="text-sm font-medium text-[var(--color-text-primary)]">Appellation</label>
                 <input
+                  id={`${fieldId}-appellation`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("appellation")}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                <label htmlFor={`${fieldId}-classification`} className="text-sm font-medium text-[var(--color-text-primary)]">
                   Classification
                 </label>
                 <input
+                  id={`${fieldId}-classification`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   placeholder="Optional (e.g. Premier Cru, DOCG)"
                   {...register("classification")}
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                <p id={`${fieldId}-wine-type-label`} className="text-sm font-medium text-[var(--color-text-primary)]">
                   Wine type
-                </label>
+                </p>
                 <Controller
                   control={control}
                   name="wine_type"
                   render={({ field }) => (
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div role="group" aria-labelledby={`${fieldId}-wine-type-label`} className="mt-2 flex flex-wrap gap-2">
                       {WINE_TYPE_VALUES.map((value) => (
                         <button
                           key={value}
@@ -2348,8 +2362,8 @@ export default function EditEntryPage() {
               </p>
               <div className="mt-4 grid gap-4 md:grid-cols-[auto_minmax(0,1fr)]">
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Group type</label>
-                  <div className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-black/40 p-1">
+                  <p id={`${fieldId}-group-type-label`} className="text-sm font-medium text-[var(--color-text-primary)]">Group type</p>
+                  <div role="group" aria-labelledby={`${fieldId}-group-type-label`} className="mt-2 inline-flex rounded-full border border-[var(--color-border)] bg-black/40 p-1">
                     {[
                       { value: "event", label: "Event" },
                       { value: "catch_up", label: "Catch-up" },
@@ -2374,10 +2388,11 @@ export default function EditEntryPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <label htmlFor={`${fieldId}-entry_group_title`} className="text-sm font-medium text-[var(--color-text-primary)]">
                     Group title
                   </label>
                   <input
+                    id={`${fieldId}-entry_group_title`}
                     className={`mt-1 w-full rounded-xl border bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:ring-2 ${
                       errors.entry_group_title
                         ? "border-[var(--color-error)]/50 focus:border-[var(--color-error)] focus:ring-[var(--color-error)]/30"
@@ -2448,13 +2463,14 @@ export default function EditEntryPage() {
                 </p>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
                   <div>
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">Location</label>
+                    <label htmlFor={`${fieldId}-location_text`} className="text-sm font-medium text-[var(--color-text-primary)]">Location</label>
                     <input type="hidden" {...register("location_place_id")} />
                     <Controller
                       control={control}
                       name="location_text"
                       render={({ field }) => (
                         <LocationAutocomplete
+                          id={`${fieldId}-location_text`}
                           value={field.value}
                           onChange={field.onChange}
                           onSelectPlaceId={(placeId) =>
@@ -2469,7 +2485,7 @@ export default function EditEntryPage() {
                     />
                   </div>
                   <div className="md:justify-self-start">
-                    <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <label htmlFor={`${fieldId}-consumed_at`} className="text-sm font-medium text-[var(--color-text-primary)]">
                       {isSharedEventGroup ? "Shared event date" : "Consumed date"}
                     </label>
                     <Controller
@@ -2478,6 +2494,7 @@ export default function EditEntryPage() {
                       rules={{ required: true }}
                       render={({ field }) => (
                         <DatePicker
+                          id={`${fieldId}-consumed_at`}
                           value={field.value}
                           onChange={field.onChange}
                           onBlur={field.onBlur}
@@ -2555,6 +2572,7 @@ export default function EditEntryPage() {
                           type="text"
                           value={friendSearch}
                           onChange={(e) => setFriendSearch(e.target.value)}
+                          aria-label="Search friends"
                           placeholder="Search friends..."
                           className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                         />
@@ -2594,10 +2612,11 @@ export default function EditEntryPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {ADVANCED_NOTE_FIELDS.map((field) => (
                 <div key={field.key}>
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <label htmlFor={`${fieldId}-advanced-${field.key}`} className="text-sm font-medium text-[var(--color-text-primary)]">
                     {field.label}
                   </label>
                   <select
+                    id={`${fieldId}-advanced-${field.key}`}
                     className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                     {...register(`advanced_notes.${field.key}` as const)}
                   >
@@ -2624,12 +2643,13 @@ export default function EditEntryPage() {
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <label htmlFor={`${fieldId}-entry_privacy`} className="text-sm font-medium text-[var(--color-text-primary)]">
                     Post visibility
                   </label>
                   <PrivacyBadge level={selectedEntryPrivacy} compact />
                 </div>
                 <select
+                  id={`${fieldId}-entry_privacy`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("entry_privacy")}
                 >
@@ -2642,10 +2662,11 @@ export default function EditEntryPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Reactions</label>
+                  <label htmlFor={`${fieldId}-reaction_privacy`} className="text-sm font-medium text-[var(--color-text-primary)]">Reactions</label>
                   <PrivacyBadge level={selectedReactionPrivacy} compact />
                 </div>
                 <select
+                  id={`${fieldId}-reaction_privacy`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("reaction_privacy")}
                 >
@@ -2658,10 +2679,11 @@ export default function EditEntryPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between gap-2">
-                  <label className="text-sm font-medium text-[var(--color-text-primary)]">Comments</label>
+                  <label htmlFor={`${fieldId}-comments_privacy`} className="text-sm font-medium text-[var(--color-text-primary)]">Comments</label>
                   <PrivacyBadge level={selectedCommentsPrivacy} compact />
                 </div>
                 <select
+                  id={`${fieldId}-comments_privacy`}
                   className="mt-1 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-primary)]/30"
                   {...register("comments_privacy")}
                 >
@@ -2692,6 +2714,7 @@ export default function EditEntryPage() {
               <div className="mt-3 flex items-center justify-end gap-2">
                 <input
                   ref={addPhotoInputRef}
+                  aria-label="Add photos"
                   type="file"
                   accept="image/*"
                   multiple
@@ -2974,6 +2997,7 @@ export default function EditEntryPage() {
                     </div>
                     <input
                       type="range"
+                      aria-label="Crop zoom"
                       min={MIN_CROP_ZOOM}
                       max={MAX_CROP_ZOOM}
                       step={0.01}
