@@ -1,4 +1,4 @@
-import { filterVisibleGroupSlides } from "@shared";
+import { filterVisibleGroupSlides, getPublicRatingBandLabel } from "@shared";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   EntryGroup,
@@ -43,6 +43,9 @@ type SlideEntryRow = {
   appellation: string | null;
   consumed_at: string;
   created_at: string;
+  notes: string | null;
+  rating: number | null;
+  qpr_level: string | null;
 };
 
 type GroupedPostPayload = {
@@ -125,7 +128,7 @@ export async function resolveGroupedPostData(
       ? await supabase
           .from("wine_entries")
           .select(
-            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at"
+            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at, notes, rating, qpr_level"
           )
           .in("id", slideEntryIds)
       : { data: [] as SlideEntryRow[], error: null };
@@ -202,6 +205,10 @@ export async function resolveGroupedPostData(
           appellation: slideEntry?.appellation ?? null,
           consumed_at: slideEntry?.consumed_at ?? null,
           created_at: slideEntry?.created_at ?? null,
+          notes: slideEntry?.notes ?? null,
+          rating: null,
+          public_rating_label: getPublicRatingBandLabel(slideEntry?.rating),
+          qpr_level: slideEntry?.qpr_level ?? null,
         } satisfies GroupedEntrySlide;
       })
       .filter((slide): slide is GroupedEntrySlide => slide !== null);
