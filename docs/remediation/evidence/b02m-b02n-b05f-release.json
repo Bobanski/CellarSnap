@@ -1,0 +1,599 @@
+{
+  "testedApplicationCommit": "4c7a8de1901aa6bbbd3aa1c4220b1c5533394d19",
+  "testedCandidate": "d4842873b40a02f9fa130eb2937765d8e9fe2d50",
+  "main": "81a98e3ca0a158592428a7c6227f3992d3ce7cce",
+  "tree": "d0c3197a19bf6a4af3d9acb13d864d8ab96be338",
+  "mainTreeEqualsTested": true,
+  "pullRequests": [
+    {
+      "number": 144,
+      "merge": "99bb80ac177861600f694946b11d3e21681b18d9",
+      "ciRun": 34793071719
+    },
+    {
+      "number": 145,
+      "merge": "51dafdc2c5b8facb3d9035875b817e659ad93275",
+      "ciRun": 34793630574
+    },
+    {
+      "number": 146,
+      "merge": "81a98e3ca0a158592428a7c6227f3992d3ce7cce",
+      "ciRun": 34793747682
+    }
+  ],
+  "checks": {
+    "isolatedTests": 429,
+    "schemaTests": 30,
+    "toolingTests": 3,
+    "webBuild": true,
+    "webTypes": true,
+    "webLint": true,
+    "databaseTypeContract": true,
+    "mobileTypes": true,
+    "mobileLint": true,
+    "expoExports": [
+      "web",
+      "ios",
+      "android"
+    ],
+    "allApplicationCI": true
+  },
+  "local": {
+    "feed": {
+      "results": [
+        {
+          "invalidBearerNoCookieFallback": true,
+          "preflight": true
+        },
+        {
+          "payloadAllBands": true,
+          "numericRatingsNull": true,
+          "privateAndOwnExcluded": true,
+          "friendsIncluded": true,
+          "groupSlides": 2
+        },
+        {
+          "cursorPagination": true
+        },
+        {
+          "device": "desktop",
+          "labelsVisible": true,
+          "imagesDecoded": true,
+          "groupRendered": true,
+          "groupSelectionAndCaption": true,
+          "loadMore": true
+        },
+        {
+          "device": "phone",
+          "labelsVisible": true,
+          "imagesDecoded": true,
+          "groupRendered": true,
+          "groupSelectionAndCaption": true,
+          "loadMore": true
+        },
+        {
+          "testAuthorExcluded": true,
+          "blockExcludedAndRestored": true
+        },
+        {
+          "ownerRatingEditAndReload": true,
+          "storedScale": "1\u2013100"
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "owner: TypeError: Failed to fetch\n    at http://localhost:3001/_next/static/chunks/1scpb4b6ryiff.js:24:38515\n    at tD (http://localhost:3001/_next/static/chunks/1scpb"
+      ],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "profile": {
+      "base": "http://localhost:3001",
+      "results": [
+        {
+          "who": "A",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "who": "A",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "device": "desktop",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "device": "phone",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "who": "B",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "who": "B",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "ownerSaveReload": true,
+          "rating": 93
+        },
+        {
+          "anonymousDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "expo-feed": {
+      "results": [
+        {
+          "crossOriginBearer": true,
+          "noStore": true,
+          "signatureFree": true,
+          "entryAndSlideRatingsNull": true,
+          "groupBandsAndNotes": true,
+          "ownPrivateExcluded": true,
+          "friendsIncluded": true,
+          "opaqueCursorNoOverlap": true
+        },
+        {
+          "device": "desktop",
+          "allFourBands": true,
+          "groupSelectionNotesBandCounter": true,
+          "keyboardSlideSelection": true,
+          "imageRendered": true,
+          "loadMore": true,
+          "circleSwitch": true
+        },
+        {
+          "device": "phone",
+          "allFourBands": true,
+          "groupSelectionNotesBandCounter": true,
+          "keyboardSlideSelection": true,
+          "imageRendered": true,
+          "loadMore": true,
+          "circleSwitch": true
+        },
+        {
+          "feedReadRequests": 12,
+          "directEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "delayedPaginationIgnoredAfterScopeChange": true
+        },
+        {
+          "commentPostAndRead": true
+        },
+        {
+          "feedOutageAndRecovery": true
+        },
+        {
+          "testAuthorExcluded": true,
+          "blockExcludedAndRestored": true
+        },
+        {
+          "mobileProfileBandCounterpart": true
+        },
+        {
+          "signOutClearsFeed": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "failures": [
+        {
+          "path": "/api/feed",
+          "status": 503
+        },
+        {
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "path": "/api/photos/image",
+          "status": 404
+        }
+      ],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    }
+  },
+  "live": {
+    "feed": {
+      "results": [
+        {
+          "invalidBearerNoCookieFallback": true,
+          "preflight": true
+        },
+        {
+          "payloadAllBands": true,
+          "numericRatingsNull": true,
+          "privateAndOwnExcluded": true,
+          "friendsIncluded": true,
+          "groupSlides": 2
+        },
+        {
+          "cursorPagination": true
+        },
+        {
+          "device": "desktop",
+          "labelsVisible": true,
+          "imagesDecoded": true,
+          "groupRendered": true,
+          "groupSelectionAndCaption": true,
+          "loadMore": true
+        },
+        {
+          "device": "phone",
+          "labelsVisible": true,
+          "imagesDecoded": true,
+          "groupRendered": true,
+          "groupSelectionAndCaption": true,
+          "loadMore": true
+        },
+        {
+          "testAuthorExcluded": true,
+          "blockExcludedAndRestored": true
+        },
+        {
+          "ownerRatingEditAndReload": true,
+          "storedScale": "1\u2013100"
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "profile": {
+      "base": "https://cellarsnap.app",
+      "results": [
+        {
+          "who": "A",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "who": "A",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "device": "desktop",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "device": "phone",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "who": "B",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "who": "B",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "ownerSaveReload": true,
+          "rating": 93
+        },
+        {
+          "anonymousDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "expo-feed": {
+      "results": [
+        {
+          "crossOriginBearer": true,
+          "noStore": true,
+          "signatureFree": true,
+          "entryAndSlideRatingsNull": true,
+          "groupBandsAndNotes": true,
+          "ownPrivateExcluded": true,
+          "friendsIncluded": true,
+          "opaqueCursorNoOverlap": true
+        },
+        {
+          "device": "desktop",
+          "knownQC12LoadedImagesWithZeroHeight": 9
+        },
+        {
+          "device": "desktop",
+          "allFourBands": true,
+          "groupSelectionNotesBandCounter": true,
+          "keyboardSlideSelection": true,
+          "imageRendered": true,
+          "loadMore": true,
+          "circleSwitch": true
+        },
+        {
+          "device": "phone",
+          "knownQC12LoadedImagesWithZeroHeight": 9
+        },
+        {
+          "device": "phone",
+          "allFourBands": true,
+          "groupSelectionNotesBandCounter": true,
+          "keyboardSlideSelection": true,
+          "imageRendered": true,
+          "loadMore": true,
+          "circleSwitch": true
+        },
+        {
+          "feedReadRequests": 12,
+          "directEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "delayedPaginationIgnoredAfterScopeChange": true
+        },
+        {
+          "commentPostAndRead": true
+        },
+        {
+          "feedOutageAndRecovery": true
+        },
+        {
+          "testAuthorExcluded": true,
+          "blockExcludedAndRestored": true
+        },
+        {
+          "mobileProfileBandCounterpart": true
+        },
+        {
+          "signOutClearsFeed": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 503 (Service Unavailable)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "failures": [
+        {
+          "phase": "injected-feed-outage",
+          "path": "/api/feed",
+          "status": 503
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "test-author-denial",
+          "path": "/api/photos/image",
+          "status": 404
+        }
+      ],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    }
+  },
+  "deployment": {
+    "id": "dpl_2miXAyN4tbETLzwdtP2EvdApyjrL",
+    "name": "cellar-snap",
+    "url": "cellar-snap-cyypcv059-eitan-sneiders-projects.vercel.app",
+    "readyState": "READY",
+    "aliases": [
+      "cellarsnap.app",
+      "cellar-snap.vercel.app",
+      "cellar-snap-eitan-sneiders-projects.vercel.app",
+      "cellar-snap-git-main-eitan-sneiders-projects.vercel.app"
+    ],
+    "githubDeployment": 6428448955,
+    "readyAt": "2026-09-14T00:51:35Z",
+    "duplicateLegacyFailure": "Missing Supabase environment variables (OPS-01), verified all previews and final production"
+  },
+  "productionErrors": {
+    "since": "2026-09-14T00:51:35Z",
+    "until": "2026-09-14T00:56:35Z",
+    "limit": 100,
+    "records": 0
+  },
+  "native": {
+    "simctl": "unavailable",
+    "xcodeApp": "absent",
+    "androidSDK": "absent",
+    "emulators": "unavailable",
+    "runtimeAcceptance": false,
+    "distribution": false,
+    "fallback": "Chromium desktop 1440x1000 and phone 390x844; Expo browser against local then production API"
+  },
+  "worktreeCleanup": {
+    "indexEntriesRemoved": 6,
+    "gitLinks": 3,
+    "settingsFiles": 3,
+    "originalPathsAndBytesPreserved": true,
+    "registeredWorktreePreserved": true,
+    "freshCheckout": [
+      {
+        "version": "baseline",
+        "commit": "8f39e21",
+        "checks": [
+          {
+            "command": "git ls-files --stage .claude/worktrees",
+            "exit": 0,
+            "stdout": "160000 a0a77dd4332c746ede67ec7d31eee764c4f55d6e 0\t.claude/worktrees/agent-a0995b31\n100644 d22db9dfe48d186eb0a220405472448895088f2b 0\t.claude/worktrees/agent-a19cd4c4/.claude/settings.local.json\n160000 a0a77dd4332c746ede67ec7d31eee764c4f55d6e 0\t.claude/worktrees/agent-a476462b\n100644 d22db9dfe48d186eb0a220405472448895088f2b 0\t.claude/worktrees/agent-a4ffa271/.claude/settings.local.json\n100644 d22db9dfe48d186eb0a220405472448895088f2b 0\t.claude/worktrees/agent-a8014bff/.claude/settings.local.json\n160000 a0a77dd4332c746ede67ec7d31eee764c4f55d6e 0\t.claude/worktrees/agent-a83037bc\n",
+            "stderr": ""
+          },
+          {
+            "command": "git submodule foreach --recursive git config --local --name-only --get-regexp core.sshCommand",
+            "exit": 128,
+            "stdout": "",
+            "stderr": "fatal: No url found for submodule path '.claude/worktrees/agent-a0995b31' in .gitmodules\n"
+          },
+          {
+            "command": "git submodule status",
+            "exit": 128,
+            "stdout": "",
+            "stderr": "fatal: no submodule mapping found in .gitmodules for path '.claude/worktrees/agent-a0995b31'\n"
+          },
+          {
+            "command": "git status --porcelain",
+            "exit": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ]
+      },
+      {
+        "version": "candidate",
+        "commit": "d484287",
+        "checks": [
+          {
+            "command": "git ls-files --stage .claude/worktrees",
+            "exit": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "command": "git submodule foreach --recursive git config --local --name-only --get-regexp core.sshCommand",
+            "exit": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "command": "git submodule status",
+            "exit": 0,
+            "stdout": "",
+            "stderr": ""
+          },
+          {
+            "command": "git status --porcelain",
+            "exit": 0,
+            "stdout": "",
+            "stderr": ""
+          }
+        ]
+      }
+    ],
+    "bothCICheckoutCleanupsPass": true,
+    "noMissingSubmoduleUrlWarningInFinalCI": true
+  },
+  "cleanup": {
+    "independentHostedSQL": {
+      "remainingFixtureEntries": 0,
+      "remainingFixtureGroups": 0,
+      "remainingFixtureComments": 0,
+      "winePhotoObjects": 882,
+      "testerCount": 4
+    },
+    "harnessFlagsRestored": true,
+    "originalTsconfigBytesPreserved": true,
+    "untrackedUserReportsPreserved": true,
+    "sessionServersStopped": [
+      3001,
+      8083
+    ],
+    "environmentFilesChanged": false
+  },
+  "remaining": [
+    "AUD-01 P0 client adoption/late-write fencing/avatars/external consumers/legacy cutoff/retirement",
+    "QC-01 physical ratings/direct Data API/mobile detail/remaining consumers/native distribution",
+    "AUD-13/15 grouped/lifecycle commands",
+    "QC-05 router headings",
+    "QC-12 ordinary feed images zero height (nine loaded images in final desktop and phone measurements)",
+    "AUD-50 recurring local owner fetch diagnostic"
+  ]
+}
