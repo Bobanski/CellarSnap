@@ -131,7 +131,7 @@ export async function resolveMobileGroupedPostData(
 
   if (slideEntryIds.length > 0) {
     const { data: slideEntryRows } = await supabaseClient
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select(
         "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at"
       )

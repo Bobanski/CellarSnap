@@ -30,7 +30,7 @@ export function CellarTab() {
       if (!user || !mounted) { setLoading(false); return; }
 
       const { data } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id, wine_name, producer, vintage, label_image_url, cellar_quantity")
         .eq("user_id", user.id)
         .eq("entry_status", "cellaring")

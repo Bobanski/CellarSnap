@@ -190,7 +190,7 @@ export default function SommelierScreen() {
 
         // Build a greeting based on mode and entry count
         const { count } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("id", { count: "exact", head: true })
           .eq("user_id", user.id);
 

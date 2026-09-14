@@ -134,7 +134,6 @@ type FriendRequestRow = {
 };
 
 const PAGE_SIZE = 30;
-const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
 
 function displayFriendName(profile: FriendProfile | null) {
   return getPublicProfileName(profile);
@@ -542,7 +541,7 @@ export default function ProfileScreen() {
 
       try {
         const { data, error, count } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select(
             "id, wine_name, label_image_path, consumed_at, created_at, entry_group_id",
             { count: "exact" }
@@ -605,7 +604,7 @@ export default function ProfileScreen() {
 
     try {
       const { data, error } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id, wine_name, label_image_path, created_at")
         .contains("tasted_with_user_ids", [user.id])
         .order("created_at", { ascending: false })
@@ -791,7 +790,7 @@ export default function ProfileScreen() {
       const frequencyMap = new Map<string, number>();
       if (friendIds.length > 0) {
         const { data: entriesWithFriends } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("tasted_with_user_ids")
           .eq("user_id", user.id)
           .neq("tasted_with_user_ids", "{}");
@@ -990,23 +989,21 @@ export default function ProfileScreen() {
             ? "gif"
             : "jpg";
 
-    const avatarPath = `${user.id}/avatar.${ext}`;
+    const avatarPath = `${user.id}/avatar-${createUuid()}.${ext}`;
     const fileResponse = await fetch(pendingAvatarAsset.uri);
     const fileBlob = await fileResponse.blob();
 
     const upload = await supabase.storage
       .from("wine-photos")
       .upload(avatarPath, fileBlob, {
-        upsert: true,
+        upsert: false,
         contentType: mimeType,
       });
     if (upload.error) {
       throw new Error(upload.error.message);
     }
 
-    const stalePaths = AVATAR_EXTENSIONS.map((candidateExt) => `${user.id}/avatar.${candidateExt}`)
-      .filter((candidatePath) => candidatePath !== avatarPath);
-    await supabase.storage.from("wine-photos").remove(stalePaths);
+    // Old keys are retired only through the verified photo-rekey protocol.
     const avatarUrl = await signPhotoUrl(avatarPath, {
       supabaseClient: supabase,
     });

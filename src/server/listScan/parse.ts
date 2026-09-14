@@ -1638,7 +1638,7 @@ async function loadUserPreferenceEntries(
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
       const response = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.fields)
         .eq("user_id", userId)
         .not("rating", "is", null);

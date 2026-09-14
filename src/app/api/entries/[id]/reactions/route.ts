@@ -33,7 +33,7 @@ export async function POST(
   }
 
   const { data: entry, error: entryError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, user_id, entry_privacy, reaction_privacy")
     .eq("id", entryId)
     .maybeSingle();
@@ -42,7 +42,7 @@ export async function POST(
     entryError &&
     (entryError.message.includes("reaction_privacy") || entryError.message.includes("column"))
       ? await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("id, user_id, entry_privacy")
           .eq("id", entryId)
           .maybeSingle()

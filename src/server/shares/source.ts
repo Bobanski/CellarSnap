@@ -46,7 +46,7 @@ export async function resolvePublicShareSource(supabase: SupabaseClient, shareId
     .select("id, post_id, expires_at, mode").eq("id", shareId).is("revoked_at", null).maybeSingle();
   if (shareError || !share) return null;
   if (share.expires_at && (!Number.isFinite(Date.parse(share.expires_at)) || Date.parse(share.expires_at) <= Date.now())) return null;
-  const {data: entry, error: entryError} = await supabase.from("wine_entries")
+  const {data: entry, error: entryError} = await supabase.from("wine_entries_with_ratings")
     .select("id, user_id, entry_privacy, label_photo_privacy, place_photo_privacy, wine_name, producer, vintage, rating, notes, consumed_at, country, region, appellation, qpr_level, label_image_path, entry_group_id")
     .eq("id", share.post_id).maybeSingle();
   if (entryError || !entry || entry.entry_privacy !== "public") return null;

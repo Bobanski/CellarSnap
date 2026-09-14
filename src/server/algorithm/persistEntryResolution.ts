@@ -206,7 +206,7 @@ export async function persistEntryResolution({
     attempt: async (payload) => {
       if (Object.keys(payload).length === 0) {
         const existingEntry = await (supabase
-          .from("wine_entries") as ExistingEntryBuilder)
+          .from("wine_entries_with_ratings") as ExistingEntryBuilder)
           .select("*")
           .eq("id", entryId)
           .eq("user_id", userId)
@@ -226,10 +226,15 @@ export async function persistEntryResolution({
         .select("*")
         .maybeSingle();
 
-      return {
-        data: updateEntry.data as PersistedEntryRow,
-        error: updateEntry.error as SupabaseErrorLike | null,
-      };
+      if (updateEntry.error || !updateEntry.data) {
+        return { data: updateEntry.data as PersistedEntryRow, error: updateEntry.error as SupabaseErrorLike | null };
+      }
+      // UPDATE receipts contain the public input row after private-source cutoff.
+      // Rehydrate the owner-aware source before returning a full entry to callers.
+      const currentEntry = await (supabase.from("wine_entries_with_ratings") as ExistingEntryBuilder)
+        .select("*").eq("id", entryId).eq("user_id", userId).maybeSingle();
+      if (currentEntry.error) throw new Error("Unable to read saved entry details");
+      return { data: currentEntry.data as PersistedEntryRow, error: null };
     },
   });
 

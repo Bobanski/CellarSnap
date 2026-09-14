@@ -25,6 +25,6 @@ test('request photo batch preserves source privacy, existence, owner and anonymo
     await db.exec('reset role; set role service_role'); await assert.rejects(read([path]),/permission denied/);
     await role(''); await assert.rejects(read([path]),{code:'42501'});
     await db.exec('reset role');
-    assert.deepEqual((await db.query("select prosecdef,proconfig from pg_proc where proname='readable_wine_photo_paths'")).rows,[{prosecdef:false,proconfig:['search_path=""']}]);
+    assert.deepEqual((await db.query("select prosecdef,proconfig from pg_proc where proname='readable_wine_photo_paths' and pronamespace='public'::regnamespace")).rows,[{prosecdef:false,proconfig:['search_path=""']}]);
   } finally { await db.close(); }
 });

@@ -29,7 +29,7 @@ function makeComparisonSupabase(userId: string) {
   return {
     client: {
       from(table: string) {
-        if (table === "wine_entries") {
+        if ((table === "wine_entries" || table === "wine_entries_with_ratings")) {
           return {
             select(columns: string) {
               expect(columns).toBe("id, user_id");

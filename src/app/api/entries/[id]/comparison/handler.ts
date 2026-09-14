@@ -97,7 +97,7 @@ export function createComparisonPostHandler(
     }
 
     const { data: newEntry, error: newEntryError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, user_id")
       .eq("id", newEntryId)
       .single();
@@ -148,7 +148,7 @@ export function createComparisonPostHandler(
     }
 
     const { data: comparisonEntry, error: comparisonEntryError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, user_id")
       .eq("id", payload.data.comparison_entry_id)
       .single();

@@ -54,7 +54,7 @@ async function queryRecentTrending(
   admin: ReturnType<typeof createSupabaseAdminClient>
 ): Promise<Array<{ name: string; type: "region" | "grape" }>> {
   const { data: recentEntries } = await admin
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, canonical_region, created_at")
     .or("entry_privacy.eq.public,entry_privacy.is.null")
     .order("created_at", { ascending: false })

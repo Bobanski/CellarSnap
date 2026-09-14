@@ -103,6 +103,15 @@ export async function expectedCatalog() {
     if (remove.length) throw new Error('B02l must be additive');
     expected[key].push(...add);
   }
+  const privacyDelta = JSON.parse(await readFile(new URL('./b02v-b02w-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(privacyDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error('Missing reviewed B02v/B02w predecessor');
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

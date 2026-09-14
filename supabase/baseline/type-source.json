@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-09-13T22:57:00Z",
-  "project": "rbmkypbqavmnuycznssv",
-  "command": "supabase_generate_typescript_types(project_id=rbmkypbqavmnuycznssv)",
+  "generatedAt": "2026-09-14T14:26:44.933Z",
+  "project": "disposable local PostgreSQL 17.6 replay",
+  "command": "PG_META_GENERATE_TYPES=typescript PG_META_GENERATE_TYPES_INCLUDED_SCHEMAS=public PG_META_GENERATE_TYPES_DETECT_ONE_TO_ONE_RELATIONSHIPS=true PG_META_POSTGREST_VERSION=14.5 node dist/server/server.js (loopback replay)",
   "catalogSha256": "4acf9025e2cab84093e7ac2424269e335c3ec47a425eb25861030d63e02346f6",
-  "typesSha256": "4b7c24b1296d24724a5d8106366b8d7caf7f81d72bcb818933ec0b700bf4590e",
+  "typesSha256": "14b30f6ff31656728ad7f66c0406e53a5d162a9501d3e68798f3bd330336a237",
   "scope": "public schema; physical rows are distinct from domain DTOs. Private and managed schemas are not exposed to client type consumers.",
-  "generator": "Supabase MCP generate_typescript_types",
-  "forwardCatalogDelta": "scripts/schema/b02i-catalog-delta.json",
+  "generator": "Supabase postgres-meta f380cc5be21edef4e77d9838c732d1f20af0b3c0",
+  "forwardCatalogDelta": "scripts/schema/b02v-b02w-catalog-delta.json",
   "priorForwardCatalogDeltas": [
     "scripts/schema/b02c2-catalog-delta.json",
     "scripts/schema/b02f-catalog-delta.json",

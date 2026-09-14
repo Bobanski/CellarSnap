@@ -577,7 +577,7 @@ async function fetchPersonalStats(
 
     if (entryIds.length > 0) {
       const { data: entries } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("rating")
         .eq("user_id", userId)
         .in("id", entryIds);
@@ -594,7 +594,7 @@ async function fetchPersonalStats(
     }
   } else if (type === "region") {
     const { data: entries } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("rating")
       .eq("user_id", userId)
       .or(
@@ -614,7 +614,7 @@ async function fetchPersonalStats(
     // Compute delta from overall average
     if (ratings.length > 0) {
       const { data: allEntries } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("rating")
         .eq("user_id", userId);
 
@@ -632,7 +632,7 @@ async function fetchPersonalStats(
   } else {
     // producer
     const { data: entries } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, rating")
       .eq("user_id", userId)
       .ilike("producer", `%${displayName}%`);
@@ -1072,7 +1072,7 @@ export async function GET(
 
     if (type === "region") {
       const { data } = await adminClient
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("qpr_level")
         .or(`canonical_region.ilike.%${displayName}%,region.ilike.%${displayName}%`)
         .not("qpr_level", "is", null);
@@ -1086,7 +1086,7 @@ export async function GET(
       const entryIds = (grapeEntries ?? []).map((r: { entry_id: string }) => r.entry_id);
       if (entryIds.length > 0) {
         const { data } = await adminClient
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("qpr_level")
           .in("id", entryIds)
           .not("qpr_level", "is", null);

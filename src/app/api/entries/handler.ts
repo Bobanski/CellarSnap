@@ -102,7 +102,7 @@ async function getRandomComparisonCandidate({
   supabase: RequestSupabaseClient;
 }): Promise<ComparisonCandidate | null> {
   const { count, error: countError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("entry_status", "consumed")
@@ -115,7 +115,7 @@ async function getRandomComparisonCandidate({
   const randomOffset = Math.floor(Math.random() * count);
 
   const { data: candidate, error: candidateError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
     .eq("user_id", userId)
     .eq("entry_status", "consumed")
@@ -212,7 +212,7 @@ export async function GET(request: Request) {
 
   const buildQuery = (fields: string) => {
     let query = supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select(fields)
       .eq("user_id", user.id)
       .eq("entry_status", "consumed")
@@ -331,7 +331,7 @@ export async function GET(request: Request) {
   });
 
   const { count: totalCount } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("entry_status", "consumed");

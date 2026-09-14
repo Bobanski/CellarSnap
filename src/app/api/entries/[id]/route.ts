@@ -45,7 +45,7 @@ async function getEntry(
   const { supabase, user } = auth;
 
   const { data, error } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("*")
     .eq("id", id)
     .single();
@@ -127,7 +127,7 @@ async function getEntry(
 
   if (viewerIsTagged && canonicalEntryId) {
     const { data: existingCopy, error: existingError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id")
       .eq("user_id", user.id)
       .eq("root_entry_id", canonicalEntryId)

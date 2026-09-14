@@ -121,7 +121,7 @@ async function getHome(request: Request) {
       },
     }),
     supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id)
       .eq("entry_status", "consumed"),
@@ -147,7 +147,7 @@ async function getHome(request: Request) {
       fallbackOnAnyMissingColumn: true,
       attempt: async (attempt) => {
         let query = supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("*")
           .eq("user_id", user.id)
           .order("consumed_at", { ascending: false })
@@ -220,7 +220,7 @@ async function getHome(request: Request) {
   if (viewerIsTestAccount || friendIds.length > 0) {
     const buildFriendQuery = (withFeedVisibilityFilter: boolean, withEntryStatusFilter: boolean) => {
       let query = supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(12);
@@ -491,7 +491,7 @@ async function getHome(request: Request) {
         wine_name: normalizeNullableString(entry.wine_name),
         producer: normalizeNullableString(entry.producer),
         vintage: normalizeNullableString(entry.vintage),
-        ...projectPublicFeedRating({ rating: typeof entry.rating === "number" ? entry.rating : null }),
+        ...projectPublicFeedRating({ public_rating_label: typeof entry.public_rating_label === "string" ? entry.public_rating_label : null, rating: typeof entry.rating === "number" ? entry.rating : null }),
         rating: typeof entry.rating === "number" ? entry.rating : null,
         qpr_level: normalizeNullableString(entry.qpr_level),
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
@@ -531,7 +531,7 @@ async function getHome(request: Request) {
         wine_name: normalizeNullableString(entry.wine_name),
         producer: normalizeNullableString(entry.producer),
         vintage: normalizeNullableString(entry.vintage),
-        ...projectPublicFeedRating({ rating: typeof entry.rating === "number" ? entry.rating : null }),
+        ...projectPublicFeedRating({ public_rating_label: typeof entry.public_rating_label === "string" ? entry.public_rating_label : null, rating: typeof entry.rating === "number" ? entry.rating : null }),
         qpr_level: normalizeNullableString(entry.qpr_level),
         consumed_at: normalizeNullableString(entry.consumed_at) ?? "",
         created_at: normalizeNullableString(entry.created_at) ?? "",

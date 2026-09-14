@@ -7,7 +7,7 @@ describe('B05 reviewed complete app schema', () => {
     const db = await replay();
     try {
       assert.deepEqual(differences(await expectedCatalog(), await catalog(db)), []);
-      assert.equal((await db.query("select count(*)::int count from pg_tables where schemaname='public'")).rows[0].count, 51);
+      assert.equal((await db.query("select count(*)::int count from pg_tables where schemaname='public'")).rows[0].count, 52);
     } finally { await db.close(); }
   });
 

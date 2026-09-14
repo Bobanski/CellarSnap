@@ -2854,7 +2854,7 @@ export default function EntryDetailScreen() {
       }
 
       const { data: targetEntry, error: targetEntryError } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id, user_id, label_image_path, place_image_path, pairing_image_path")
         .eq("id", targetEntryId)
         .maybeSingle();

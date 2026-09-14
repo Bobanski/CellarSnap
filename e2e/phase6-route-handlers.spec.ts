@@ -49,7 +49,7 @@ function makeShareSupabase({
       getUser: async () => ({ data: { user: makeAuthenticatedUser(viewerUserId) } }),
     },
     from(table: string) {
-      if (table !== "wine_entries") {
+      if ((table !== "wine_entries" && table !== "wine_entries_with_ratings")) {
         throw new Error(`Unexpected table lookup: ${table}`);
       }
 
@@ -98,7 +98,7 @@ function makeEntryPutSupabase({
         getUser: async () => ({ data: { user: makeAuthenticatedUser(viewerUserId) } }),
       },
       from(table: string) {
-        if (table !== "wine_entries") {
+        if ((table !== "wine_entries" && table !== "wine_entries_with_ratings")) {
           throw new Error(`Unexpected table lookup: ${table}`);
         }
 
@@ -145,6 +145,7 @@ function makeEntryPutSupabase({
                             user_id: ownerUserId,
                             rating: existingRating,
                             entry_group_id: null,
+                            ...lastUpdatePayload,
                           },
                           error: null,
                         }),
@@ -154,6 +155,7 @@ function makeEntryPutSupabase({
                             user_id: ownerUserId,
                             rating: existingRating,
                             entry_group_id: null,
+                            ...lastUpdatePayload,
                           },
                           error: null,
                         }),
@@ -187,11 +189,8 @@ function makeEntryPutSupabase({
                             data: {
                               id: value,
                               user_id: ownerUserId,
-                              rating:
-                                typeof payload.rating === "number"
-                                  ? payload.rating
-                                  : existingRating,
                               ...payload,
+                              rating: null, // Cleared write-input column after isolation.
                             },
                             error: null,
                           }),
@@ -228,7 +227,7 @@ function makeEntryDeleteClients({
   return {
     authClient: {
       from(table: string) {
-        if (table !== "wine_entries") {
+        if ((table !== "wine_entries" && table !== "wine_entries_with_ratings")) {
           throw new Error(`Unexpected table lookup: ${table}`);
         }
 
@@ -298,7 +297,7 @@ function makeEntryDeleteClients({
           };
         }
 
-        if (table === "wine_entries") {
+        if ((table === "wine_entries" || table === "wine_entries_with_ratings")) {
           return {
             delete() {
               return {
@@ -445,7 +444,7 @@ function makeBulkGroupSupabase(userId: string) {
         getUser: async () => ({ data: { user: makeAuthenticatedUser(userId) } }),
       },
       from(table: string) {
-        if (table === "wine_entries") {
+        if ((table === "wine_entries" || table === "wine_entries_with_ratings")) {
           return {
             select(columns: string) {
               expect(columns).toBe("id");
@@ -540,7 +539,7 @@ function makeBulkPublishSupabase(userId: string) {
         getUser: async () => ({ data: { user: makeAuthenticatedUser(userId) } }),
       },
       from(table: string) {
-        if (table === "wine_entries") {
+        if ((table === "wine_entries" || table === "wine_entries_with_ratings")) {
           return {
             select(columns: string) {
               if (columns === "id, entry_group_id") {
@@ -1087,7 +1086,7 @@ for (const viewerUserId of ['author', 'tagged-viewer']) {
       ];
       const supabase = {
         from(table: string) {
-          const rows = table === 'wine_entries' ? source : [];
+          const rows = (table === 'wine_entries' || table === 'wine_entries_with_ratings') ? source : [];
           const query = {
             select: () => query, eq: () => query, in: () => query,
             contains: () => query, order: () => query,

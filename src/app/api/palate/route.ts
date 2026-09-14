@@ -109,7 +109,7 @@ export async function GET(request: Request) {
     fallbackOnAnyMissingColumn: false,
     attempt: async (attempt) => {
       const response = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.fields)
         .eq("user_id", user.id)
         .not("rating", "is", null)
@@ -151,7 +151,7 @@ export async function GET(request: Request) {
       );
       if (backfillResult.resolved > 0) {
         const { data: fresh } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("id, assembled_sensory")
           .in("id", unresolved.map((r) => r.id));
         if (fresh) {

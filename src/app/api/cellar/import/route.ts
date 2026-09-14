@@ -141,7 +141,7 @@ export async function POST(request: Request) {
   // --- Duplicate detection ---
   // Build a set of existing entries for this user (wine_name + producer + vintage)
   const { data: existingEntries } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, wine_name, producer, vintage")
     .eq("user_id", user.id);
 

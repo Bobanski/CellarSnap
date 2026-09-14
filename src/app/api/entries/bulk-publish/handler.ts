@@ -48,7 +48,7 @@ export function createBulkPublishHandler(
     const entryIds = Array.from(new Set(parsed.data.entry_ids));
 
     const { data: entries, error: fetchEntriesError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, entry_group_id")
       .in("id", entryIds)
       .eq("user_id", user.id);

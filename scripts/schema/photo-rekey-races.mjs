@@ -40,5 +40,5 @@ export async function rekeyRaces({sql,session,waitForLock,env,bin}) {
  assert.equal(JSON.parse(run('status',id).stdout).state,'planned');
  assert.equal(JSON.parse(run('abandon',id).stdout).state,'abandoned');
  assert.notEqual(run('retire',id).status,0);
- return {sourceEditAndReferenceAndStorageRaces:count,operatorCli:true,retirementUnavailable:true};
+ return {sourceEditAndReferenceAndStorageRaces:count,operatorCli:true,retirementRequiresExplicitConfiguration:true};
 }

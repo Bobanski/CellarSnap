@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
+import {privacyCutoverRaces} from './privacy-cutover-races.mjs';
 import { rekeyRaces } from './photo-rekey-races.mjs';
 import { baselineFile, canonical, differences, expectedCatalog, forwardSql } from './contract.mjs';
 
@@ -138,7 +139,8 @@ try {
   assert.notEqual(duplicate.status,0);
   assert.deepEqual(JSON.parse(await readFile(inventoryPath,'utf8')),snapshot);
   const photoRekey=await rekeyRaces({sql,session,waitForLock,env,bin});
-  console.log(JSON.stringify({photoRekey,postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
+  const privacyCutover=await privacyCutoverRaces({sql,session});
+  console.log(JSON.stringify({privacyCutover,photoRekey,postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
 } finally {
   if(started) run('pg_ctl',['-D',join(scratch,'data'),'-m','immediate','-w','stop']);
   await rm(scratch,{recursive:true,force:true});

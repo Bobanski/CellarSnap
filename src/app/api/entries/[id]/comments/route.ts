@@ -98,7 +98,7 @@ async function getEntryWithCommentSettings(
     fallbackOnAnyMissingColumn: true,
     attempt: async (attempt) => {
       const response = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.select)
         .eq("id", entryId)
         .maybeSingle();

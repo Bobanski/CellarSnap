@@ -1470,7 +1470,7 @@ export default function EditEntryPage() {
       ownerUserId: string
     ): Promise<SurveyComparisonCandidate | null> => {
       const { count, error: countError } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id", { count: "exact", head: true })
         .eq("user_id", ownerUserId)
         .neq("id", currentEntryId);
@@ -1482,7 +1482,7 @@ export default function EditEntryPage() {
       const randomOffset = Math.floor(Math.random() * count);
 
       const { data: candidate, error: candidateError } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id, wine_name, producer, vintage, consumed_at, label_image_path")
         .eq("user_id", ownerUserId)
         .neq("id", currentEntryId)

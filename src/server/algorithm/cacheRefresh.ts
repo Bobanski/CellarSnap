@@ -144,7 +144,7 @@ async function loadRecentScoreableEntries(
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
       let query = supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.fields)
         .eq("user_id", userId);
 

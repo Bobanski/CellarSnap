@@ -92,7 +92,7 @@ export function createUserEntriesGetHandler(
     }
 
     let entriesQuery = supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("*")
       .eq("user_id", userId)
       .eq("entry_status", "consumed");

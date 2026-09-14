@@ -62,7 +62,7 @@ export function createEntryDeleteHandler(
     }
 
     const { data: existing, error: fetchError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, label_image_path, place_image_path, pairing_image_path, entry_group_id")
       .eq("id", id)
       .eq("user_id", user.id)
@@ -112,7 +112,7 @@ export function createEntryDeleteHandler(
 
       if (groupExists && isAnchor) {
         const { data: remainingEntries, error: remainingEntriesError } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("id")
           .eq("entry_group_id", existingEntryGroupId)
           .eq("user_id", user.id)
@@ -187,7 +187,7 @@ export function createEntryDeleteHandler(
 
     if (existingEntryGroupId) {
       const { count: remainingGroupCount, error: remainingCountError } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id", { count: "exact", head: true })
         .eq("entry_group_id", existingEntryGroupId)
         .eq("user_id", user.id);

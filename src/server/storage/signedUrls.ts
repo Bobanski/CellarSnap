@@ -1,4 +1,4 @@
-import { authenticatedPhotoUrl, isValidPhotoPath, usesRequestPhotoDelivery } from "@/lib/storage/photoDelivery";
+import { authenticatedPhotoUrl, isValidPhotoPath } from "@/lib/storage/photoDelivery";
 import { signPhotoPaths } from "@shared/storage";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -56,7 +56,7 @@ export async function signPhotoUrl(
 
   if (path !== "pending" && !isValidPhotoPath(path)) return null;
 
-  if (bucket === DEFAULT_PHOTO_BUCKET && usesRequestPhotoDelivery(supabase)) {
+  if (bucket === DEFAULT_PHOTO_BUCKET) {
     return (await requestPhotoUrls([path], supabase, options)).get(path) ?? null;
   }
 
@@ -78,7 +78,7 @@ export async function signPhotoUrls(
 ) {
   const bucket = options?.bucket ?? DEFAULT_PHOTO_BUCKET;
   const ttlSeconds = options?.ttlSeconds ?? DEFAULT_SIGNED_URL_TTL_SECONDS;
-  if (bucket === DEFAULT_PHOTO_BUCKET && usesRequestPhotoDelivery(supabase)) {
+  if (bucket === DEFAULT_PHOTO_BUCKET) {
     return requestPhotoUrls(paths, supabase, options);
   }
   const result = await signPhotoPaths(paths, {
