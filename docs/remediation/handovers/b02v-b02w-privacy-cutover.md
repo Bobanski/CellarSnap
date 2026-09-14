@@ -32,7 +32,7 @@ Native runtime inventory: CommandLineTools only; no Xcode/simctl, Android SDK, a
 
 ## Release state
 - Implementation: committed, [PR #158](https://github.com/Bobanski/CellarSnap/pull/158) open.
-- QC: local/source and builds as above; hosted integration, native device and multi-region CDN acceptance remain. At 14:45 UTC primary Vercel preview and mobile CI pass; web CI is running. The duplicate `cellarsnap` Vercel failure was independently rechecked: missing Supabase environment variables, existing OPS-01. No hosting configuration was changed.
+- QC: local/source and builds as above; hosted integration, native device and multi-region CDN acceptance remain. CI run `34857329580` completed successfully on `00c2bb4` (web and mobile); primary Vercel preview also passes. Later commits only update documentation/evidence and may still have repeated checks running. The duplicate `cellarsnap` Vercel failure was independently rechecked: missing Supabase environment variables, existing OPS-01. No hosting configuration was changed.
 - Merge: not merged. Primary web deployment: unchanged.
 - SQL: both files only staged in the repository manifest, not applied to hosted project `rbmkypbqavmnuycznssv`.
 - `20260914134821_private_rating_source.sql`: SHA-256 `037374f8f593c6b8046e6b5b93ced35d24b103eb54a9694effa6e25639faa64d`.

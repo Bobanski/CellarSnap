@@ -753,7 +753,14 @@
     "mobileCI": "SUCCESS",
     "webCI": "IN_PROGRESS",
     "duplicateVercel": "FAILURE: Missing Supabase environment variables; existing OPS-01",
-    "productionDeployment": "unchanged"
+    "productionDeployment": "unchanged",
+    "completedCI": {
+      "run": 34857329580,
+      "commit": "00c2bb464e38cb5e4bfde4be402203c0a9335ec0",
+      "web": "SUCCESS",
+      "mobile": "SUCCESS",
+      "note": "Later commits only update documentation/evidence; their repeated checks may still run."
+    }
   },
   "workspace": {
     "ownedLocalServicesStopped": true,
