@@ -53,7 +53,7 @@ If you use AI label autofill / photo auto-tagging, run the web app too (repo roo
 npm run dev
 ```
 
-For TestFlight / App Review builds, point `EXPO_PUBLIC_WEB_API_BASE_URL` at the deployed web API, not localhost. The mobile app uses that API for AI photo analysis, crop editing, alerts actions, and account deletion.
+For TestFlight / App Review builds, point `EXPO_PUBLIC_WEB_API_BASE_URL` at the deployed web API, not localhost. The mobile app uses that API for the feed, public profiles, AI photo analysis, crop editing, alerts actions, and account deletion. Feed reads require the projected API response and do not fall back to direct database reads.
 
 ## Auth Redirect URLs (Supabase)
 
