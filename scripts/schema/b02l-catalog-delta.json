@@ -1,0 +1,269 @@
+{
+  "columns": {
+    "add": [
+      {
+        "default_expression": "'planned'::text",
+        "generated": "",
+        "identity": "",
+        "name": "state",
+        "not_null": true,
+        "position": 5,
+        "table_name": "photo_rekey_operations",
+        "type": "text"
+      },
+      {
+        "default_expression": "now()",
+        "generated": "",
+        "identity": "",
+        "name": "created_at",
+        "not_null": true,
+        "position": 7,
+        "table_name": "photo_rekey_operations",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "committed_at",
+        "not_null": false,
+        "position": 8,
+        "table_name": "photo_rekey_operations",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "expected",
+        "not_null": true,
+        "position": 4,
+        "table_name": "photo_rekey_operations",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "id",
+        "not_null": true,
+        "position": 1,
+        "table_name": "photo_rekey_operations",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "mapping",
+        "not_null": true,
+        "position": 3,
+        "table_name": "photo_rekey_operations",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "proof",
+        "not_null": false,
+        "position": 6,
+        "table_name": "photo_rekey_operations",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "source_path",
+        "not_null": true,
+        "position": 2,
+        "table_name": "photo_rekey_operations",
+        "type": "text"
+      }
+    ],
+    "remove": []
+  },
+  "constraints": {
+    "add": [
+      {
+        "definition": "CHECK ((state = 'pending_revocation'::text) = (committed_at IS NOT NULL))",
+        "name": "photo_rekey_operations_check",
+        "table_name": "photo_rekey_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (jsonb_array_length(mapping) = 2)",
+        "name": "photo_rekey_operations_mapping_check",
+        "table_name": "photo_rekey_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (state = ANY (ARRAY['planned'::text, 'pending_revocation'::text, 'abandoned'::text]))",
+        "name": "photo_rekey_operations_state_check",
+        "table_name": "photo_rekey_operations",
+        "validated": true
+      },
+      {
+        "definition": "PRIMARY KEY (id)",
+        "name": "photo_rekey_operations_pkey",
+        "table_name": "photo_rekey_operations",
+        "validated": true
+      }
+    ],
+    "remove": []
+  },
+  "function_grants": {
+    "add": [
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "commit_photo_rekey",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, old_path text",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "plan_photo_rekey",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "abandon_photo_rekey",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "paths text[]",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "photo_rekey_snapshot",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "functions": {
+    "add": [
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.commit_photo_rekey(operation_id uuid, copy_proof jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\n SET statement_timeout TO '30s'\nAS $function$\ndeclare op private.photo_rekey_operations; old_paths text[]; new_paths text[]; current_new jsonb; r jsonb; m jsonb; dest text; n integer;\nbegin\n  select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n  if op.state='pending_revocation' then return to_jsonb(op); end if;\n  if op.state<>'planned' then raise exception 'Operation abandoned' using errcode='22023'; end if;\n  select array_agg(v->>'old' order by ord),array_agg(v->>'new' order by ord) into old_paths,new_paths\n    from jsonb_array_elements(op.mapping) with ordinality a(v,ord);\n  -- Short operator transaction; table locks also exclude phantom references from\n  -- legacy writers which do not participate in advisory/source-row locking.\n  lock table public.wine_entries, public.entry_groups, public.entry_photos, public.entry_group_slides,\n    public.profiles, public.user_collections, public.user_collection_items in share row exclusive mode;\n  perform 1 from storage.objects where bucket_id='wine-photos' and name=any(old_paths||new_paths) order by name for update;\n  if private.photo_rekey_snapshot(old_paths)<>op.expected then raise exception 'Photo source changed; abandon and replan' using errcode='PT409'; end if;\n  current_new:=private.photo_rekey_snapshot(new_paths);\n  if jsonb_array_length(current_new->'refs')<>0 then raise exception 'Destination gained references' using errcode='PT409'; end if;\n  if copy_proof is null or jsonb_typeof(copy_proof)<>'object' or copy_proof->'objects' is distinct from current_new->'objects'\n    or jsonb_typeof(copy_proof->'hashes') is distinct from 'array' or jsonb_array_length(copy_proof->'hashes')<>2 then\n    raise exception 'Copy proof changed or incomplete' using errcode='PT409'; end if;\n  for m in select * from jsonb_array_elements(op.mapping) loop\n    if (select o->'object' from jsonb_array_elements(op.expected->'objects') o where o->>'path'=m->>'old')='null'::jsonb then\n      if (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')<>'null'::jsonb then\n        raise exception 'Unexpected original destination' using errcode='PT409'; end if;\n    else\n      if not exists(select from jsonb_array_elements(copy_proof->'hashes') h where h->>'old'=m->>'old' and h->>'new'=m->>'new'\n        and h->>'sha256' ~ '^[0-9a-f]{64}$' and (h->>'size')::bigint between 1 and 26214400\n        and h->>'mimetype' ~ '^image/(jpeg|png|webp|gif|avif|heic|heif)$')\n        or (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')='null'::jsonb then\n        raise exception 'Missing verified copy' using errcode='PT409'; end if;\n    end if;\n  end loop;\n  -- Exactly the captured canonical cells, without replacing entire rows or IDs.\n  for r in select * from jsonb_array_elements(op.expected->'refs') loop\n    select v->>'new' into strict dest from jsonb_array_elements(op.mapping) v where v->>'old'=r->>'path';\n    execute format('update public.%I set %I=$1 where id=$2::uuid and %I=$3',r->>'t',r->>'c',r->>'c') using dest,r->>'id',r->>'path';\n    get diagnostics n=row_count;\n    if n<>1 then raise exception 'Photo reference changed' using errcode='PT409'; end if;\n  end loop;\n  if jsonb_array_length(private.photo_rekey_snapshot(old_paths)->'refs')<>0 then raise exception 'References remain' using errcode='PT409'; end if;\n  update private.photo_rekey_operations set state='pending_revocation',proof=copy_proof,committed_at=clock_timestamp() where id=operation_id returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "commit_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, old_path text",
+        "definition": "CREATE OR REPLACE FUNCTION private.plan_photo_rekey(operation_id uuid, old_path text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations; base text; sibling text; dest text; original_dest text; snap jsonb; r jsonb;\nbegin\n  -- Entry-owned three/four-segment keys only. Fixed-name avatar/cover and opaque\n  -- external URL migration needs its own reviewed authority contract.\n  if operation_id is null or old_path is null or length(old_path)>1024 or old_path !~\n    '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/([^/]+/)?[^/]+$'\n    or old_path ~ '[\\\\[:cntrl:]]' or old_path ~ '(^|/)\\.{1,2}(/|$)' or old_path ~ '__original(\\.[a-zA-Z0-9]+)?$'\n    then raise exception 'Unsupported source path' using errcode='22023'; end if;\n  perform pg_advisory_xact_lock(hashtextextended(old_path, 9281));\n  select * into op from private.photo_rekey_operations where id=operation_id;\n  if found then\n    if op.source_path<>old_path then raise exception 'Operation identity mismatch' using errcode='22023'; end if;\n    return to_jsonb(op);\n  end if;\n  base:=old_path;\n  sibling:=case when base ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(base,'(\\.[a-zA-Z0-9]+)$','__original\\1') else base||'__original' end;\n  dest:=regexp_replace(base,'[^/]+$',operation_id::text||coalesce(substring(base from '(\\.[a-zA-Z0-9]+)$'),''));\n  original_dest:=case when dest ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(dest,'(\\.[a-zA-Z0-9]+)$','__original\\1') else dest||'__original' end;\n  snap:=private.photo_rekey_snapshot(array[base,sibling]);\n  if jsonb_array_length(snap->'sources')<>1 or jsonb_array_length(snap->'refs')=0 or\n    exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=base and o->'object'='null'::jsonb)\n    then raise exception 'Missing source object, entry or references' using errcode='22023'; end if;\n  for r in select * from jsonb_array_elements(snap->'refs') loop\n    if exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=r->>'path' and o->'object'='null'::jsonb) then\n      raise exception 'Referenced original is missing' using errcode='22023'; end if;\n  end loop;\n  if exists(select from jsonb_array_elements(private.photo_rekey_snapshot(array[dest,original_dest])->'objects') o where o->'object'<>'null'::jsonb)\n    or jsonb_array_length(private.photo_rekey_snapshot(array[dest,original_dest])->'refs')>0 then\n    raise exception 'Destination already exists' using errcode='23505'; end if;\n  insert into private.photo_rekey_operations(id,source_path,mapping,expected) values(operation_id,base,\n    jsonb_build_array(jsonb_build_object('old',base,'new',dest),jsonb_build_object('old',sibling,'new',original_dest)),snap) returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "plan_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.abandon_photo_rekey(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations;\nbegin\n  select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n  if op.state='pending_revocation' then raise exception 'Committed operations cannot be abandoned' using errcode='22023'; end if;\n  update private.photo_rekey_operations set state='abandoned' where id=operation_id returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "abandon_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "paths text[]",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_rekey_snapshot(paths text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare refs jsonb; objects jsonb; sources jsonb;\nbegin\n  if cardinality(paths) <> 2 or paths is null then raise exception 'Invalid photo cohort' using errcode='22023'; end if;\n  with r as (\n    select 'entry_photos'::text t,id::text id,'path'::text c,path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') fingerprint from public.entry_photos p where path=any(paths)\n    union all select 'wine_entries',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex') from public.wine_entries e\n      cross join lateral(values('label_image_path',e.label_image_path),('place_image_path',e.place_image_path),('pairing_image_path',e.pairing_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'entry_group_slides',id::text,'path',path,encode(sha256(convert_to(to_jsonb(s)::text,'UTF8')),'hex') from public.entry_group_slides s where path=any(paths)\n    union all select 'profiles',id::text,'avatar_path',avatar_path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') from public.profiles p where avatar_path=any(paths)\n    union all select 'user_collection_items',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(i)::text,'UTF8')),'hex') from public.user_collection_items i\n      cross join lateral(values('snapshot_label_image_path',i.snapshot_label_image_path),('snapshot_preview_image_path',i.snapshot_preview_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'user_collections',id::text,'cover_image_path',cover_image_path,encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') from public.user_collections c where cover_image_path=any(paths)\n  ) select coalesce(jsonb_agg(to_jsonb(b) order by t,id,c),'[]') into refs from (select * from r order by t,id,c limit 1001) b;\n  if jsonb_array_length(refs)>1000 then raise exception 'Photo reference bound exceeded' using errcode='54000'; end if;\n  select coalesce(jsonb_agg(jsonb_build_object('path',p,'object',case when o.id is null then null else\n    jsonb_build_object('id',o.id,'version',o.version,'updated_at',o.updated_at,'metadata',o.metadata) end) order by p),'[]') into objects\n    from unnest(paths) p left join storage.objects o on o.bucket_id='wine-photos' and o.name=p;\n  select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'fingerprint',encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex')) order by e.id),'[]') into sources from public.wine_entries e\n    where e.id::text=split_part(paths[1],'/',2) and e.user_id::text=split_part(paths[1],'/',1);\n  return jsonb_build_object('refs',refs,'objects',objects,'sources',sources);\nend $function$\n",
+        "name": "photo_rekey_snapshot",
+        "owner": "postgres",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "grants": {
+    "add": [
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_rekey_operations",
+        "privilege_type": "UPDATE"
+      }
+    ],
+    "remove": []
+  },
+  "indexes": {
+    "add": [
+      {
+        "indexdef": "CREATE UNIQUE INDEX photo_rekey_active_source ON private.photo_rekey_operations USING btree (source_path) WHERE (state <> 'abandoned'::text)",
+        "indexname": "photo_rekey_active_source",
+        "tablename": "photo_rekey_operations"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX photo_rekey_operations_pkey ON private.photo_rekey_operations USING btree (id)",
+        "indexname": "photo_rekey_operations_pkey",
+        "tablename": "photo_rekey_operations"
+      }
+    ],
+    "remove": []
+  },
+  "relations": {
+    "add": [
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "photo_rekey_operations",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "d",
+        "rls": true,
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  }
+}

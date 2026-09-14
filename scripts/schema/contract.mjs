@@ -97,6 +97,12 @@ export async function expectedCatalog() {
     if (remove.length) throw new Error('B02i must be additive');
     expected[key].push(...add);
   }
+  // B02l is private, invoker-only operator machinery; no app grants or policies change.
+  const rekeyDelta = JSON.parse(await readFile(new URL('./b02l-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(rekeyDelta)) {
+    if (remove.length) throw new Error('B02l must be additive');
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

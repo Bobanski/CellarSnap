@@ -1,0 +1,508 @@
+{
+  "date": "2026-09-13",
+  "scope": "B02l AUD-01/AUD-22 bounded entry-photo copy and atomic reference swaps",
+  "sql": {
+    "file": "20260913234035_photo_rekey_operations.sql",
+    "hostedVersion": "20260913235129",
+    "statementMd5": "52d2df95120d5fce99cdf449fbaf4bc3",
+    "sha256": "a7e091acd9c99de29617d8f1663d691a2d4cb089db66a8112c8f5b81eeb9fdc3",
+    "fullCatalogMatches": true
+  },
+  "automated": {
+    "isolated": 412,
+    "schema": 30,
+    "databaseTypes": true,
+    "webTypesLintBuild": true,
+    "mobileTypesLint": true,
+    "postgres": {
+      "photoRekey": {
+        "sourceEditAndReferenceAndStorageRaces": 3,
+        "operatorCli": true,
+        "retirementUnavailable": true
+      },
+      "postgres": "postgres (PostgreSQL) 17.6",
+      "catalogMatches": true,
+      "ownerAndStrangerAccess": true,
+      "concurrencyChecks": 4,
+      "editConcurrencyChecks": 2,
+      "inventoryCli": true,
+      "productionWrites": 0
+    }
+  },
+  "inventory": {
+    "missingKeys": 12,
+    "groupSlideKeys": 10,
+    "orderedPhotoKeys": 2,
+    "missingSlideOriginalsPresent": 9,
+    "missingOrderedOriginalsPresent": 0,
+    "missingKeysWithSourceEntry": 12,
+    "missingSlidesWithCurrentSameTypePhoto": 7,
+    "contextOnlyMissingSlides": 1,
+    "unreferencedNonOriginalObjects": 118,
+    "olderThan30Days": 118,
+    "entryShapeWithoutSource": 117,
+    "avatarShape": 1,
+    "knownPrefixOwners": 59,
+    "testerPrefixes": 0,
+    "originalSiblings": 0,
+    "historicalRowsChanged": 0,
+    "ordinaryObjectsRekeyedOrDeleted": 0
+  },
+  "hosted": {
+    "results": [
+      {
+        "allNineReferenceColumns": true,
+        "originalSibling": true,
+        "stableRowIds": true,
+        "lostCopyAndCommitRecovery": true,
+        "state": "pending_revocation",
+        "oldObjectsRetained": true
+      },
+      {
+        "name": "photoPrivacy",
+        "denialAndRestore": true
+      },
+      {
+        "name": "entryPrivacy",
+        "denialAndRestore": true
+      },
+      {
+        "name": "testAuthor",
+        "denialAndRestore": true
+      },
+      {
+        "blockDenialAndRestore": true
+      },
+      {
+        "publicRpcUnavailable": true
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "webLocal": {
+    "results": [
+      {
+        "rekeyedBeforeBrowser": true,
+        "baseAndOriginal": true
+      },
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 400 ()"
+    ],
+    "failedRequests": [
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/list-scan",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/list-scan",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/explore",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "webLive": {
+    "results": [
+      {
+        "rekeyedBeforeBrowser": true,
+        "baseAndOriginal": true
+      },
+      {
+        "device": "desktop",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true,
+        "storageRequests": 0,
+        "signatureFreePayload": true
+      },
+      {
+        "initial": {
+          "status": 200,
+          "noStore": true,
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "noStore": true,
+          "bytes": 0
+        }
+      },
+      {
+        "anonymous": 401
+      },
+      {
+        "cropSaveAndOriginalReopen": true
+      },
+      {
+        "ownerEditor": "desktop",
+        "cropOpened": true
+      },
+      {
+        "ownerEditor": "phone",
+        "cropOpened": true
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 400 ()"
+    ],
+    "failedRequests": [
+      {
+        "path": "/sommelier",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/list-scan",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate/distill",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/rest/v1/public_profiles",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/feed",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/palate",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/notifications",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      },
+      {
+        "path": "/api/photos/image",
+        "error": "net::ERR_ABORTED"
+      }
+    ],
+    "httpFailures": [
+      {
+        "path": "/storage/v1/object/copy",
+        "status": 400
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "expoBrowser": {
+    "results": [
+      {
+        "rekeyedBeforeExpo": true,
+        "baseAndOriginal": true
+      },
+      {
+        "device": "desktop",
+        "imageLoaded": true
+      },
+      {
+        "device": "phone",
+        "imageLoaded": true
+      },
+      {
+        "crossOriginBearer": {
+          "status": 200,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 91828
+        }
+      },
+      {
+        "reason": "photoPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "entryPrivacy",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "reason": "testAuthor",
+        "denied": {
+          "status": 404,
+          "cache": "private, no-store, max-age=0",
+          "bytes": 0
+        }
+      },
+      {
+        "deniedLoadThenRetry": true
+      },
+      {
+        "outageThenRetry": true
+      },
+      {
+        "adoptedPayloadSignatureFree": true,
+        "oldBearerCompatible": true
+      },
+      {
+        "storageRequests": 0,
+        "imageRequests": 13,
+        "bearerOnly": true
+      },
+      {
+        "signOutClearsImageSurface": true
+      },
+      {
+        "ownerCropSaveAndReopen": true,
+        "originalDimensionReads": 3
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+    ],
+    "failures": [
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 404
+      },
+      {
+        "path": "/api/photos/image",
+        "status": 503
+      }
+    ],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "expoCropFocused": {
+    "results": [
+      {
+        "rekeyedBeforeExpo": true,
+        "baseAndOriginal": true
+      },
+      {
+        "ownerCropSaveAndReopen": true,
+        "originalDimensionReads": 3
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "failures": [],
+    "fixturesRemoved": true,
+    "profilesRestored": true
+  },
+  "coverage": {
+    "nativeRuntimes": false,
+    "nativeDistribution": false,
+    "expoArtifact": "unchanged B02g browser export",
+    "productionRetirement": false,
+    "legacySigningCutoff": false,
+    "avatarRekey": false
+  },
+  "advisor": {
+    "categoriesBefore": 6,
+    "observationsBefore": 17,
+    "categoriesAfter": 6,
+    "observationsAfter": 18,
+    "new": "INFO rls_enabled_no_policy on private.photo_rekey_operations; deliberate no-app-access ledger"
+  },
+  "qcCorrections": [
+    "Expo screenshot check initially filtered WebP data URLs; reopened crop uses JPEG prefix. Corrected image-format-neutral loading assertion and waited for modal animation. Focused crop and entire Expo suite then passed. No application change.",
+    "Web crop produces one handled Storage copy HTTP 400 when original exists; save/reopen passed. No page exceptions. Navigation/closure cancellations are recorded, not generalized into a clean-network claim."
+  ]
+}

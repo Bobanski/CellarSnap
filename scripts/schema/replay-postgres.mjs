@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createServer } from 'node:net';
 import { once } from 'node:events';
+import { rekeyRaces } from './photo-rekey-races.mjs';
 import { baselineFile, canonical, differences, expectedCatalog, forwardSql } from './contract.mjs';
 
 const bin=resolve(process.argv[2] ?? '');
@@ -136,7 +137,8 @@ try {
   const duplicate=spawnSync(process.execPath,inventoryArgs,{env:inventoryEnv,encoding:'utf8'});
   assert.notEqual(duplicate.status,0);
   assert.deepEqual(JSON.parse(await readFile(inventoryPath,'utf8')),snapshot);
-  console.log(JSON.stringify({postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
+  const photoRekey=await rekeyRaces({sql,session,waitForLock,env,bin});
+  console.log(JSON.stringify({photoRekey,postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
 } finally {
   if(started) run('pg_ctl',['-D',join(scratch,'data'),'-m','immediate','-w','stop']);
   await rm(scratch,{recursive:true,force:true});

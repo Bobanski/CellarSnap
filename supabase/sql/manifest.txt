@@ -89,3 +89,4 @@
 20260913220317_atomic_web_entry_fields.sql
 20260913222046_entry_edit_privacy_domain.sql
 20260913225201_request_photo_paths.sql
+20260913234035_photo_rekey_operations.sql
