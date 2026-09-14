@@ -995,7 +995,7 @@ export default function EntriesScreen() {
 
       {errorMessage ? <View>
         <AppText style={styles.errorText}>{errorMessage}</AppText>
-        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={styles.pill}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={[styles.pill, styles.libraryRetry]}>
           <AppText style={styles.pillText}>Retry</AppText>
         </Pressable>
       </View> : null}
@@ -1196,7 +1196,7 @@ export default function EntriesScreen() {
             <>
               {errorMessage ? <View>
         <AppText style={styles.errorText}>{errorMessage}</AppText>
-        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={styles.pill}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Retry library" onPress={() => void loadEntries(true)} style={[styles.pill, styles.libraryRetry]}>
           <AppText style={styles.pillText}>Retry</AppText>
         </Pressable>
       </View> : null}
@@ -1287,6 +1287,7 @@ export default function EntriesScreen() {
 }
 
 const styles = StyleSheet.create({
+  libraryRetry: { minHeight: 44, justifyContent: "center" },
   screen: { flex: 1, backgroundColor: colors.screenBg },
   loadingScreen: { flex: 1, backgroundColor: colors.screenBg, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 28, gap: 12 },
