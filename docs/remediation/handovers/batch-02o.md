@@ -1,4 +1,7 @@
 # B02o handover — September 13, 2026 (EDT)
+
+**Release follow-up:** merged and final-primary verified; see [B02o/B02p/B02q release](b02o-b02p-b02q-release.md). The checkpoint below preserves its original stopping state.
+
 ## Objective and IDs
 QC-01 reader/writer and physical-isolation prerequisite inventory; related AUD-19/48/50. See [consumer map](../b02o-rating-consumers.md). No application or SQL changes.
 ## Resume here

@@ -1,0 +1,740 @@
+{
+  "date": "2026-09-13 EDT / 2026-09-14 UTC",
+  "batches": [
+    "B02o",
+    "B02p",
+    "B02q"
+  ],
+  "ids": [
+    "QC-01",
+    "AUD-48",
+    "AUD-50"
+  ],
+  "candidate": "1561bbf11e93db8111e85f1dcf44875606f0129c",
+  "productMain": "c8717ce44aaedeb0d3a6470df78859f38850141e",
+  "tree": "66d9cbe2b00a7c12f5634675b94d11096832c0f6",
+  "mergedTreeEqualsCandidate": true,
+  "prs": {
+    "148": "435d488c777ae898066593647446cdc0cbef7f5f",
+    "149": "070ad0e700e76b0c130bd0f2f57057c84a853534",
+    "150": "c8717ce44aaedeb0d3a6470df78859f38850141e"
+  },
+  "checks": {
+    "isolatedTests": 466,
+    "schemaTests": 30,
+    "newTransportTests": 37,
+    "webAndMobileLint": "pass",
+    "webAndMobileTypes": "pass",
+    "databaseTypeContract": "pass",
+    "expoAllPlatformExports": "pass",
+    "primaryPreviewBuilds": "pass",
+    "applicationCI": "pass",
+    "localNextProductionBuild": "not run; exact-commit primary Vercel builds passed"
+  },
+  "ciRuns": {
+    "148": "34795373297",
+    "149": "34795777045",
+    "150": "34796327487"
+  },
+  "deployment": {
+    "id": "dpl_9v61QSXbcM4Gkq52J28fA5NgHPKG",
+    "githubDeployment": 6428892510,
+    "ready": "2026-09-14T01:39:18Z",
+    "alias": "https://cellarsnap.app",
+    "status": "READY"
+  },
+  "sql": {
+    "newMigrations": 0,
+    "productionMigration": false,
+    "readOnlyCatalog": "table grants and rating function source inventory only; no new full-catalog audit"
+  },
+  "platforms": {
+    "desktop": "Chromium 145 / 1440x1000",
+    "phone": "Chromium 145 / 390x844",
+    "nativeIOS": "Unavailable: CommandLineTools only; xcrun cannot find simctl",
+    "nativeAndroid": "Unavailable: no emulator/adb or standard SDK directory",
+    "distribution": "No native binary or OTA published"
+  },
+  "browser": {
+    "home": {
+      "results": [
+        {
+          "ownerNumeric": true,
+          "circleFourBands": true,
+          "privateExcluded": true,
+          "groupProjected": true,
+          "crossOriginBearer": true,
+          "noStore": true,
+          "signatureFree": true
+        },
+        {
+          "device": "desktop",
+          "allBandsVisible": true,
+          "imageRendered": true,
+          "homeToDetail": true
+        },
+        {
+          "device": "phone",
+          "allBandsVisible": true,
+          "imageRendered": true,
+          "homeToDetail": true
+        },
+        {
+          "reactionPostAndReload": true
+        },
+        {
+          "homeDirectEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "outageFailsClosed": true,
+          "retryRecovers": true
+        },
+        {
+          "rawPayloadRejected": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "cookieApi": true,
+          "invalidBearerNoCookieFallback": true,
+          "anonymousDenied": true,
+          "preflightReadOnly": true
+        },
+        {
+          "signoutClearsHome": true,
+          "lateResponseAfterSignoutIgnored": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "home-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "home-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "home-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "phase": "home-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "phase": "home-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "phase": "home-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "home-outage",
+          "path": "/api/home",
+          "status": 503
+        },
+        {
+          "phase": "home-outage",
+          "path": "/api/home",
+          "status": 503
+        },
+        {
+          "phase": "home-test-author",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "home-test-author",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "home-test-author",
+          "path": "/api/photos/image",
+          "status": 404
+        },
+        {
+          "phase": "home-test-author",
+          "path": "/api/photos/image",
+          "status": 404
+        }
+      ],
+      "homeDirectReads": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "detail": {
+      "results": [
+        {
+          "nonownerProjected": true,
+          "groupProjected": true,
+          "friendsVisible": true,
+          "privateDenied": true,
+          "crossOriginBearer": true,
+          "signatureFree": true,
+          "noStore": true
+        },
+        {
+          "device": "desktop",
+          "bandVisible": true,
+          "noNumericOrEditControl": true,
+          "grapesVisible": true,
+          "photoDecodedAndVisible": true
+        },
+        {
+          "device": "phone",
+          "bandVisible": true,
+          "noNumericOrEditControl": true,
+          "grapesVisible": true,
+          "photoDecodedAndVisible": true
+        },
+        {
+          "directDetailEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "commentPostAndRead": true
+        },
+        {
+          "outageFailsClosed": true,
+          "retryRecovers": true
+        },
+        {
+          "rawAndWrongViewerRejected": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDenialClearsStateAndRestores": true
+        },
+        {
+          "lateResponseAfterSignoutIgnored": true
+        },
+        {
+          "owner92to93SaveReload": true,
+          "ownerCropSaveAndReopen": true
+        },
+        {
+          "anonymousDenied": true,
+          "preflight": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "detail-api",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "phase": "detail-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "detail-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        },
+        {
+          "phase": "detail-block",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "detail-api",
+          "path": "/api/entries/fixture",
+          "status": 404
+        },
+        {
+          "phase": "detail-outage",
+          "path": "/api/entries/fixture",
+          "status": 503
+        },
+        {
+          "phase": "detail-test-author",
+          "path": "/api/entries/fixture",
+          "status": 404
+        },
+        {
+          "phase": "detail-block",
+          "path": "/api/entries/fixture",
+          "status": 404
+        }
+      ],
+      "directReads": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "profile": {
+      "base": "http://localhost:3001",
+      "results": [
+        {
+          "who": "A",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "who": "A",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "device": "desktop",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "device": "phone",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "who": "B",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "who": "B",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "ownerSaveReload": true,
+          "rating": 93
+        },
+        {
+          "anonymousDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "atomic": {
+      "results": [
+        {
+          "device": "desktop",
+          "notesOnlyPreservesLinkIds": true,
+          "noDirectGrapeWrites": true,
+          "failedRequestPreservesAllData": true,
+          "lostSuccessRetryPreservesLinkIds": true,
+          "staleConflictPreservesSavedAndLocalText": true,
+          "emptySelectionAndRecovery": true,
+          "webCounterpart": true,
+          "commands": 6
+        },
+        {
+          "device": "phone",
+          "timeoutRetainsInputAndSavedData": true
+        },
+        {
+          "device": "phone",
+          "notesOnlyPreservesLinkIds": true,
+          "noDirectGrapeWrites": true,
+          "failedRequestPreservesAllData": true,
+          "lostSuccessRetryPreservesLinkIds": true,
+          "staleConflictPreservesSavedAndLocalText": true,
+          "emptySelectionAndRecovery": true,
+          "webCounterpart": true,
+          "commands": 7
+        },
+        {
+          "strangerDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "device": "desktop",
+          "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "device": "desktop",
+          "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "device": "desktop",
+          "error": "Failed to load resource: the server responded with a status of 409 ()"
+        },
+        {
+          "device": "phone",
+          "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "device": "phone",
+          "error": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "device": "phone",
+          "error": "Failed to load resource: the server responded with a status of 409 ()"
+        }
+      ],
+      "failedResponses": [
+        {
+          "device": "desktop",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 503,
+          "message": "QC injected pre-save outage"
+        },
+        {
+          "device": "desktop",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 503,
+          "message": "QC injected lost success response"
+        },
+        {
+          "device": "desktop",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 409,
+          "code": "PT409",
+          "message": "Entry changed elsewhere. Close the editor and refresh before saving again."
+        },
+        {
+          "device": "phone",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 503,
+          "message": "QC injected pre-save outage"
+        },
+        {
+          "device": "phone",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 503,
+          "message": "QC injected lost success response"
+        },
+        {
+          "device": "phone",
+          "path": "/rest/v1/rpc/save_entry_details",
+          "status": 409,
+          "code": "PT409",
+          "message": "Entry changed elsewhere. Close the editor and refresh before saving again."
+        }
+      ],
+      "fixturesRemoved": true,
+      "awardsUnchanged": true
+    },
+    "atomic-bulk": {
+      "results": [
+        {
+          "surface": "bulk",
+          "device": "phone",
+          "failurePreservesAllData": true,
+          "retryFinishesAndPublishes": true,
+          "grapeIdsRetained": true
+        },
+        {
+          "strangerDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failedResponses": [],
+      "fixturesRemoved": true,
+      "awardsUnchanged": true
+    },
+    "live-home": {
+      "results": [
+        {
+          "ownerNumeric": true,
+          "circleFourBands": true,
+          "privateExcluded": true,
+          "groupProjected": true,
+          "crossOriginBearer": true,
+          "noStore": true,
+          "signatureFree": true
+        },
+        {
+          "device": "desktop",
+          "allBandsVisible": true,
+          "imageRendered": true,
+          "homeToDetail": true
+        },
+        {
+          "device": "phone",
+          "allBandsVisible": true,
+          "imageRendered": true,
+          "homeToDetail": true
+        },
+        {
+          "reactionPostAndReload": true
+        },
+        {
+          "homeDirectEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "outageFailsClosed": true,
+          "retryRecovers": true
+        },
+        {
+          "rawPayloadRejected": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "cookieApi": true,
+          "invalidBearerNoCookieFallback": true,
+          "anonymousDenied": true,
+          "preflightReadOnly": true
+        },
+        {
+          "signoutClearsHome": true,
+          "lateResponseAfterSignoutIgnored": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "home-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "home-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "home-outage",
+          "path": "/api/home",
+          "status": 503
+        },
+        {
+          "phase": "home-outage",
+          "path": "/api/home",
+          "status": 503
+        }
+      ],
+      "homeDirectReads": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "live-detail": {
+      "results": [
+        {
+          "nonownerProjected": true,
+          "groupProjected": true,
+          "friendsVisible": true,
+          "privateDenied": true,
+          "crossOriginBearer": true,
+          "signatureFree": true,
+          "noStore": true
+        },
+        {
+          "device": "desktop",
+          "bandVisible": true,
+          "noNumericOrEditControl": true,
+          "grapesVisible": true,
+          "photoDecodedAndVisible": true
+        },
+        {
+          "device": "phone",
+          "bandVisible": true,
+          "noNumericOrEditControl": true,
+          "grapesVisible": true,
+          "photoDecodedAndVisible": true
+        },
+        {
+          "directDetailEntryReads": 0,
+          "bearerOnly": true
+        },
+        {
+          "commentPostAndRead": true
+        },
+        {
+          "outageFailsClosed": true,
+          "retryRecovers": true
+        },
+        {
+          "rawAndWrongViewerRejected": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDenialClearsStateAndRestores": true
+        },
+        {
+          "lateResponseAfterSignoutIgnored": true
+        },
+        {
+          "owner92to93SaveReload": true,
+          "ownerCropSaveAndReopen": true
+        },
+        {
+          "anonymousDenied": true,
+          "preflight": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "detail-api",
+          "text": "Failed to load resource: the server responded with a status of 404 ()"
+        },
+        {
+          "phase": "detail-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "detail-test-author",
+          "text": "Failed to load resource: the server responded with a status of 404 ()"
+        },
+        {
+          "phase": "detail-block",
+          "text": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "detail-api",
+          "path": "/api/entries/fixture",
+          "status": 404
+        },
+        {
+          "phase": "detail-outage",
+          "path": "/api/entries/fixture",
+          "status": 503
+        },
+        {
+          "phase": "detail-test-author",
+          "path": "/api/entries/fixture",
+          "status": 404
+        },
+        {
+          "phase": "detail-block",
+          "path": "/api/entries/fixture",
+          "status": 404
+        }
+      ],
+      "directReads": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "live-profile": {
+      "base": "https://cellarsnap.app",
+      "results": [
+        {
+          "who": "A",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "who": "A",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "device": "desktop",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "device": "phone",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "who": "B",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "who": "B",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "ownerSaveReload": true,
+          "rating": 93
+        },
+        {
+          "anonymousDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    }
+  },
+  "cleanup": {
+    "fixtureEntries": 0,
+    "fixtureGroups": 0,
+    "fixtureComments": 0,
+    "winePhotoObjects": 882,
+    "testers": 4,
+    "originalDesignatedTesterFlagsRestored": true,
+    "originalTsconfigBytesPreserved": true,
+    "userReportsAndNestedWorktreePreserved": true,
+    "sessionServersStopped": [
+      3001,
+      8083
+    ]
+  },
+  "qcCorrections": [
+    "Harness status property corrected",
+    "Comment/save assertions now await persistence instead of optimistic UI",
+    "Crop fixture given required editable entry_photos metadata",
+    "Home screenshots wait for the target image",
+    "Late interception disposal caught; six interrupted disposable entries/group/photo recovered and complete live suite reran; fixture manifests persisted locally"
+  ],
+  "residuals": [
+    "QC-01 remains Partial for physical owner-only ratings, direct Data API, remaining direct owner/mobile/server/operator consumers and installed-native adoption",
+    "AUD-01 P0 photo cutoff/rekey/native rollout and retirement not performed",
+    "Known QC-05 Expo header/QC-12 ordinary feed sizing remain B11",
+    "OPS-01 duplicate legacy Vercel previews and production fail with verified missing Supabase variables; primary deployment succeeds"
+  ],
+  "runtimeLogQuery": {
+    "deployment": "dpl_9v61QSXbcM4Gkq52J28fA5NgHPKG",
+    "since": "2026-09-14T01:39:18Z",
+    "until": "2026-09-14T01:47:56Z",
+    "level": "error",
+    "limit": 100,
+    "returnedRecords": 0
+  }
+}

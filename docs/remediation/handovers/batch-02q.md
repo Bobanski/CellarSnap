@@ -1,4 +1,7 @@
 # B02q handover — September 13, 2026 (EDT)
+
+**Release follow-up:** merged and final-primary verified; see [B02o/B02p/B02q release](b02o-b02p-b02q-release.md). The checkpoint below preserves its original stopping state.
+
 ## Objective and IDs
 QC-01 required projected mobile detail read, related AUD-48/50. Owners retain 1–100 inputs; non-owners receive the public band. No direct `wine_entries` detail read fallback.
 ## Resume here
