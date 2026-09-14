@@ -1,0 +1,224 @@
+{
+  "date": "2026-09-14",
+  "scope": [
+    "AUD-17",
+    "AUD-27",
+    "QC-11",
+    "QC-18",
+    "QC-19"
+  ],
+  "newFinding": "QC-20",
+  "testedCommit": "6435c31c8253414c996e5a967e167846e560d178",
+  "applicationCommit": "83454a1816bcc3e95990b75c114a81f481cc0d8f",
+  "identicalTree": "db98c8c212d05f66e7d66ccdc5e76639eaca6cdd",
+  "pr": 161,
+  "issue": 160,
+  "production": {
+    "url": "https://cellarsnap.app",
+    "deployment": "dpl_FhMJm4BtUWDhi8rCr3711hX5bgrY",
+    "githubDeployment": 6443370150,
+    "status": "Ready / success"
+  },
+  "automated": {
+    "isolatedTests": 562,
+    "webLintTypesBuild": "pass",
+    "ciRun": 34878185105,
+    "webAndMobileCI": "pass",
+    "freshExpoWebExport": "pass"
+  },
+  "webLive": {
+    "base": "https://cellarsnap.app",
+    "mode": "live",
+    "checks": [
+      {
+        "id": "QC-18",
+        "device": "desktop",
+        "allVisibleInputsNamed": true,
+        "uniqueIds": true,
+        "labelFocusAndTab": true,
+        "save": true
+      },
+      {
+        "id": "QC-18",
+        "device": "desktop",
+        "bulkNamesAndUniqueIds": true,
+        "groupLabelsAndFocus": true
+      },
+      {
+        "id": "QC-19",
+        "device": "desktop",
+        "headingRight": 1095,
+        "textRight": 1090,
+        "viewport": 1440,
+        "scroll": 1440,
+        "fullNamePreserved": true
+      },
+      {
+        "id": "QC-19",
+        "device": "desktop",
+        "realNameWrapping": true,
+        "realNameRight": 1095,
+        "realTextRight": 1088
+      },
+      {
+        "id": "AUD-17",
+        "device": "desktop",
+        "personalCountAndAverage": true,
+        "count": 3,
+        "average": 95.5
+      },
+      {
+        "id": "QC-18",
+        "device": "phone",
+        "allVisibleInputsNamed": true,
+        "uniqueIds": true,
+        "labelFocusAndTab": true,
+        "save": true
+      },
+      {
+        "id": "QC-18",
+        "device": "phone",
+        "bulkNamesAndUniqueIds": true,
+        "groupLabelsAndFocus": true
+      },
+      {
+        "id": "QC-19",
+        "device": "phone",
+        "headingRight": 366,
+        "textRight": 360,
+        "viewport": 390,
+        "scroll": 390,
+        "fullNamePreserved": true
+      },
+      {
+        "id": "QC-19",
+        "device": "phone",
+        "realNameWrapping": true,
+        "realNameRight": 366,
+        "realTextRight": 357
+      },
+      {
+        "id": "AUD-17",
+        "device": "phone",
+        "personalCountAndAverage": true,
+        "count": 3,
+        "average": 96
+      },
+      {
+        "id": "AUD-27",
+        "warmCacheSentinel": true,
+        "terminalResponse": true,
+        "overridePrecedence": true
+      },
+      {
+        "id": "QC-11",
+        "source": "scripted",
+        "rejected422": true,
+        "uploadGuidance": true,
+        "retryEnabled": true,
+        "noHistoryInsert": true
+      },
+      {
+        "id": "QC-11",
+        "source": "valid",
+        "status": 200,
+        "wines": 48,
+        "retryAfterError": true
+      }
+    ],
+    "pageErrors": [],
+    "consoleErrors": [
+      {
+        "phase": "scan-scripted",
+        "message": "Failed to load resource: the server responded with a status of 422 ()"
+      }
+    ],
+    "httpErrors": [
+      {
+        "phase": "scan-scripted",
+        "status": 422,
+        "path": "/api/list-scan/parse"
+      }
+    ],
+    "fixturesRemoved": true,
+    "profileRestored": true
+  },
+  "expoAgainstPrimary": {
+    "checks": [
+      {
+        "kind": "scripted",
+        "status": 422,
+        "bearerOnly": true,
+        "uploadGuidance": true,
+        "noHistoryInsert": true
+      },
+      {
+        "kind": "valid",
+        "status": 200,
+        "wines": 48,
+        "retry": true,
+        "recommendationNotesStatus": 401,
+        "recommendationNotesBearerPresent": false
+      }
+    ],
+    "errors": [],
+    "httpErrors": [
+      {
+        "phase": "scripted",
+        "status": 422,
+        "path": "/api/list-scan/parse"
+      },
+      {
+        "phase": "valid",
+        "status": 401,
+        "path": "/api/list-scan/recommendation-notes"
+      }
+    ],
+    "consoleErrors": [
+      {
+        "phase": "scripted",
+        "message": "Failed to load resource: the server responded with a status of 422 (Unprocessable Entity)"
+      },
+      {
+        "phase": "valid",
+        "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+      }
+    ],
+    "fixturesRemoved": true,
+    "native": false
+  },
+  "independentCleanup": {
+    "wine_entries": "no session fixtures",
+    "entry_primary_grapes": "no session fixtures",
+    "wine_entry_scores": "no session fixtures",
+    "entry_groups": "no session fixtures",
+    "profileRestored": true,
+    "exploreAfterFixtureRemoval": {
+      "count": 2,
+      "average": 98,
+      "liveApiMatchesDatabase": true
+    }
+  },
+  "native": {
+    "simctl": "unavailable",
+    "adbAndEmulator": "unavailable",
+    "nativeAcceptance": "not performed; owner deferred to mobile launch"
+  },
+  "runtimeLogs": {
+    "local": "reviewed; existing owner-fetch diagnostic tracked AUD-50",
+    "production": "bounded Vercel stream during live QC returned no records; not proof of comprehensive server-log coverage"
+  },
+  "baseline": {
+    "scriptedMenu": "200 / zero wines persisted; removed",
+    "notesAccessibleName": "missing at desktop and phone widths",
+    "profilePhone": "visually clipped unbroken name"
+  },
+  "counts": {
+    "total": 72,
+    "closed": 13,
+    "partial": 21,
+    "open": 35,
+    "needsTriage": 2,
+    "notReproducible": 1
+  }
+}

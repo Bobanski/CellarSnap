@@ -1,6 +1,8 @@
 # Remediation hub
 
-- **Latest handover / web release:** [B02v/B02w](handovers/b02v-b02w-web-release.md), [sanitized evidence](evidence/b02v-b02w-web-release.json). #158 merged, primary and SQL live, both cutoffs active, all 487 referenced photo cohorts retired/verified and all 882 files preserved. QC-01 Closed for current web scope; AUD-01 remains Partial for retained historical media. Native acceptance is deferred to mobile launch by owner.
+- **Latest handover / five closures:** [B11a–B11c / B01 verification](handovers/b11a-b11c-release.md), [sanitized evidence](evidence/b11a-b11c-release.json). #161 merged `83454a1`, primary live; AUD-17/AUD-27/QC-11/QC-18/QC-19 Closed. 13 Closed / 72 total, including newly recorded QC-20 (Open/P2).
+
+- **Previous web release:** [B02v/B02w](handovers/b02v-b02w-web-release.md), [sanitized evidence](evidence/b02v-b02w-web-release.json). #158 merged, primary and SQL live, both cutoffs active, all 487 referenced photo cohorts retired/verified and all 882 files preserved. QC-01 Closed for current web scope; AUD-01 remains Partial for retained historical media. Native acceptance is deferred to mobile launch by owner.
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
@@ -27,6 +29,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B11a–B11c and B01 release verification are complete at application `83454a1` (#161).** Five findings closed: Explore grape statistics, all-hit/terminal scoring batches, empty scans, editor input labels and phone profile wrapping. 562 isolated tests and web/mobile CI pass; final-primary desktop/phone browser and cookie-stripped Expo web scan/retry acceptance passed. Fixtures removed and temporary profile names restored. QC-20 separately records a pre-existing mobile notes-authentication failure; it remains Open. Current totals: **13 Closed, 21 Partial, 35 Open, 2 Needs triage, 1 Not reproducible (72)**. Native runtimes are unavailable and launch acceptance remains deferred by owner. [Current handover](handovers/b11a-b11c-release.md).
 
 **B02v/B02w web rollout is complete at application commit `90e4dd2` (#158).** Both exact migrations are live and activated. All 272 private ratings, 650 photo reference cells and source records are preserved. All 487 extant referenced photo cohorts / 684 old objects have verified retirement evidence from Virginia and Ireland; all 882 current files match the private backup byte for byte. Desktop/phone web creation, editing, photos/cropping, avatar and anonymous-share privacy pass. QC-01 is Closed for the current web-only product. AUD-01 remains P0/Partial for 198 retained historical objects; AUD-22 owns their source reconciliation and twelve pre-existing missing references. Native testing/distribution is deferred to future mobile launch by owner. [Current handover](handovers/b02v-b02w-web-release.md).
 
@@ -91,7 +95,7 @@ For remaining B02 work, start with policy/access fixtures, not a broad code dele
 
 ## Finding intake and local tickets
 
-Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-18 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
+Each backlog ID is a repository-local ticket. AUD-01 through AUD-50 preserve the original numbering; QC-01 through QC-20 capture browser/mobile findings; OPS IDs track operational/reconciliation work. There is no dependency on creating dozens of GitHub issues. If a GitHub ticket is created, add its URL to the same finding, and put the local IDs in the PR description. The older closed issue #70 is a brand/design issue, **not** this backlog's umbrella.
 
 When a session finds something new:
 
