@@ -12,7 +12,7 @@ Base `fdc168d`, branch `fix/b02t-owner-edit-api`. Implementation and isolated ch
 Only `{entry_id, viewer_user_id, replayed}` is serialized after verifying RPC row identity and ownership. Raw row/rating/error diagnostics are never returned. Failures are no-store, CORS permits bearer POST/OPTIONS without credentials, and stage-only logs exclude source data. Existing web PUT and old RPC consumers remain compatible.
 
 ## Verification
-29 added route/contract tests (combined with 19 mobile tests: 48), full combined 557 isolated and 30 schema checks, canonical query types, web/mobile types, lint and all-platform exports pass. The initial mobile type command used root TypeScript 5.9 against a TypeScript 6 config; rerunning with the mobile workspace's compiler passes without changing configuration.
+30 added route/contract tests (combined with 18 mobile tests: 48), full combined 557 isolated and 30 schema checks, canonical query types, web/mobile types, lint and all-platform exports pass. The initial mobile type command used root TypeScript 5.9 against a TypeScript 6 config; rerunning with the mobile workspace's compiler passes without changing configuration.
 Hosted catalog read confirms invoker command, authenticated execution, anon denial, owner predicate, PT409 and friends-of-friends support. Current Supabase changelog and relevant official API docs reviewed; no applicable API break. Browser/hosted transaction evidence is being completed in B02u.
 
 ## Release state
