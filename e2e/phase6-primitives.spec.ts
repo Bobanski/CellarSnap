@@ -522,16 +522,16 @@ test.describe("Phase 6 server primitive unit coverage", () => {
       },
     } as never;
 
-    expect(await signPhotoUrl(null, supabase)).toBeNull();
-    expect(await signPhotoUrl("pending", supabase)).toBeNull();
-    expect(await signPhotoUrl("pending", supabase, { treatPendingAsNull: false })).toBe(
+    expect(await signPhotoUrl(null, supabase, {bucket: "other-bucket"})).toBeNull();
+    expect(await signPhotoUrl("pending", supabase, {bucket: "other-bucket"})).toBeNull();
+    expect(await signPhotoUrl("pending", supabase, { treatPendingAsNull: false, bucket: "other-bucket" })).toBe(
       "https://cdn.example/pending?ttl=3600"
     );
-    expect(await signPhotoUrl("broken.jpg", supabase)).toBeNull();
+    expect(await signPhotoUrl("broken.jpg", supabase, {bucket: "other-bucket"})).toBeNull();
 
     const signed = await signPhotoUrls(
       ["a.jpg", "a.jpg", "pending", null, undefined, "b.jpg"],
-      supabase
+      supabase, {bucket: "other-bucket"}
     );
 
     expect(signed.get("a.jpg")).toBe("https://cdn.example/a.jpg?ttl=3600");

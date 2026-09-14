@@ -320,7 +320,7 @@ export async function retrieveUserContext(
 
   for (const selectClause of attempts) {
     const response = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select(selectClause)
       .eq("user_id", userId)
       .order("consumed_at", { ascending: false })

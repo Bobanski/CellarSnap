@@ -1,0 +1,2567 @@
+{
+  "column_grants": {
+    "add": [
+      {
+        "column_name": "advanced_notes",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "advanced_notes",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "appellation",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "appellation",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "assembled_sensory",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "assembled_sensory",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "bottle_format",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "bottle_format",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_country",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_country",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_sub_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "canonical_sub_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "cellar_quantity",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "cellar_quantity",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "cellared_from_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "cellared_from_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "comments_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "comments_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "comments_scope",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "comments_scope",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "consumed_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "consumed_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "country",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "country",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "created_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "created_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "drinking_now",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "drinking_now",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_group_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_group_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_status",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "entry_status",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "fallback_level",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "fallback_level",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "is_feed_visible",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "is_feed_visible",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "label_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "label_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "label_photo_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "label_photo_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "location_place_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "location_place_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "location_text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "location_text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "notes",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "notes",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "pairing_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "pairing_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "place_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "place_image_path",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "place_photo_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "place_photo_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid_currency",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid_currency",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid_source",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid_source",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "price_paid",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "qpr_level",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "qpr_level",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "rating",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "rating",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_classification",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_producer",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_wine_type",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "raw_wine_type",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "reaction_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "reaction_privacy",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "region",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "resolution_confidence",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "resolution_confidence",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "root_entry_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "root_entry_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "sensory_resolved_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "sensory_resolved_at",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_drink_again",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_drink_again",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_enjoyment_intent",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_enjoyment_intent",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_expectation_match",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_expectation_match",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_how_was_it",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "survey_how_was_it",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "tasted_with_user_ids",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "tasted_with_user_ids",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "user_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "user_id",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "vintage",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "vintage",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "wine_name",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "wine_name",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "wine_type",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "INSERT",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "column_name": "wine_type",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "privilege_type": "UPDATE",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      }
+    ],
+    "remove": []
+  },
+  "columns": {
+    "add": [
+      {
+        "default_expression": "0",
+        "generated": "",
+        "identity": "",
+        "name": "fence_epoch",
+        "not_null": true,
+        "position": 3,
+        "table_name": "photo_delivery_state",
+        "type": "bigint"
+      },
+      {
+        "default_expression": "false",
+        "generated": "",
+        "identity": "",
+        "name": "isolated",
+        "not_null": true,
+        "position": 2,
+        "table_name": "rating_source_state",
+        "type": "boolean"
+      },
+      {
+        "default_expression": "false",
+        "generated": "",
+        "identity": "",
+        "name": "legacy_disabled",
+        "not_null": true,
+        "position": 2,
+        "table_name": "photo_delivery_state",
+        "type": "boolean"
+      },
+      {
+        "default_expression": "now()",
+        "generated": "",
+        "identity": "",
+        "name": "fenced_at",
+        "not_null": true,
+        "position": 3,
+        "table_name": "photo_retired_paths",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": "true",
+        "generated": "",
+        "identity": "",
+        "name": "singleton",
+        "not_null": true,
+        "position": 1,
+        "table_name": "photo_delivery_state",
+        "type": "boolean"
+      },
+      {
+        "default_expression": "true",
+        "generated": "",
+        "identity": "",
+        "name": "singleton",
+        "not_null": true,
+        "position": 1,
+        "table_name": "rating_source_state",
+        "type": "boolean"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "activated_at",
+        "not_null": false,
+        "position": 3,
+        "table_name": "rating_source_state",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "advanced_notes",
+        "not_null": false,
+        "position": 21,
+        "table_name": "wine_entries_with_ratings",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "appellation",
+        "not_null": false,
+        "position": 17,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "assembled_sensory",
+        "not_null": false,
+        "position": 51,
+        "table_name": "wine_entries_with_ratings",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "bottle_format",
+        "not_null": false,
+        "position": 55,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "canonical_classification",
+        "not_null": false,
+        "position": 45,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "canonical_country",
+        "not_null": false,
+        "position": 48,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "canonical_producer",
+        "not_null": false,
+        "position": 44,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "canonical_region",
+        "not_null": false,
+        "position": 43,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "canonical_sub_region",
+        "not_null": false,
+        "position": 49,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "cellar_quantity",
+        "not_null": false,
+        "position": 54,
+        "table_name": "wine_entries_with_ratings",
+        "type": "integer"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "cellared_from_id",
+        "not_null": false,
+        "position": 56,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "classification",
+        "not_null": false,
+        "position": 26,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "comments_privacy",
+        "not_null": false,
+        "position": 32,
+        "table_name": "wine_entries_with_ratings",
+        "type": "privacy_level"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "comments_scope",
+        "not_null": false,
+        "position": 30,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "consumed_at",
+        "not_null": false,
+        "position": 10,
+        "table_name": "wine_entries_with_ratings",
+        "type": "date"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "country",
+        "not_null": false,
+        "position": 16,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "created_at",
+        "not_null": false,
+        "position": 13,
+        "table_name": "wine_entries_with_ratings",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "deleted_at",
+        "not_null": false,
+        "position": 11,
+        "table_name": "photo_rekey_operations",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "drinking_now",
+        "not_null": false,
+        "position": 36,
+        "table_name": "wine_entries_with_ratings",
+        "type": "boolean"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "entry_group_id",
+        "not_null": false,
+        "position": 37,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "entry_id",
+        "not_null": true,
+        "position": 1,
+        "table_name": "wine_entry_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "entry_privacy",
+        "not_null": false,
+        "position": 18,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "entry_status",
+        "not_null": false,
+        "position": 53,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "fallback_level",
+        "not_null": false,
+        "position": 47,
+        "table_name": "wine_entries_with_ratings",
+        "type": "smallint"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "id",
+        "not_null": false,
+        "position": 1,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "is_feed_visible",
+        "not_null": false,
+        "position": 28,
+        "table_name": "wine_entries_with_ratings",
+        "type": "boolean"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "label_image_path",
+        "not_null": false,
+        "position": 11,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "label_photo_privacy",
+        "not_null": false,
+        "position": 19,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "location_place_id",
+        "not_null": false,
+        "position": 29,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "location_text",
+        "not_null": false,
+        "position": 9,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "notes",
+        "not_null": false,
+        "position": 8,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "operation_id",
+        "not_null": true,
+        "position": 2,
+        "table_name": "photo_retired_paths",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "pairing_image_path",
+        "not_null": false,
+        "position": 15,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "path",
+        "not_null": true,
+        "position": 1,
+        "table_name": "photo_retired_paths",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "place_image_path",
+        "not_null": false,
+        "position": 12,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "place_photo_privacy",
+        "not_null": false,
+        "position": 20,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "price_paid_currency",
+        "not_null": false,
+        "position": 25,
+        "table_name": "wine_entries_with_ratings",
+        "type": "price_paid_currency"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "price_paid_source",
+        "not_null": false,
+        "position": 23,
+        "table_name": "wine_entries_with_ratings",
+        "type": "price_paid_source"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "price_paid",
+        "not_null": false,
+        "position": 22,
+        "table_name": "wine_entries_with_ratings",
+        "type": "numeric(10,2)"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "producer",
+        "not_null": false,
+        "position": 4,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "public_rating_label",
+        "not_null": false,
+        "position": 57,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "public_rating_label",
+        "not_null": false,
+        "position": 57,
+        "table_name": "wine_entries",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "qpr_level",
+        "not_null": false,
+        "position": 24,
+        "table_name": "wine_entries_with_ratings",
+        "type": "qpr_level"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "rating",
+        "not_null": false,
+        "position": 3,
+        "table_name": "wine_entry_ratings",
+        "type": "integer"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "rating",
+        "not_null": false,
+        "position": 7,
+        "table_name": "wine_entries_with_ratings",
+        "type": "integer"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "raw_classification",
+        "not_null": false,
+        "position": 41,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "raw_producer",
+        "not_null": false,
+        "position": 40,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "raw_region",
+        "not_null": false,
+        "position": 39,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "raw_wine_type",
+        "not_null": false,
+        "position": 42,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "reaction_privacy",
+        "not_null": false,
+        "position": 31,
+        "table_name": "wine_entries_with_ratings",
+        "type": "privacy_level"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "region",
+        "not_null": false,
+        "position": 6,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "resolution_confidence",
+        "not_null": false,
+        "position": 46,
+        "table_name": "wine_entries_with_ratings",
+        "type": "numeric(4,3)"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "retirement_evidence",
+        "not_null": false,
+        "position": 10,
+        "table_name": "photo_rekey_operations",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "retirement_phase",
+        "not_null": false,
+        "position": 9,
+        "table_name": "photo_rekey_operations",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "root_entry_id",
+        "not_null": false,
+        "position": 27,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "sensory_resolved_at",
+        "not_null": false,
+        "position": 52,
+        "table_name": "wine_entries_with_ratings",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "survey_drink_again",
+        "not_null": false,
+        "position": 35,
+        "table_name": "wine_entries_with_ratings",
+        "type": "entry_survey_drink_again"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "survey_enjoyment_intent",
+        "not_null": false,
+        "position": 50,
+        "table_name": "wine_entries_with_ratings",
+        "type": "entry_survey_enjoyment_intent"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "survey_expectation_match",
+        "not_null": false,
+        "position": 34,
+        "table_name": "wine_entries_with_ratings",
+        "type": "entry_survey_expectation_match"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "survey_how_was_it",
+        "not_null": false,
+        "position": 33,
+        "table_name": "wine_entries_with_ratings",
+        "type": "entry_survey_how_was_it"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "tasted_with_user_ids",
+        "not_null": false,
+        "position": 14,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid[]"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "user_id",
+        "not_null": false,
+        "position": 2,
+        "table_name": "wine_entries_with_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "user_id",
+        "not_null": true,
+        "position": 2,
+        "table_name": "wine_entry_ratings",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "vintage",
+        "not_null": false,
+        "position": 5,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "wine_name",
+        "not_null": false,
+        "position": 3,
+        "table_name": "wine_entries_with_ratings",
+        "type": "text"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "wine_type",
+        "not_null": false,
+        "position": 38,
+        "table_name": "wine_entries_with_ratings",
+        "type": "wine_type"
+      }
+    ],
+    "remove": []
+  },
+  "constraints": {
+    "add": [
+      {
+        "definition": "CHECK (public_rating_label = ANY (ARRAY['Loved it'::text, 'Really liked it'::text, 'Liked it'::text, 'Tried it'::text]))",
+        "name": "wine_entries_public_rating_label_check",
+        "table_name": "wine_entries",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (rating >= 1 AND rating <= 100)",
+        "name": "wine_entry_ratings_rating_check",
+        "table_name": "wine_entry_ratings",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (retirement_phase = ANY (ARRAY['deleting'::text, 'deleted_pending_cdn'::text, 'verified'::text]))",
+        "name": "photo_rekey_operations_retirement_phase_check",
+        "table_name": "photo_rekey_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (singleton)",
+        "name": "photo_delivery_state_singleton_check",
+        "table_name": "photo_delivery_state",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (singleton)",
+        "name": "rating_source_state_singleton_check",
+        "table_name": "rating_source_state",
+        "validated": true
+      },
+      {
+        "definition": "FOREIGN KEY (entry_id) REFERENCES wine_entries(id) ON DELETE CASCADE",
+        "name": "wine_entry_ratings_entry_id_fkey",
+        "table_name": "wine_entry_ratings",
+        "validated": true
+      },
+      {
+        "definition": "FOREIGN KEY (operation_id) REFERENCES private.photo_rekey_operations(id)",
+        "name": "photo_retired_paths_operation_id_fkey",
+        "table_name": "photo_retired_paths",
+        "validated": true
+      },
+      {
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "name": "wine_entry_ratings_user_id_fkey",
+        "table_name": "wine_entry_ratings",
+        "validated": true
+      },
+      {
+        "definition": "PRIMARY KEY (entry_id)",
+        "name": "wine_entry_ratings_pkey",
+        "table_name": "wine_entry_ratings",
+        "validated": true
+      },
+      {
+        "definition": "PRIMARY KEY (path)",
+        "name": "photo_retired_paths_pkey",
+        "table_name": "photo_retired_paths",
+        "validated": true
+      },
+      {
+        "definition": "PRIMARY KEY (singleton)",
+        "name": "photo_delivery_state_pkey",
+        "table_name": "photo_delivery_state",
+        "validated": true
+      },
+      {
+        "definition": "PRIMARY KEY (singleton)",
+        "name": "rating_source_state_pkey",
+        "table_name": "rating_source_state",
+        "validated": true
+      }
+    ],
+    "remove": []
+  },
+  "function_grants": {
+    "add": [
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "activate_photo_cutoff",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "activate_rating_isolation",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "capture_entry_rating",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "guard_entry_rating_owner",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "guard_photo_reference",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "photo_path_writable",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "photo_storage_select_allowed",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "photo_path_writable",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "photo_storage_select_allowed",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_names text[]",
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "name": "readable_wine_photo_paths",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_names text[]",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "readable_wine_photo_paths",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "commit_photo_rekey_unfenced",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, observations jsonb",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "record_photo_revocation_evidence",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "confirm_photo_deletion",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "prepare_photo_retirement",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "value integer",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "rating_band",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "functions": {
+    "add": [
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.activate_photo_cutoff()\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\nbegin\n update private.photo_delivery_state set legacy_disabled=true,fence_epoch=fence_epoch+1;\n return jsonb_build_object('legacy_signing_disabled',true);\nend $function$\n",
+        "name": "activate_photo_cutoff",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.activate_rating_isolation()\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare n bigint;\nbegin\n lock table public.wine_entries in access exclusive mode;\n perform 1 from private.rating_source_state for update;\n if exists(select from pg_publication_tables where schemaname='public' and tablename in ('wine_entries','wine_entry_ratings')) then\n  raise exception 'Review realtime publication before rating cutoff' using errcode='22023';\n end if;\n if (select isolated from private.rating_source_state) then\n  return jsonb_build_object('isolated',true,'replayed',true);\n end if;\n if exists(select from public.wine_entries e left join public.wine_entry_ratings r on r.entry_id=e.id\n where r.entry_id is null or r.user_id<>e.user_id or r.rating is distinct from e.rating\n or e.public_rating_label is distinct from private.rating_band(e.rating)) then\n  raise exception 'Rating source parity failed' using errcode='PT409';\n end if;\n alter table public.wine_entries disable trigger capture_entry_rating;\n alter table public.wine_entries disable trigger invalidate_entry_knowledge;\n update public.wine_entries set rating=null where rating is not null;\n get diagnostics n=row_count;\n update private.rating_source_state set isolated=true,activated_at=clock_timestamp();\n alter table public.wine_entries enable trigger isolate_entry_rating;\n alter table public.wine_entries enable trigger invalidate_entry_knowledge;\n return jsonb_build_object('isolated',true,'replayed',false,'transferred',n);\nend $function$\n",
+        "name": "activate_rating_isolation",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.capture_entry_rating()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare isolated boolean;\nbegin\n  if current_setting('role',true)='authenticated' and\n     (auth.uid() is null or new.user_id<>auth.uid()) then\n    raise exception 'Entry owner required' using errcode='42501';\n  end if;\n  -- Trigger selection is catalog state, not a transaction snapshot of a flag.\n  -- Transactions opened before cutoff cannot observe a stale non-isolated mode.\n  isolated := TG_NAME='isolate_entry_rating';\n  if isolated and TG_OP='UPDATE' and old.rating is not null and new.rating is null then\n    return new;\n  end if;\n  insert into public.wine_entry_ratings(entry_id,user_id,rating)\n    values(new.id,new.user_id,new.rating)\n    on conflict(entry_id) do update set user_id=excluded.user_id,rating=excluded.rating;\n  if isolated and new.rating is not null then\n    update public.wine_entries set rating=null,public_rating_label=private.rating_band(new.rating) where id=new.id;\n  else\n    update public.wine_entries set public_rating_label=private.rating_band(new.rating) where id=new.id;\n  end if;\n  return new;\nend $function$\n",
+        "name": "capture_entry_rating",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.guard_entry_rating_owner()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\nbegin\n if new.user_id is distinct from old.user_id then\n  raise exception 'Entry ownership cannot change' using errcode='42501';\n end if;\n return new;\nend $function$\n",
+        "name": "guard_entry_rating_owner",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "",
+        "definition": "CREATE OR REPLACE FUNCTION private.guard_photo_reference()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare col text; path text;\nbegin\n foreach col in array TG_ARGV loop\n  path:=to_jsonb(new)->>col;\n  if path is not null and not private.photo_path_writable(path) then\n   raise exception 'Photo moved; reload before saving' using errcode='PT409';\n  end if;\n end loop;\n return new;\nend $function$\n",
+        "name": "guard_photo_reference",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "definition": "CREATE OR REPLACE FUNCTION private.can_access_wine_photo(object_name text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  viewer uuid := auth.uid();\n  public_only boolean := coalesce(auth.role() = 'service_role', false);\n  parts text[] := string_to_array(object_name, '/');\n  source public.wine_entries%rowtype;\n  base_path text := regexp_replace(object_name, '__original(\\.[a-zA-Z0-9]+)?$', '\\1');\n  kinds text[];\n  kind text;\n  photo_privacy text;\nbegin\n  if exists(select from private.photo_retired_paths where path=object_name) then return false; end if;\n  if not public_only and viewer is null then return false; end if;\n  -- Preserves uploads before metadata exists, upserts, avatar/cover changes,\n  -- originals, drafts and cleanup of orphaned objects within one's own prefix.\n  if not public_only and parts[1] = viewer::text then return true; end if;\n  if parts[1] is null or parts[1] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  if not public_only and array_length(parts,1)=2 then\n    return parts[2] ~ '^avatar(-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})?\\.(jpg|png|webp|gif)$'\n      and public.can_view_entry(viewer, parts[1]::uuid, 'public')\n      and exists (select 1 from public.profiles p\n        where p.id=parts[1]::uuid and p.avatar_path=object_name);\n  end if;\n  if array_length(parts,1) not in (3,4) or parts[2] is null\n    or parts[2] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  select * into source from public.wine_entries e\n    where e.id=parts[2]::uuid and e.user_id=parts[1]::uuid;\n  if not found then return false; end if;\n  if public_only then\n    if source.entry_privacy::text is distinct from 'public'\n      or public.is_test_account(source.user_id) then return false; end if;\n  elsif not public.can_view_entry(viewer,source.user_id,source.entry_privacy::text) then\n    return false;\n  end if;\n\n  -- Photo reclassification updates metadata without moving the object. Exact\n  -- ordered metadata wins over legacy columns and group references. ALL current\n  -- types must permit access if duplicate rows point at the same source object.\n  select array_agg(distinct p.type::text) into kinds from public.entry_photos p\n    where p.entry_id=source.id and p.path=base_path;\n  if kinds is null then\n    select array_agg(v.kind) into kinds from (values\n      ('label',source.label_image_path),('place',source.place_image_path),\n      ('pairing',source.pairing_image_path)) v(kind,path) where v.path=base_path;\n  end if;\n  if kinds is null then\n    -- Some legacy group photos exist only in slides. Validate the source member\n    -- and the group's owned, readable anchor. Entry-less context is anchored.\n    -- A private ordered/legacy source above always wins over a slide reference.\n    select array_agg(distinct s.photo_type::text) into kinds\n    from public.entry_groups g join public.entry_group_slides s on s.group_id=g.id\n    join public.wine_entries anchor on anchor.id=g.anchor_entry_id\n      and anchor.user_id=g.user_id and anchor.entry_group_id=g.id\n    where g.user_id=source.user_id and source.entry_group_id=g.id\n      and coalesce(s.entry_id,g.anchor_entry_id)=source.id and s.path=base_path\n      and case when public_only then anchor.entry_privacy::text='public'\n        else public.can_view_entry(viewer,anchor.user_id,anchor.entry_privacy::text) end;\n  end if;\n  if kinds is null then return false; end if;\n  foreach kind in array kinds loop\n    if kind is null or kind not in ('label','place','pairing','lineup','people','other_bottles') then return false; end if;\n    photo_privacy := case kind\n      when 'label' then coalesce(source.label_photo_privacy,source.entry_privacy)::text\n      when 'place' then coalesce(source.place_photo_privacy,source.entry_privacy)::text\n      else source.entry_privacy::text end;\n    if public_only then\n      if photo_privacy is distinct from 'public' then return false; end if;\n    elsif not public.can_view_entry(viewer,source.user_id,photo_privacy) then return false; end if;\n  end loop;\n  return true;\nend;\n$function$\n",
+        "name": "can_access_wine_photo",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_path_writable(object_name text)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n if current_setting('role',true)='authenticated' and auth.uid() is null then return false; end if;\n perform 1 from private.photo_delivery_state for share;\n return not exists(select from private.photo_retired_paths where path=object_name);\nend $function$\n",
+        "name": "photo_path_writable",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_name text",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_storage_select_allowed(object_name text)\n RETURNS boolean\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare cutoff boolean;\nbegin\n if auth.uid() is null then return false; end if;\n select legacy_disabled into strict cutoff from private.photo_delivery_state for share;\n if exists(select from private.photo_retired_paths where path=object_name) then return false; end if;\n if not cutoff then return true; end if;\n return storage.allow_any_operation(array['object.upload','object.upload_update','object.upload_signed',\n   'object.copy','object.delete','object.delete_many']);\nend $function$\n",
+        "name": "photo_storage_select_allowed",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_names text[]",
+        "definition": "CREATE OR REPLACE FUNCTION private.readable_wine_photo_paths(object_names text[])\n RETURNS SETOF text\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;\n if object_names is null or cardinality(object_names)>100 or exists(select from unnest(object_names) p where p is null or octet_length(p)>2048) then\n  raise exception 'Invalid photo batch' using errcode='22023';\n end if;\n return query select o.name from storage.objects o where o.bucket_id='wine-photos' and o.name=any(object_names)\n and private.can_access_wine_photo(o.name) and not exists(select from private.photo_retired_paths r where r.path=o.name);\nend $function$\n",
+        "name": "readable_wine_photo_paths",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_names text[]",
+        "definition": "CREATE OR REPLACE FUNCTION public.readable_wine_photo_paths(object_names text[])\n RETURNS SETOF text\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$ select private.readable_wine_photo_paths(object_names) $function$\n",
+        "name": "readable_wine_photo_paths",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.commit_photo_rekey_unfenced(operation_id uuid, copy_proof jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\n SET statement_timeout TO '30s'\nAS $function$\ndeclare op private.photo_rekey_operations; old_paths text[]; new_paths text[]; current_new jsonb; r jsonb; m jsonb; dest text; n integer;\nbegin\n  select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n  if op.state='pending_revocation' then return to_jsonb(op); end if;\n  if op.state<>'planned' then raise exception 'Operation abandoned' using errcode='22023'; end if;\n  select array_agg(v->>'old' order by ord),array_agg(v->>'new' order by ord) into old_paths,new_paths\n    from jsonb_array_elements(op.mapping) with ordinality a(v,ord);\n  -- Short operator transaction; table locks also exclude phantom references from\n  -- legacy writers which do not participate in advisory/source-row locking.\n  lock table public.wine_entries, public.entry_groups, public.entry_photos, public.entry_group_slides,\n    public.profiles, public.user_collections, public.user_collection_items in share row exclusive mode;\n  perform 1 from storage.objects where bucket_id='wine-photos' and name=any(old_paths||new_paths) order by name for update;\n  if private.photo_rekey_snapshot(old_paths)<>op.expected then raise exception 'Photo source changed; abandon and replan' using errcode='PT409'; end if;\n  current_new:=private.photo_rekey_snapshot(new_paths);\n  if jsonb_array_length(current_new->'refs')<>0 then raise exception 'Destination gained references' using errcode='PT409'; end if;\n  if copy_proof is null or jsonb_typeof(copy_proof)<>'object' or copy_proof->'objects' is distinct from current_new->'objects'\n    or jsonb_typeof(copy_proof->'hashes') is distinct from 'array' or jsonb_array_length(copy_proof->'hashes')<>2 then\n    raise exception 'Copy proof changed or incomplete' using errcode='PT409'; end if;\n  for m in select * from jsonb_array_elements(op.mapping) loop\n    if (select o->'object' from jsonb_array_elements(op.expected->'objects') o where o->>'path'=m->>'old')='null'::jsonb then\n      if (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')<>'null'::jsonb then\n        raise exception 'Unexpected original destination' using errcode='PT409'; end if;\n    else\n      if not exists(select from jsonb_array_elements(copy_proof->'hashes') h where h->>'old'=m->>'old' and h->>'new'=m->>'new'\n        and h->>'sha256' ~ '^[0-9a-f]{64}$' and (h->>'size')::bigint between 1 and 26214400\n        and h->>'mimetype' ~ '^image/(jpeg|png|webp|gif|avif|heic|heif)$')\n        or (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')='null'::jsonb then\n        raise exception 'Missing verified copy' using errcode='PT409'; end if;\n    end if;\n  end loop;\n  -- Exactly the captured canonical cells, without replacing entire rows or IDs.\n  for r in select * from jsonb_array_elements(op.expected->'refs') loop\n    select v->>'new' into strict dest from jsonb_array_elements(op.mapping) v where v->>'old'=r->>'path';\n    execute format('update public.%I set %I=$1 where id=$2::uuid and %I=$3',r->>'t',r->>'c',r->>'c') using dest,r->>'id',r->>'path';\n    get diagnostics n=row_count;\n    if n<>1 then raise exception 'Photo reference changed' using errcode='PT409'; end if;\n  end loop;\n  if jsonb_array_length(private.photo_rekey_snapshot(old_paths)->'refs')<>0 then raise exception 'References remain' using errcode='PT409'; end if;\n  update private.photo_rekey_operations set state='pending_revocation',proof=copy_proof,committed_at=clock_timestamp() where id=operation_id returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "commit_photo_rekey_unfenced",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.commit_photo_rekey(operation_id uuid, copy_proof jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare result jsonb;\nbegin\n update private.photo_delivery_state set fence_epoch=fence_epoch+1;\n result:=private.commit_photo_rekey_unfenced(operation_id,copy_proof);\n insert into private.photo_retired_paths(path,operation_id)\n select m->>'old',operation_id from jsonb_array_elements(result->'mapping') m\n on conflict(path) do nothing;\n return result;\nend $function$\n",
+        "name": "commit_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, observations jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.record_photo_revocation_evidence(operation_id uuid, observations jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations; h jsonb; region text; regions text[];\nbegin\n select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n if op.retirement_phase not in ('deleted_pending_cdn','verified') or op.deleted_at is null then\n  raise exception 'Storage deletion not confirmed' using errcode='22023';\n end if;\n if observations is null or jsonb_typeof(observations)<>'array' or jsonb_array_length(observations)>40 or octet_length(observations::text)>32768 then\n  raise exception 'Invalid denial observations' using errcode='22023';\n end if;\n if exists(select from jsonb_array_elements(observations) o where not coalesce(\n  jsonb_typeof(o)='object'\n  and o ?& array['region','path','surface','status','observed_at','capability_sha256','source_sha256','warm_sha256','warmed_at','warm_status']\n  and o->>'region' ~ '^[a-zA-Z0-9_-]{2,64}$' and o->>'surface' in ('raw','transformed')\n  and o->>'status' in ('400','403','404') and o->>'capability_sha256' ~ '^[a-f0-9]{64}$'\n  and o->>'warm_sha256' ~ '^[a-f0-9]{64}$' and o->>'warm_status'='200'\n  and (o->>'warmed_at')::timestamptz<=op.deleted_at\n  and (o->>'observed_at')::timestamptz>=op.deleted_at and (o->>'observed_at')::timestamptz<=clock_timestamp()\n  and exists(select from jsonb_array_elements(op.proof->'hashes') proof_hash where proof_hash->>'old'=o->>'path' and proof_hash->>'sha256'=o->>'source_sha256'),false)) then\n  raise exception 'Invalid or unrelated denial observation' using errcode='22023';\n end if;\n select array_agg(distinct o->>'region') into regions from jsonb_array_elements(observations) o;\n if coalesce(cardinality(regions),0)<2 then raise exception 'Two independently observed regions required' using errcode='22023'; end if;\n foreach region in array regions loop\n  for h in select * from jsonb_array_elements(op.proof->'hashes') where value ? 'sha256' loop\n   if (select count(distinct o->>'surface') from jsonb_array_elements(observations) o\n     where o->>'region'=region and o->>'path'=h->>'old')<>2 then\n    raise exception 'Raw and transformed denials required for every old object' using errcode='22023';\n   end if;\n  end loop;\n end loop;\n update private.photo_rekey_operations set retirement_phase='verified',retirement_evidence=observations where id=op.id returning * into op;\n return to_jsonb(op);\nend $function$\n",
+        "name": "record_photo_revocation_evidence",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, old_path text",
+        "definition": "CREATE OR REPLACE FUNCTION private.plan_photo_rekey(operation_id uuid, old_path text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations; base text; sibling text; dest text; original_dest text; snap jsonb; r jsonb;\nbegin\n  -- Entry-owned three/four-segment keys only. Fixed-name avatar/cover and opaque\n  -- external URL migration needs its own reviewed authority contract.\n  if operation_id is null or old_path is null or length(old_path)>1024 or (old_path !~\n    '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/([^/]+/)?[^/]+$' and old_path !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/avatar(-[0-9a-f-]{36})?\\.(jpg|png|webp|gif)$')\n    or old_path ~ '[\\\\[:cntrl:]]' or old_path ~ '(^|/)\\.{1,2}(/|$)' or old_path ~ '__original(\\.[a-zA-Z0-9]+)?$'\n    then raise exception 'Unsupported source path' using errcode='22023'; end if;\n  perform pg_advisory_xact_lock(hashtextextended(old_path, 9281));\n  select * into op from private.photo_rekey_operations where id=operation_id;\n  if found then\n    if op.source_path<>old_path then raise exception 'Operation identity mismatch' using errcode='22023'; end if;\n    return to_jsonb(op);\n  end if;\n  base:=old_path;\n  sibling:=case when base ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(base,'(\\.[a-zA-Z0-9]+)$','__original\\1') else base||'__original' end;\n  dest:=regexp_replace(base,'[^/]+$',operation_id::text||coalesce(substring(base from '(\\.[a-zA-Z0-9]+)$'),''));\n  if array_length(string_to_array(base,'/'),1)=2 then dest:=split_part(base,'/',1)||'/avatar-'||operation_id::text||substring(base from '(\\.[a-zA-Z0-9]+)$'); end if;\n  original_dest:=case when dest ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(dest,'(\\.[a-zA-Z0-9]+)$','__original\\1') else dest||'__original' end;\n  snap:=private.photo_rekey_snapshot(array[base,sibling]);\n  if jsonb_array_length(snap->'sources')<>1 or jsonb_array_length(snap->'refs')=0 or\n    exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=base and o->'object'='null'::jsonb)\n    then raise exception 'Missing source object, entry or references' using errcode='22023'; end if;\n  for r in select * from jsonb_array_elements(snap->'refs') loop\n    if exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=r->>'path' and o->'object'='null'::jsonb) then\n      raise exception 'Referenced original is missing' using errcode='22023'; end if;\n  end loop;\n  if exists(select from jsonb_array_elements(private.photo_rekey_snapshot(array[dest,original_dest])->'objects') o where o->'object'<>'null'::jsonb)\n    or jsonb_array_length(private.photo_rekey_snapshot(array[dest,original_dest])->'refs')>0 then\n    raise exception 'Destination already exists' using errcode='23505'; end if;\n  insert into private.photo_rekey_operations(id,source_path,mapping,expected) values(operation_id,base,\n    jsonb_build_array(jsonb_build_object('old',base,'new',dest),jsonb_build_object('old',sibling,'new',original_dest)),snap) returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "plan_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.confirm_photo_deletion(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations; old_paths text[];\nbegin\n select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n if op.retirement_phase is null then raise exception 'Retirement not prepared' using errcode='22023'; end if;\n select array_agg(m->>'old') into old_paths from jsonb_array_elements(op.mapping) m;\n if exists(select from jsonb_array_elements(private.photo_rekey_snapshot(old_paths)->'objects') o where o->'object'<>'null'::jsonb) then\n  raise exception 'Old objects still exist' using errcode='PT409';\n end if;\n if op.retirement_phase='deleting' then\n  update private.photo_rekey_operations set retirement_phase='deleted_pending_cdn',deleted_at=clock_timestamp() where id=op.id returning * into op;\n end if;\n return to_jsonb(op);\nend $function$\n",
+        "name": "confirm_photo_deletion",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.prepare_photo_retirement(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_rekey_operations; old_paths text[]; new_paths text[]; snap jsonb;\nbegin\n update private.photo_delivery_state set fence_epoch=fence_epoch+1;\n if not (select legacy_disabled from private.photo_delivery_state) then\n  raise exception 'Legacy signing cutoff required' using errcode='22023';\n end if;\n select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n if op.state<>'pending_revocation' then raise exception 'References not committed' using errcode='22023'; end if;\n select array_agg(m->>'old'),array_agg(m->>'new') into old_paths,new_paths from jsonb_array_elements(op.mapping) m;\n if exists(select from unnest(old_paths) p where not exists(select from private.photo_retired_paths r where r.path=p and r.operation_id=op.id)) then\n  raise exception 'Durable fence required' using errcode='22023';\n end if;\n snap:=private.photo_rekey_snapshot(old_paths);\n if exists(select from jsonb_array_elements(snap->'objects') current_object\n  where current_object->'object'<>'null'::jsonb and not exists(\n   select from jsonb_array_elements(op.expected->'objects') expected_object\n   where current_object=expected_object)) then\n  raise exception 'Old object changed; investigate before retirement' using errcode='PT409';\n end if;\n if jsonb_array_length(snap->'refs')<>0 then raise exception 'Old references remain' using errcode='PT409'; end if;\n if (private.photo_rekey_snapshot(new_paths)->'objects') is distinct from (op.proof->'objects') then\n  raise exception 'Replacement objects changed; reverify access and bytes' using errcode='PT409';\n end if;\n if op.retirement_phase is null then\n  update private.photo_rekey_operations set retirement_phase='deleting' where id=op.id returning * into op;\n end if;\n return to_jsonb(op);\nend $function$\n",
+        "name": "prepare_photo_retirement",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "p_entry_id uuid, p_updates jsonb, p_expected jsonb, p_grape_ids uuid[], p_expected_grape_ids uuid[]",
+        "definition": "CREATE OR REPLACE FUNCTION public.save_entry_details(p_entry_id uuid, p_updates jsonb, p_expected jsonb, p_grape_ids uuid[] DEFAULT NULL::uuid[], p_expected_grape_ids uuid[] DEFAULT NULL::uuid[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  viewer uuid := auth.uid();\n  current_entry public.wine_entries%rowtype;\n  current_fields jsonb;\n  current_grapes uuid[];\n  update_keys text[];\n  expected_keys text[];\n  assignments text;\n  allowed_keys constant text[] := array[\n    'wine_name','producer','vintage','country','region','appellation','classification',\n    'rating','price_paid','price_paid_currency','price_paid_source','qpr_level',\n    'location_text','location_place_id','consumed_at','notes','tasted_with_user_ids',\n    'advanced_notes','is_feed_visible',\n    'wine_type','entry_privacy','reaction_privacy','comments_privacy'\n  ];\nbegin\n  if viewer is null then raise exception 'Authentication required' using errcode='42501'; end if;\n  if p_updates is null or p_expected is null\n    or jsonb_typeof(p_updates) <> 'object' or jsonb_typeof(p_expected) <> 'object'\n    or octet_length(p_updates::text) > 65536 or octet_length(p_expected::text) > 65536 then\n    raise exception 'Invalid entry edit payload' using errcode='22023';\n  end if;\n  select coalesce(array_agg(k order by k),'{}') into update_keys from jsonb_object_keys(p_updates) k;\n  select coalesce(array_agg(k order by k),'{}') into expected_keys from jsonb_object_keys(p_expected) k;\n  if update_keys is distinct from expected_keys or not update_keys <@ allowed_keys then\n    raise exception 'Unsupported entry edit fields' using errcode='22023';\n  end if;\n  -- These hosted columns are text, so the new command must enforce the\n  -- web domain contract itself (including direct Data API callers).\n  if exists(select 1 from jsonb_each(p_updates) field\n    where field.key in ('entry_privacy','reaction_privacy','comments_privacy')\n      and field.value not in ('\"public\"'::jsonb,'\"friends_of_friends\"'::jsonb,'\"friends\"'::jsonb,'\"private\"'::jsonb))\n    or (p_updates ? 'wine_type' and p_updates->'wine_type' not in\n      ('null'::jsonb,'\"red\"'::jsonb,'\"white\"'::jsonb,'\"rose\"'::jsonb,'\"sparkling\"'::jsonb,'\"sweet\"'::jsonb,'\"orange\"'::jsonb)) then\n    raise exception 'Invalid wine type or privacy' using errcode='22023';\n  end if;\n  if (p_grape_ids is null) <> (p_expected_grape_ids is null)\n    or cardinality(p_grape_ids) > 3 or cardinality(p_expected_grape_ids) > 3\n    or array_position(p_grape_ids,null) is not null\n    or array_position(p_expected_grape_ids,null) is not null\n    or (p_grape_ids is not null and cardinality(p_grape_ids) <> (select count(distinct id) from unnest(p_grape_ids) id)) then\n    raise exception 'Invalid ordered grape selection' using errcode='22023';\n  end if;\n\n  -- Serializes adopting editors. The predicate is mandatory even for trusted\n  -- test viewers who may SELECT foreign entries through their read policies.\n  perform 1 from public.wine_entries where id=p_entry_id and user_id=viewer for update;\n  select e.* into current_entry from public.wine_entries_with_ratings e\n    where e.id=p_entry_id and e.user_id=viewer;\n  if not found then raise exception 'Entry unavailable' using errcode='42501'; end if;\n  select coalesce(jsonb_object_agg(k,to_jsonb(current_entry)->k),'{}') into current_fields\n    from unnest(update_keys) k;\n  if p_grape_ids is not null then\n    perform 1 from public.entry_primary_grapes where entry_id=p_entry_id order by position for update;\n    select coalesce(array_agg(variety_id order by position),'{}') into current_grapes\n      from public.entry_primary_grapes where entry_id=p_entry_id;\n    if (select count(*) from public.grape_varieties where id=any(p_grape_ids)) <> cardinality(p_grape_ids) then\n      raise exception 'Invalid grape variety' using errcode='22023';\n    end if;\n  end if;\n\n  -- A lost success response can be retried without deleting/reinserting links\n  -- or repeating writes/triggers when the requested state is already present.\n  if current_fields = p_updates and (p_grape_ids is null or current_grapes = p_grape_ids) then\n    return jsonb_build_object('entry',to_jsonb(current_entry),'replayed',true);\n  end if;\n  if current_fields is distinct from p_expected\n    or (p_grape_ids is not null and current_grapes is distinct from p_expected_grape_ids) then\n    raise exception 'Entry changed elsewhere. Close the editor and refresh before saving again.' using errcode='PT409';\n  end if;\n\n  if current_fields is distinct from p_updates then\n    select string_agg(format('%1$I = incoming.%1$I',k),', ' order by k) into assignments from unnest(update_keys) k;\n    execute format('update public.wine_entries e set %s from jsonb_populate_record(null::public.wine_entries,$1) incoming where e.id=$2 and e.user_id=$3',assignments)\n      using p_updates,p_entry_id,viewer;\n  end if;\n  if p_grape_ids is not null and current_grapes is distinct from p_grape_ids then\n    delete from public.entry_primary_grapes where entry_id=p_entry_id;\n    insert into public.entry_primary_grapes(entry_id,variety_id,position)\n      select p_entry_id,id,ordinality::smallint from unnest(p_grape_ids) with ordinality as grapes(id,ordinality);\n  end if;\n  select * into current_entry from public.wine_entries_with_ratings where id=p_entry_id and user_id=viewer;\n  return jsonb_build_object('entry',to_jsonb(current_entry),'replayed',false);\nend;\n$function$\n",
+        "name": "save_entry_details",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "paths text[]",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_rekey_snapshot(paths text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare refs jsonb; objects jsonb; sources jsonb;\nbegin\n  if cardinality(paths) <> 2 or paths is null then raise exception 'Invalid photo cohort' using errcode='22023'; end if;\n  with r as (\n    select 'entry_photos'::text t,id::text id,'path'::text c,path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') fingerprint from public.entry_photos p where path=any(paths)\n    union all select 'wine_entries',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex') from public.wine_entries e\n      cross join lateral(values('label_image_path',e.label_image_path),('place_image_path',e.place_image_path),('pairing_image_path',e.pairing_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'entry_group_slides',id::text,'path',path,encode(sha256(convert_to(to_jsonb(s)::text,'UTF8')),'hex') from public.entry_group_slides s where path=any(paths)\n    union all select 'profiles',id::text,'avatar_path',avatar_path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') from public.profiles p where avatar_path=any(paths)\n    union all select 'user_collection_items',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(i)::text,'UTF8')),'hex') from public.user_collection_items i\n      cross join lateral(values('snapshot_label_image_path',i.snapshot_label_image_path),('snapshot_preview_image_path',i.snapshot_preview_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'user_collections',id::text,'cover_image_path',cover_image_path,encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') from public.user_collections c where cover_image_path=any(paths)\n  ) select coalesce(jsonb_agg(to_jsonb(b) order by t,id,c),'[]') into refs from (select * from r order by t,id,c limit 1001) b;\n  if jsonb_array_length(refs)>1000 then raise exception 'Photo reference bound exceeded' using errcode='54000'; end if;\n  select coalesce(jsonb_agg(jsonb_build_object('path',p,'object',case when o.id is null then null else\n    jsonb_build_object('id',o.id,'version',o.version,'updated_at',o.updated_at,'metadata',o.metadata) end) order by p),'[]') into objects\n    from unnest(paths) p left join storage.objects o on o.bucket_id='wine-photos' and o.name=p;\n  select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'fingerprint',encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex')) order by e.id),'[]') into sources from public.wine_entries e\n    where e.id::text=split_part(paths[1],'/',2) and e.user_id::text=split_part(paths[1],'/',1);\n  if array_length(string_to_array(paths[1],'/'),1)=2 then\n    select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'fingerprint',encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex'))),'[]') into sources\n    from public.profiles p where p.id::text=split_part(paths[1],'/',1) and p.avatar_path=paths[1];\n  end if;\n  return jsonb_build_object('refs',refs,'objects',objects,'sources',sources);\nend $function$\n",
+        "name": "photo_rekey_snapshot",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "target_entry_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.entry_knowledge_snapshot(target_entry_id uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE\n SET search_path TO 'public', 'extensions'\nAS $function$\n  select jsonb_build_object('entry', to_jsonb(e)-'public_rating_label', 'primary_grapes', coalesce((\n    select jsonb_agg(jsonb_build_object('id', g.variety_id, 'name', v.name, 'position', g.position)\n      order by g.position, g.id)\n    from public.entry_primary_grapes g\n    join public.grape_varieties v on v.id = g.variety_id\n    where g.entry_id = e.id\n  ), '[]'::jsonb))\n  from public.wine_entries_with_ratings e where e.id = target_entry_id;\n$function$\n",
+        "name": "entry_knowledge_snapshot",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "value integer",
+        "definition": "CREATE OR REPLACE FUNCTION private.rating_band(value integer)\n RETURNS text\n LANGUAGE sql\n IMMUTABLE\n SET search_path TO ''\nAS $function$\n select case when value is null then null when value>=90 then 'Loved it'\n when value>=75 then 'Really liked it' when value>=60 then 'Liked it' else 'Tried it' end\n$function$\n",
+        "name": "rating_band",
+        "owner": "postgres",
+        "schema_name": "private"
+      }
+    ],
+    "remove": [
+      {
+        "args": "object_name text",
+        "definition": "CREATE OR REPLACE FUNCTION private.can_access_wine_photo(object_name text)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare\n  viewer uuid := auth.uid();\n  public_only boolean := coalesce(auth.role() = 'service_role', false);\n  parts text[] := string_to_array(object_name, '/');\n  source public.wine_entries%rowtype;\n  base_path text := regexp_replace(object_name, '__original(\\.[a-zA-Z0-9]+)?$', '\\1');\n  kinds text[];\n  kind text;\n  photo_privacy text;\nbegin\n  if not public_only and viewer is null then return false; end if;\n  -- Preserves uploads before metadata exists, upserts, avatar/cover changes,\n  -- originals, drafts and cleanup of orphaned objects within one's own prefix.\n  if not public_only and parts[1] = viewer::text then return true; end if;\n  if parts[1] is null or parts[1] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  if not public_only and array_length(parts,1)=2 then\n    return parts[2] ~ '^avatar\\.(jpg|png|webp|gif)$'\n      and public.can_view_entry(viewer, parts[1]::uuid, 'public')\n      and exists (select 1 from public.profiles p\n        where p.id=parts[1]::uuid and p.avatar_path=object_name);\n  end if;\n  if array_length(parts,1) not in (3,4) or parts[2] is null\n    or parts[2] !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then\n    return false;\n  end if;\n  select * into source from public.wine_entries e\n    where e.id=parts[2]::uuid and e.user_id=parts[1]::uuid;\n  if not found then return false; end if;\n  if public_only then\n    if source.entry_privacy::text is distinct from 'public'\n      or public.is_test_account(source.user_id) then return false; end if;\n  elsif not public.can_view_entry(viewer,source.user_id,source.entry_privacy::text) then\n    return false;\n  end if;\n\n  -- Photo reclassification updates metadata without moving the object. Exact\n  -- ordered metadata wins over legacy columns and group references. ALL current\n  -- types must permit access if duplicate rows point at the same source object.\n  select array_agg(distinct p.type::text) into kinds from public.entry_photos p\n    where p.entry_id=source.id and p.path=base_path;\n  if kinds is null then\n    select array_agg(v.kind) into kinds from (values\n      ('label',source.label_image_path),('place',source.place_image_path),\n      ('pairing',source.pairing_image_path)) v(kind,path) where v.path=base_path;\n  end if;\n  if kinds is null then\n    -- Some legacy group photos exist only in slides. Validate the source member\n    -- and the group's owned, readable anchor. Entry-less context is anchored.\n    -- A private ordered/legacy source above always wins over a slide reference.\n    select array_agg(distinct s.photo_type::text) into kinds\n    from public.entry_groups g join public.entry_group_slides s on s.group_id=g.id\n    join public.wine_entries anchor on anchor.id=g.anchor_entry_id\n      and anchor.user_id=g.user_id and anchor.entry_group_id=g.id\n    where g.user_id=source.user_id and source.entry_group_id=g.id\n      and coalesce(s.entry_id,g.anchor_entry_id)=source.id and s.path=base_path\n      and case when public_only then anchor.entry_privacy::text='public'\n        else public.can_view_entry(viewer,anchor.user_id,anchor.entry_privacy::text) end;\n  end if;\n  if kinds is null then return false; end if;\n  foreach kind in array kinds loop\n    if kind is null or kind not in ('label','place','pairing','lineup','people','other_bottles') then return false; end if;\n    photo_privacy := case kind\n      when 'label' then coalesce(source.label_photo_privacy,source.entry_privacy)::text\n      when 'place' then coalesce(source.place_photo_privacy,source.entry_privacy)::text\n      else source.entry_privacy::text end;\n    if public_only then\n      if photo_privacy is distinct from 'public' then return false; end if;\n    elsif not public.can_view_entry(viewer,source.user_id,photo_privacy) then return false; end if;\n  end loop;\n  return true;\nend;\n$function$\n",
+        "name": "can_access_wine_photo",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "object_names text[]",
+        "definition": "CREATE OR REPLACE FUNCTION public.readable_wine_photo_paths(object_names text[])\n RETURNS SETOF text\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\nbegin\n  if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;\n  if object_names is null or cardinality(object_names) > 100\n    or exists(select 1 from unnest(object_names) p where p is null or octet_length(p) > 2048) then\n    raise exception 'Invalid photo batch' using errcode='22023';\n  end if;\n  return query select o.name from storage.objects o\n    where o.bucket_id='wine-photos' and o.name=any(object_names)\n      and private.can_access_wine_photo(o.name);\nend;\n$function$\n",
+        "name": "readable_wine_photo_paths",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "operation_id uuid, copy_proof jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.commit_photo_rekey(operation_id uuid, copy_proof jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\n SET statement_timeout TO '30s'\nAS $function$\ndeclare op private.photo_rekey_operations; old_paths text[]; new_paths text[]; current_new jsonb; r jsonb; m jsonb; dest text; n integer;\nbegin\n  select * into strict op from private.photo_rekey_operations where id=operation_id for update;\n  if op.state='pending_revocation' then return to_jsonb(op); end if;\n  if op.state<>'planned' then raise exception 'Operation abandoned' using errcode='22023'; end if;\n  select array_agg(v->>'old' order by ord),array_agg(v->>'new' order by ord) into old_paths,new_paths\n    from jsonb_array_elements(op.mapping) with ordinality a(v,ord);\n  -- Short operator transaction; table locks also exclude phantom references from\n  -- legacy writers which do not participate in advisory/source-row locking.\n  lock table public.wine_entries, public.entry_groups, public.entry_photos, public.entry_group_slides,\n    public.profiles, public.user_collections, public.user_collection_items in share row exclusive mode;\n  perform 1 from storage.objects where bucket_id='wine-photos' and name=any(old_paths||new_paths) order by name for update;\n  if private.photo_rekey_snapshot(old_paths)<>op.expected then raise exception 'Photo source changed; abandon and replan' using errcode='PT409'; end if;\n  current_new:=private.photo_rekey_snapshot(new_paths);\n  if jsonb_array_length(current_new->'refs')<>0 then raise exception 'Destination gained references' using errcode='PT409'; end if;\n  if copy_proof is null or jsonb_typeof(copy_proof)<>'object' or copy_proof->'objects' is distinct from current_new->'objects'\n    or jsonb_typeof(copy_proof->'hashes') is distinct from 'array' or jsonb_array_length(copy_proof->'hashes')<>2 then\n    raise exception 'Copy proof changed or incomplete' using errcode='PT409'; end if;\n  for m in select * from jsonb_array_elements(op.mapping) loop\n    if (select o->'object' from jsonb_array_elements(op.expected->'objects') o where o->>'path'=m->>'old')='null'::jsonb then\n      if (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')<>'null'::jsonb then\n        raise exception 'Unexpected original destination' using errcode='PT409'; end if;\n    else\n      if not exists(select from jsonb_array_elements(copy_proof->'hashes') h where h->>'old'=m->>'old' and h->>'new'=m->>'new'\n        and h->>'sha256' ~ '^[0-9a-f]{64}$' and (h->>'size')::bigint between 1 and 26214400\n        and h->>'mimetype' ~ '^image/(jpeg|png|webp|gif|avif|heic|heif)$')\n        or (select o->'object' from jsonb_array_elements(current_new->'objects') o where o->>'path'=m->>'new')='null'::jsonb then\n        raise exception 'Missing verified copy' using errcode='PT409'; end if;\n    end if;\n  end loop;\n  -- Exactly the captured canonical cells, without replacing entire rows or IDs.\n  for r in select * from jsonb_array_elements(op.expected->'refs') loop\n    select v->>'new' into strict dest from jsonb_array_elements(op.mapping) v where v->>'old'=r->>'path';\n    execute format('update public.%I set %I=$1 where id=$2::uuid and %I=$3',r->>'t',r->>'c',r->>'c') using dest,r->>'id',r->>'path';\n    get diagnostics n=row_count;\n    if n<>1 then raise exception 'Photo reference changed' using errcode='PT409'; end if;\n  end loop;\n  if jsonb_array_length(private.photo_rekey_snapshot(old_paths)->'refs')<>0 then raise exception 'References remain' using errcode='PT409'; end if;\n  update private.photo_rekey_operations set state='pending_revocation',proof=copy_proof,committed_at=clock_timestamp() where id=operation_id returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "commit_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, old_path text",
+        "definition": "CREATE OR REPLACE FUNCTION private.plan_photo_rekey(operation_id uuid, old_path text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_rekey_operations; base text; sibling text; dest text; original_dest text; snap jsonb; r jsonb;\nbegin\n  -- Entry-owned three/four-segment keys only. Fixed-name avatar/cover and opaque\n  -- external URL migration needs its own reviewed authority contract.\n  if operation_id is null or old_path is null or length(old_path)>1024 or old_path !~\n    '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/([^/]+/)?[^/]+$'\n    or old_path ~ '[\\\\[:cntrl:]]' or old_path ~ '(^|/)\\.{1,2}(/|$)' or old_path ~ '__original(\\.[a-zA-Z0-9]+)?$'\n    then raise exception 'Unsupported source path' using errcode='22023'; end if;\n  perform pg_advisory_xact_lock(hashtextextended(old_path, 9281));\n  select * into op from private.photo_rekey_operations where id=operation_id;\n  if found then\n    if op.source_path<>old_path then raise exception 'Operation identity mismatch' using errcode='22023'; end if;\n    return to_jsonb(op);\n  end if;\n  base:=old_path;\n  sibling:=case when base ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(base,'(\\.[a-zA-Z0-9]+)$','__original\\1') else base||'__original' end;\n  dest:=regexp_replace(base,'[^/]+$',operation_id::text||coalesce(substring(base from '(\\.[a-zA-Z0-9]+)$'),''));\n  original_dest:=case when dest ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(dest,'(\\.[a-zA-Z0-9]+)$','__original\\1') else dest||'__original' end;\n  snap:=private.photo_rekey_snapshot(array[base,sibling]);\n  if jsonb_array_length(snap->'sources')<>1 or jsonb_array_length(snap->'refs')=0 or\n    exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=base and o->'object'='null'::jsonb)\n    then raise exception 'Missing source object, entry or references' using errcode='22023'; end if;\n  for r in select * from jsonb_array_elements(snap->'refs') loop\n    if exists(select from jsonb_array_elements(snap->'objects') o where o->>'path'=r->>'path' and o->'object'='null'::jsonb) then\n      raise exception 'Referenced original is missing' using errcode='22023'; end if;\n  end loop;\n  if exists(select from jsonb_array_elements(private.photo_rekey_snapshot(array[dest,original_dest])->'objects') o where o->'object'<>'null'::jsonb)\n    or jsonb_array_length(private.photo_rekey_snapshot(array[dest,original_dest])->'refs')>0 then\n    raise exception 'Destination already exists' using errcode='23505'; end if;\n  insert into private.photo_rekey_operations(id,source_path,mapping,expected) values(operation_id,base,\n    jsonb_build_array(jsonb_build_object('old',base,'new',dest),jsonb_build_object('old',sibling,'new',original_dest)),snap) returning * into op;\n  return to_jsonb(op);\nend $function$\n",
+        "name": "plan_photo_rekey",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "p_entry_id uuid, p_updates jsonb, p_expected jsonb, p_grape_ids uuid[], p_expected_grape_ids uuid[]",
+        "definition": "CREATE OR REPLACE FUNCTION public.save_entry_details(p_entry_id uuid, p_updates jsonb, p_expected jsonb, p_grape_ids uuid[] DEFAULT NULL::uuid[], p_expected_grape_ids uuid[] DEFAULT NULL::uuid[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  viewer uuid := auth.uid();\n  current_entry public.wine_entries%rowtype;\n  current_fields jsonb;\n  current_grapes uuid[];\n  update_keys text[];\n  expected_keys text[];\n  assignments text;\n  allowed_keys constant text[] := array[\n    'wine_name','producer','vintage','country','region','appellation','classification',\n    'rating','price_paid','price_paid_currency','price_paid_source','qpr_level',\n    'location_text','location_place_id','consumed_at','notes','tasted_with_user_ids',\n    'advanced_notes','is_feed_visible',\n    'wine_type','entry_privacy','reaction_privacy','comments_privacy'\n  ];\nbegin\n  if viewer is null then raise exception 'Authentication required' using errcode='42501'; end if;\n  if p_updates is null or p_expected is null\n    or jsonb_typeof(p_updates) <> 'object' or jsonb_typeof(p_expected) <> 'object'\n    or octet_length(p_updates::text) > 65536 or octet_length(p_expected::text) > 65536 then\n    raise exception 'Invalid entry edit payload' using errcode='22023';\n  end if;\n  select coalesce(array_agg(k order by k),'{}') into update_keys from jsonb_object_keys(p_updates) k;\n  select coalesce(array_agg(k order by k),'{}') into expected_keys from jsonb_object_keys(p_expected) k;\n  if update_keys is distinct from expected_keys or not update_keys <@ allowed_keys then\n    raise exception 'Unsupported entry edit fields' using errcode='22023';\n  end if;\n  -- These hosted columns are text, so the new command must enforce the\n  -- web domain contract itself (including direct Data API callers).\n  if exists(select 1 from jsonb_each(p_updates) field\n    where field.key in ('entry_privacy','reaction_privacy','comments_privacy')\n      and field.value not in ('\"public\"'::jsonb,'\"friends_of_friends\"'::jsonb,'\"friends\"'::jsonb,'\"private\"'::jsonb))\n    or (p_updates ? 'wine_type' and p_updates->'wine_type' not in\n      ('null'::jsonb,'\"red\"'::jsonb,'\"white\"'::jsonb,'\"rose\"'::jsonb,'\"sparkling\"'::jsonb,'\"sweet\"'::jsonb,'\"orange\"'::jsonb)) then\n    raise exception 'Invalid wine type or privacy' using errcode='22023';\n  end if;\n  if (p_grape_ids is null) <> (p_expected_grape_ids is null)\n    or cardinality(p_grape_ids) > 3 or cardinality(p_expected_grape_ids) > 3\n    or array_position(p_grape_ids,null) is not null\n    or array_position(p_expected_grape_ids,null) is not null\n    or (p_grape_ids is not null and cardinality(p_grape_ids) <> (select count(distinct id) from unnest(p_grape_ids) id)) then\n    raise exception 'Invalid ordered grape selection' using errcode='22023';\n  end if;\n\n  -- Serializes adopting editors. The predicate is mandatory even for trusted\n  -- test viewers who may SELECT foreign entries through their read policies.\n  select * into current_entry from public.wine_entries e\n    where e.id=p_entry_id and e.user_id=viewer for update;\n  if not found then raise exception 'Entry unavailable' using errcode='42501'; end if;\n  select coalesce(jsonb_object_agg(k,to_jsonb(current_entry)->k),'{}') into current_fields\n    from unnest(update_keys) k;\n  if p_grape_ids is not null then\n    perform 1 from public.entry_primary_grapes where entry_id=p_entry_id order by position for update;\n    select coalesce(array_agg(variety_id order by position),'{}') into current_grapes\n      from public.entry_primary_grapes where entry_id=p_entry_id;\n    if (select count(*) from public.grape_varieties where id=any(p_grape_ids)) <> cardinality(p_grape_ids) then\n      raise exception 'Invalid grape variety' using errcode='22023';\n    end if;\n  end if;\n\n  -- A lost success response can be retried without deleting/reinserting links\n  -- or repeating writes/triggers when the requested state is already present.\n  if current_fields = p_updates and (p_grape_ids is null or current_grapes = p_grape_ids) then\n    return jsonb_build_object('entry',to_jsonb(current_entry),'replayed',true);\n  end if;\n  if current_fields is distinct from p_expected\n    or (p_grape_ids is not null and current_grapes is distinct from p_expected_grape_ids) then\n    raise exception 'Entry changed elsewhere. Close the editor and refresh before saving again.' using errcode='PT409';\n  end if;\n\n  if current_fields is distinct from p_updates then\n    select string_agg(format('%1$I = incoming.%1$I',k),', ' order by k) into assignments from unnest(update_keys) k;\n    execute format('update public.wine_entries e set %s from jsonb_populate_record(null::public.wine_entries,$1) incoming where e.id=$2 and e.user_id=$3',assignments)\n      using p_updates,p_entry_id,viewer;\n  end if;\n  if p_grape_ids is not null and current_grapes is distinct from p_grape_ids then\n    delete from public.entry_primary_grapes where entry_id=p_entry_id;\n    insert into public.entry_primary_grapes(entry_id,variety_id,position)\n      select p_entry_id,id,ordinality::smallint from unnest(p_grape_ids) with ordinality as grapes(id,ordinality);\n  end if;\n  select * into current_entry from public.wine_entries where id=p_entry_id and user_id=viewer;\n  return jsonb_build_object('entry',to_jsonb(current_entry),'replayed',false);\nend;\n$function$\n",
+        "name": "save_entry_details",
+        "owner": "postgres",
+        "schema_name": "public"
+      },
+      {
+        "args": "paths text[]",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_rekey_snapshot(paths text[])\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare refs jsonb; objects jsonb; sources jsonb;\nbegin\n  if cardinality(paths) <> 2 or paths is null then raise exception 'Invalid photo cohort' using errcode='22023'; end if;\n  with r as (\n    select 'entry_photos'::text t,id::text id,'path'::text c,path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') fingerprint from public.entry_photos p where path=any(paths)\n    union all select 'wine_entries',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex') from public.wine_entries e\n      cross join lateral(values('label_image_path',e.label_image_path),('place_image_path',e.place_image_path),('pairing_image_path',e.pairing_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'entry_group_slides',id::text,'path',path,encode(sha256(convert_to(to_jsonb(s)::text,'UTF8')),'hex') from public.entry_group_slides s where path=any(paths)\n    union all select 'profiles',id::text,'avatar_path',avatar_path,encode(sha256(convert_to(to_jsonb(p)::text,'UTF8')),'hex') from public.profiles p where avatar_path=any(paths)\n    union all select 'user_collection_items',id::text,v.c,v.path,encode(sha256(convert_to(to_jsonb(i)::text,'UTF8')),'hex') from public.user_collection_items i\n      cross join lateral(values('snapshot_label_image_path',i.snapshot_label_image_path),('snapshot_preview_image_path',i.snapshot_preview_image_path)) v(c,path) where v.path=any(paths)\n    union all select 'user_collections',id::text,'cover_image_path',cover_image_path,encode(sha256(convert_to(to_jsonb(c)::text,'UTF8')),'hex') from public.user_collections c where cover_image_path=any(paths)\n  ) select coalesce(jsonb_agg(to_jsonb(b) order by t,id,c),'[]') into refs from (select * from r order by t,id,c limit 1001) b;\n  if jsonb_array_length(refs)>1000 then raise exception 'Photo reference bound exceeded' using errcode='54000'; end if;\n  select coalesce(jsonb_agg(jsonb_build_object('path',p,'object',case when o.id is null then null else\n    jsonb_build_object('id',o.id,'version',o.version,'updated_at',o.updated_at,'metadata',o.metadata) end) order by p),'[]') into objects\n    from unnest(paths) p left join storage.objects o on o.bucket_id='wine-photos' and o.name=p;\n  select coalesce(jsonb_agg(jsonb_build_object('id',e.id,'fingerprint',encode(sha256(convert_to(to_jsonb(e)::text,'UTF8')),'hex')) order by e.id),'[]') into sources from public.wine_entries e\n    where e.id::text=split_part(paths[1],'/',2) and e.user_id::text=split_part(paths[1],'/',1);\n  return jsonb_build_object('refs',refs,'objects',objects,'sources',sources);\nend $function$\n",
+        "name": "photo_rekey_snapshot",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "target_entry_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION public.entry_knowledge_snapshot(target_entry_id uuid)\n RETURNS jsonb\n LANGUAGE sql\n STABLE\n SET search_path TO 'public', 'extensions'\nAS $function$\n  select jsonb_build_object('entry', to_jsonb(e), 'primary_grapes', coalesce((\n    select jsonb_agg(jsonb_build_object('id', g.variety_id, 'name', v.name, 'position', g.position)\n      order by g.position, g.id)\n    from public.entry_primary_grapes g\n    join public.grape_varieties v on v.id = g.variety_id\n    where g.entry_id = e.id\n  ), '[]'::jsonb))\n  from public.wine_entries e where e.id = target_entry_id;\n$function$\n",
+        "name": "entry_knowledge_snapshot",
+        "owner": "postgres",
+        "schema_name": "public"
+      }
+    ]
+  },
+  "grants": {
+    "add": [
+      {
+        "grantee": "anon",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_delivery_state",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "photo_retired_paths",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "rating_source_state",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "DELETE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "MAINTAIN"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "REFERENCES"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "TRIGGER"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "TRUNCATE"
+      },
+      {
+        "grantee": "postgres",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "wine_entries_with_ratings",
+        "privilege_type": "SELECT"
+      },
+      {
+        "grantee": "service_role",
+        "is_grantable": false,
+        "object": "wine_entry_ratings",
+        "privilege_type": "SELECT"
+      }
+    ],
+    "remove": [
+      {
+        "grantee": "anon",
+        "is_grantable": false,
+        "object": "wine_entries",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "anon",
+        "is_grantable": false,
+        "object": "wine_entries",
+        "privilege_type": "UPDATE"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "wine_entries",
+        "privilege_type": "INSERT"
+      },
+      {
+        "grantee": "authenticated",
+        "is_grantable": false,
+        "object": "wine_entries",
+        "privilege_type": "UPDATE"
+      }
+    ]
+  },
+  "indexes": {
+    "add": [
+      {
+        "indexdef": "CREATE INDEX wine_entry_ratings_user_id ON public.wine_entry_ratings USING btree (user_id)",
+        "indexname": "wine_entry_ratings_user_id",
+        "tablename": "wine_entry_ratings"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX photo_delivery_state_pkey ON private.photo_delivery_state USING btree (singleton)",
+        "indexname": "photo_delivery_state_pkey",
+        "tablename": "photo_delivery_state"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX photo_retired_paths_pkey ON private.photo_retired_paths USING btree (path)",
+        "indexname": "photo_retired_paths_pkey",
+        "tablename": "photo_retired_paths"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX rating_source_state_pkey ON private.rating_source_state USING btree (singleton)",
+        "indexname": "rating_source_state_pkey",
+        "tablename": "rating_source_state"
+      },
+      {
+        "indexdef": "CREATE UNIQUE INDEX wine_entry_ratings_pkey ON public.wine_entry_ratings USING btree (entry_id)",
+        "indexname": "wine_entry_ratings_pkey",
+        "tablename": "wine_entry_ratings"
+      }
+    ],
+    "remove": []
+  },
+  "policies": {
+    "add": [
+      {
+        "cmd": "INSERT",
+        "permissive": "RESTRICTIVE",
+        "policyname": "Wine photo retired upload fence",
+        "qual": null,
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "storage",
+        "tablename": "objects",
+        "with_check": "((bucket_id <> 'wine-photos'::text) OR private.photo_path_writable(name))"
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "policyname": "Owners read private entry ratings",
+        "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "public",
+        "tablename": "wine_entry_ratings",
+        "with_check": null
+      },
+      {
+        "cmd": "SELECT",
+        "permissive": "RESTRICTIVE",
+        "policyname": "Wine photo capability cutoff",
+        "qual": "((bucket_id <> 'wine-photos'::text) OR private.photo_storage_select_allowed(name))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "storage",
+        "tablename": "objects",
+        "with_check": null
+      },
+      {
+        "cmd": "UPDATE",
+        "permissive": "RESTRICTIVE",
+        "policyname": "Wine photo retired overwrite fence",
+        "qual": "((bucket_id <> 'wine-photos'::text) OR private.photo_path_writable(name))",
+        "roles": [
+          "authenticated"
+        ],
+        "schemaname": "storage",
+        "tablename": "objects",
+        "with_check": "((bucket_id <> 'wine-photos'::text) OR private.photo_path_writable(name))"
+      }
+    ],
+    "remove": []
+  },
+  "relations": {
+    "add": [
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "photo_delivery_state",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "d",
+        "rls": true,
+        "schema_name": "private"
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "photo_retired_paths",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "d",
+        "rls": true,
+        "schema_name": "private"
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "rating_source_state",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "d",
+        "rls": true,
+        "schema_name": "private"
+      },
+      {
+        "force_rls": false,
+        "kind": "r",
+        "name": "wine_entry_ratings",
+        "options": null,
+        "owner": "postgres",
+        "replica_identity": "d",
+        "rls": true,
+        "schema_name": "public"
+      },
+      {
+        "force_rls": false,
+        "kind": "v",
+        "name": "wine_entries_with_ratings",
+        "options": [
+          "security_invoker=true"
+        ],
+        "owner": "postgres",
+        "replica_identity": "n",
+        "rls": false,
+        "schema_name": "public"
+      }
+    ],
+    "remove": []
+  },
+  "triggers": {
+    "add": [
+      {
+        "definition": "CREATE TRIGGER capture_entry_rating AFTER INSERT OR UPDATE OF rating ON wine_entries FOR EACH ROW EXECUTE FUNCTION private.capture_entry_rating()",
+        "enabled": "O",
+        "name": "capture_entry_rating",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_entry_rating_owner BEFORE UPDATE OF user_id ON wine_entries FOR EACH ROW EXECUTE FUNCTION private.guard_entry_rating_owner()",
+        "enabled": "O",
+        "name": "guard_entry_rating_owner",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF avatar_path ON profiles FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('avatar_path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "profiles"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF cover_image_path ON user_collections FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('cover_image_path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "user_collections"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF label_image_path, place_image_path, pairing_image_path ON wine_entries FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('label_image_path', 'place_image_path', 'pairing_image_path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF path ON entry_group_slides FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "entry_group_slides"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF path ON entry_photos FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "entry_photos"
+      },
+      {
+        "definition": "CREATE TRIGGER guard_photo_reference BEFORE INSERT OR UPDATE OF snapshot_label_image_path, snapshot_preview_image_path ON user_collection_items FOR EACH ROW EXECUTE FUNCTION private.guard_photo_reference('snapshot_label_image_path', 'snapshot_preview_image_path')",
+        "enabled": "O",
+        "name": "guard_photo_reference",
+        "schema_name": "public",
+        "table_name": "user_collection_items"
+      },
+      {
+        "definition": "CREATE TRIGGER isolate_entry_rating AFTER INSERT OR UPDATE OF rating ON wine_entries FOR EACH ROW EXECUTE FUNCTION private.capture_entry_rating()",
+        "enabled": "D",
+        "name": "isolate_entry_rating",
+        "schema_name": "public",
+        "table_name": "wine_entries"
+      }
+    ],
+    "remove": []
+  },
+  "views": {
+    "add": [
+      {
+        "definition": " SELECT e.id,\n    e.user_id,\n    e.wine_name,\n    e.producer,\n    e.vintage,\n    e.region,\n    r.rating,\n    e.notes,\n    e.location_text,\n    e.consumed_at,\n    e.label_image_path,\n    e.place_image_path,\n    e.created_at,\n    e.tasted_with_user_ids,\n    e.pairing_image_path,\n    e.country,\n    e.appellation,\n    e.entry_privacy,\n    e.label_photo_privacy,\n    e.place_photo_privacy,\n    e.advanced_notes,\n    e.price_paid,\n    e.price_paid_source,\n    e.qpr_level,\n    e.price_paid_currency,\n    e.classification,\n    e.root_entry_id,\n    e.is_feed_visible,\n    e.location_place_id,\n    e.comments_scope,\n    e.reaction_privacy,\n    e.comments_privacy,\n    e.survey_how_was_it,\n    e.survey_expectation_match,\n    e.survey_drink_again,\n    e.drinking_now,\n    e.entry_group_id,\n    e.wine_type,\n    e.raw_region,\n    e.raw_producer,\n    e.raw_classification,\n    e.raw_wine_type,\n    e.canonical_region,\n    e.canonical_producer,\n    e.canonical_classification,\n    e.resolution_confidence,\n    e.fallback_level,\n    e.canonical_country,\n    e.canonical_sub_region,\n    e.survey_enjoyment_intent,\n    e.assembled_sensory,\n    e.sensory_resolved_at,\n    e.entry_status,\n    e.cellar_quantity,\n    e.bottle_format,\n    e.cellared_from_id,\n    e.public_rating_label\n   FROM wine_entries e\n     LEFT JOIN wine_entry_ratings r ON r.entry_id = e.id AND r.user_id = e.user_id;",
+        "name": "wine_entries_with_ratings",
+        "schema_name": "public"
+      }
+    ],
+    "remove": []
+  }
+}

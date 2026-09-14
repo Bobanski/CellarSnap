@@ -197,7 +197,7 @@ export async function defaultLoadEntryForScoring(
     fallbackOnAnyMissingColumn: false,
     attempt: async (attempt) => {
       const response = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.fields)
         .eq("id", entryId)
         .eq("user_id", userId)
@@ -278,7 +278,7 @@ export async function defaultLoadUserPreferenceEntries(
     getFallbackColumns: (attempt) => attempt.missingColumns,
     attempt: async (attempt) => {
       const response = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select(attempt.fields)
         .eq("user_id", userId)
         .not("rating", "is", null);

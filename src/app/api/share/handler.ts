@@ -105,7 +105,7 @@ export function createSharePostHandler(
     }
 
     const { data: targetPost, error: postError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, user_id, entry_privacy")
       .eq("id", payload.data.postId)
       .maybeSingle();

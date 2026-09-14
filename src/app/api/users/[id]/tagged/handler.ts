@@ -92,7 +92,7 @@ export function createTaggedEntriesGetHandler(
     }
 
     const { data: entries, error } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("*")
       .contains("tasted_with_user_ids", [userId])
       .order("created_at", { ascending: false });

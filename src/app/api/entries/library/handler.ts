@@ -36,7 +36,7 @@ export function createOwnerLibraryGetHandler(dependencies: Partial<typeof defaul
         return json({ error: 'Invalid library limit' }, 400);
       }
       stage = 'entries';
-      let query = supabase.from('wine_entries').select(FIELDS)
+      let query = supabase.from("wine_entries_with_ratings").select(FIELDS)
         .eq('user_id', user.id).eq('entry_status', 'consumed')
         .order('consumed_at', { ascending: false }).order('created_at', { ascending: false })
         .order('id', { ascending: false }).limit(limit + 1);

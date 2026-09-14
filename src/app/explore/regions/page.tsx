@@ -76,7 +76,7 @@ export default function RegionsBrowsePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !mounted) { setUserRegionsLoaded(true); return; }
       const { data } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("canonical_region")
         .eq("user_id", user.id)
         .not("canonical_region", "is", null)

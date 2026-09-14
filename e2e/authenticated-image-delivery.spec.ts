@@ -91,15 +91,15 @@ test('adopted payloads authorize in bounded batches without Storage signing; inv
   expect(many.has('unrequested.jpg')).toBe(false);
 });
 
-test('unadopted bearer/native clients retain signed response compatibility', async () => {
+test('wine photo payloads never mint legacy capabilities even without a version header', async () => {
   let calls = 0;
   const client = createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async () => {
-    calls++; return new Response(JSON.stringify({ signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } });
+    calls++; return new Response(JSON.stringify([path]), { headers: { 'content-type': 'application/json' } });
   } } });
-  expect(await signPhotoUrl(path, client)).toContain('/storage/v1/object/sign/'); expect(calls).toBe(1);
+  expect(await signPhotoUrl(path, client)).toBe(authenticatedPhotoUrl(path)); expect(calls).toBe(1);
 });
 
-test('only explicitly adopted verified bearer clients receive request-authorized payloads', async () => {
+test('all verified bearer clients receive request-authorized payloads', async () => {
   for (const version of [null, 'unknown', 'request-v1']) {
     const client = createClient('https://fixture.supabase.co', 'fixture-key', { global: { fetch: async (input) =>
       new Response(JSON.stringify(String(input).includes('/rpc/') ? [path] : { signedURL: '/object/sign/wine-photos/' + path + '?token=fixture' }), { headers: { 'content-type': 'application/json' } }) } });
@@ -112,8 +112,7 @@ test('only explicitly adopted verified bearer clients receive request-authorized
       createCookieClient: async () => { throw new Error('Unexpected cookie fallback'); },
     });
     const url = await signPhotoUrl(path, auth.supabase);
-    expect(url?.includes('/storage/v1/')).toBe(version !== 'request-v1');
-    if (version === 'request-v1') expect(url).toBe(authenticatedPhotoUrl(path));
+    expect(url).toBe(authenticatedPhotoUrl(path));
   }
 });
 

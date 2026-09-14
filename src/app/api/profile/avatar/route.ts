@@ -1,9 +1,9 @@
+import { randomUUID } from 'node:crypto';
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signPhotoUrl } from "@/server/storage/signedUrls";
 
 const AVATAR_PATH_PREFIX = "avatar";
-const AVATAR_EXTENSIONS = ["jpg", "png", "webp", "gif"] as const;
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
@@ -57,11 +57,11 @@ export async function POST(request: Request) {
   const currentAvatarPath = currentProfile?.avatar_path ?? null;
 
   const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : file.type === "image/gif" ? "gif" : "jpg";
-  const path = `${user.id}/${AVATAR_PATH_PREFIX}.${ext}`;
+  const path = `${user.id}/${AVATAR_PATH_PREFIX}-${randomUUID()}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from("wine-photos")
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, file, { upsert: false, contentType: file.type });
 
   if (uploadError) {
     return NextResponse.json(
@@ -97,12 +97,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const staleAvatarPaths = AVATAR_EXTENSIONS.map(
-    (candidateExt) => `${user.id}/${AVATAR_PATH_PREFIX}.${candidateExt}`
-  ).filter((candidatePath) => candidatePath !== path);
-  if (staleAvatarPaths.length > 0) {
-    await supabase.storage.from("wine-photos").remove(staleAvatarPaths);
-  }
+  // Old keys are retired only through the verified photo-rekey protocol.
 
   return NextResponse.json({
     avatar_url: await signPhotoUrl(path, supabase),

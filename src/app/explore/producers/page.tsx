@@ -52,7 +52,7 @@ export default function ProducersBrowsePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !mounted) { setLoading(false); return; }
       const { data } = await supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("producer")
         .eq("user_id", user.id)
         .not("producer", "is", null)

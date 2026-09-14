@@ -162,9 +162,10 @@ test("web grouped resolver never requests a signature for a hidden parent, and p
       {id:"s3",group_id:"g",entry_id:null,photo_type:"place",path:"context"},
       {id:"s4",group_id:"missing",entry_id:"e",photo_type:"label",path:"other-secret"},
     ],
-    wine_entries:[{id:"e",wine_name:"Visible wine"}],
+    wine_entries_with_ratings:[{id:"e",wine_name:"Visible wine"}],
   };
   const client = {
+    rpc: async (_: string, {object_names}: {object_names: string[]}) => {requested.push(...object_names); return {data: object_names, error: null};},
     from(table: string) {
       const query = {select:()=>query,in:()=>query,order:()=>query,
         then:(resolve:(value:object)=>unknown)=>Promise.resolve({data:rows[table],error:null}).then(resolve)};

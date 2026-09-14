@@ -20,6 +20,10 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 
 **Earlier B02b release boundary:** AUD-02/03 are Closed. B02b1/B02b2 are merged, both exact SQL files are applied, and the primary web release is verified live. The broad authenticated Storage read policy has been removed. AUD-01 remains Partial for measured cache/revocation and supported-client acceptance; see [release handover](handovers/sql-rollout-b02b.md) and [live QC](../audits/b02b-production-rollout-qc-2026-09-12.md). Native binaries/OTA were not released. Recheck current deployment state when resuming.
 
+## Active privacy pass — B02v/B02w
+
+September 14: `fix/privacy-cutover`, base `854dcff`, issue #81. QC-01 and AUD-01 remain Partial; source isolation and durable photo cutoff work are **In progress**. B02v stages an owner-only rating relation, owner-aware reads and transaction-compatible write capture with explicit operator activation. B02w targets legacy Storage signing and durable reference/write fences before retirement. No production activation, ordinary photo deletion or native release has occurred. EAS inventory confirms three completed March internal iOS builds; supported installed adoption remains unproven. All-platform exports and responsive QC will supplement, not substitute for, unavailable native runtimes.
+
 ## Original audit
 
 ### B02i historical checkpoint — adopted photo metadata without Storage signing (since released)

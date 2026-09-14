@@ -12,7 +12,7 @@ function fixture(entries:Entry[],friends:Friend[],fail?:string) {
     const table=url.pathname.split('/').pop();
     if(table===fail)return new Response(JSON.stringify({code:'XX000',message:'fixture failure'}),{status:500,headers:{'content-type':'application/json'}});
     if(table==='user_badges')return new Response(null,{status:200,headers:{'content-range':'*/3'}});
-    const rows=table==='wine_entries'?entries:friends;
+    const rows=(table==='wine_entries' || table === 'wine_entries_with_ratings')?entries:friends;
     const after=url.searchParams.get('id')?.slice(3)??'';
     // Deliberately return less than the requested 500 and more than 1000 total.
     return new Response(JSON.stringify(rows.filter(r=>r.id>after).slice(0,37)),{headers:{'content-type':'application/json'}});

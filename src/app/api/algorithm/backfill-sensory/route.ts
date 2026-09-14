@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const force = url.searchParams.get("force") === "true";
 
   let query = supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, wine_type, canonical_region, canonical_sub_region, canonical_country, region, appellation, country, vintage, producer, classification")
     .not("wine_type", "is", null)
     .order("created_at", { ascending: false })

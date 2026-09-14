@@ -52,7 +52,7 @@ for (const canonicalColumnsPresent of [true, false]) {
         if (table === "entry_primary_grapes") {
           return { select: () => ({ in: () => ({ order: async () => ({ data: [], error: null }) }) }) };
         }
-        expect(table).toBe("wine_entries");
+        expect(table).toBe("wine_entries_with_ratings");
         return {
           select(columns: string) {
             fields.push(columns);

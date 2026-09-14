@@ -174,7 +174,7 @@ async function main() {
 
   console.log("Reading rated wine_entries for those tasters (read-only)...");
   const { data: loggedEntries, error: loggedError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select(`${ENTRY_SELECT}, user_id, notes`)
     .in("user_id", tasterUserIds)
     .not("rating", "is", null)

@@ -99,7 +99,7 @@ export default function ExploreBrowseScreen() {
     const load = async () => {
       if (!user) return;
       const { data } = await supabaseDatabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("producer")
         .eq("user_id", user.id)
         .not("producer", "is", null)

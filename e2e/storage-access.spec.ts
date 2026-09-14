@@ -145,7 +145,7 @@ test("anonymous preview skips private first slide/photo and never approves paths
   const client={from(table:string){
     let multiple=false;
     const q={select:()=>q,eq:()=>q,order:()=>q,in:()=>{multiple=true;return q;},maybeSingle:()=>q,
-      then:(resolve:(v:object)=>unknown)=>Promise.resolve({data:table==='wine_entries'?(multiple?[{id:'anchor',entry_privacy:'public',label_photo_privacy:null,place_photo_privacy:null}]:anchorVisible?{id:'anchor'}:null):data[table],error:null}).then(resolve)};
+      then:(resolve:(v:object)=>unknown)=>Promise.resolve({data:(table==='wine_entries' || table === 'wine_entries_with_ratings')?(multiple?[{id:'anchor',entry_privacy:'public',label_photo_privacy:null,place_photo_privacy:null}]:anchorVisible?{id:'anchor'}:null):data[table],error:null}).then(resolve)};
     return q;
   },rpc:async(_name:string,{object_name}:{object_name:string})=>{
     approved.push(object_name);return {data:object_name!=='owner/own/label/hidden.jpg'&&object_name!=='owner/own/label/forged.jpg',error:rpcFails?{message:'migration absent'}:null};

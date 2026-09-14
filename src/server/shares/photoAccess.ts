@@ -35,7 +35,7 @@ export async function resolvePublicSharePhotoPaths(
     const { data: group } = await supabase.from("entry_groups")
       .select("id, user_id, anchor_entry_id").eq("id", entry.entry_group_id).maybeSingle();
     if (group?.anchor_entry_id && group.user_id === entry.user_id) {
-      const { data: anchor } = await supabase.from("wine_entries")
+      const { data: anchor } = await supabase.from("wine_entries_with_ratings")
         .select("id").eq("id", group.anchor_entry_id).eq("user_id", group.user_id)
         .eq("entry_group_id", group.id).eq("entry_privacy", "public").maybeSingle();
       if (anchor) {
@@ -44,7 +44,7 @@ export async function resolvePublicSharePhotoPaths(
           .order("position", { ascending: true }).order("created_at", { ascending: true });
         const candidates = (slides ?? []) as Slide[];
         const ids = [...new Set(candidates.map(s => s.entry_id ?? group.anchor_entry_id))];
-        const { data: members } = ids.length ? await supabase.from("wine_entries")
+        const { data: members } = ids.length ? await supabase.from("wine_entries_with_ratings")
           .select("id, entry_privacy, label_photo_privacy, place_photo_privacy").in("id", ids).eq("user_id", group.user_id)
           .eq("entry_group_id", group.id).eq("entry_privacy", "public") : { data: [] };
         const visibleMembers = new Map((members ?? []).map(m => [m.id, m]));

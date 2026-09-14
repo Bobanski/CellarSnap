@@ -181,7 +181,7 @@ export default async function SharePage({ params }: SharePageProps) {
 
   if (user) {
     const { data: allowedEntry, error: allowedEntryError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id")
       .eq("id", share.postId)
       .maybeSingle();

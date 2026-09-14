@@ -187,7 +187,7 @@ export async function gatherPalateSignal(
 ): Promise<PalateSignal> {
   const [entriesResult, surveyResult, comparisonsResult] = await Promise.all([
     supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select(
         // wine_entries has created_at but no updated_at column — recency of
         // logging is the right ordering signal anyway.

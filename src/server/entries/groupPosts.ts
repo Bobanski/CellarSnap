@@ -45,6 +45,7 @@ type SlideEntryRow = {
   created_at: string;
   notes: string | null;
   rating: number | null;
+  public_rating_label?: string | null;
   qpr_level: string | null;
 };
 
@@ -127,9 +128,9 @@ export async function resolveGroupedPostData(
   const { data: slideEntryRows, error: slideEntriesError } =
     slideEntryIds.length > 0
       ? await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select(
-            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at, notes, rating, qpr_level"
+            "id, wine_name, producer, vintage, country, region, appellation, consumed_at, created_at, notes, rating, public_rating_label, qpr_level"
           )
           .in("id", slideEntryIds)
       : { data: [] as SlideEntryRow[], error: null };
@@ -208,7 +209,7 @@ export async function resolveGroupedPostData(
           created_at: slideEntry?.created_at ?? null,
           notes: slideEntry?.notes ?? null,
           rating: null,
-          public_rating_label: getPublicRatingBandLabel(slideEntry?.rating),
+          public_rating_label: slideEntry?.public_rating_label ?? getPublicRatingBandLabel(slideEntry?.rating),
           qpr_level: slideEntry?.qpr_level ?? null,
         } satisfies GroupedEntrySlide;
       })

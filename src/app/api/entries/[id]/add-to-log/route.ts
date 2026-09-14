@@ -77,7 +77,7 @@ export async function POST(
   }
 
   const { data: entry, error: entryError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("*")
     .eq("id", id)
     .maybeSingle();
@@ -117,7 +117,7 @@ export async function POST(
   const rootEntryId = baseEntry.root_entry_id ?? null;
   if (rootEntryId) {
     const { data: rootRow } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("*")
       .eq("id", rootEntryId)
       .maybeSingle();
@@ -158,7 +158,7 @@ export async function POST(
 
   // If this entry was already added to the user's log, return it.
   const existing = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, location_text")
     .eq("user_id", user.id)
     .eq("root_entry_id", rootEntry.id)

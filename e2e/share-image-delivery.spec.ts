@@ -12,7 +12,7 @@ function fixture() {
     const url=new URL(String(input));calls.push(url.pathname);
     let data:unknown=null;
     if(url.pathname.endsWith('/post_shares')) {expect(url.searchParams.get('revoked_at')).toBe('is.null');data=state.revoked?null:{id:shareId,post_id:'entry',expires_at:state.expires};}
-    if(url.pathname.endsWith('/wine_entries'))data={id:'entry',user_id:'owner',entry_privacy:state.privacy,label_photo_privacy:'public',label_image_path:photoPath};
+    if(url.pathname.endsWith('/wine_entries_with_ratings'))data={id:'entry',user_id:'owner',entry_privacy:state.privacy,label_photo_privacy:'public',label_image_path:photoPath};
     if(url.pathname.endsWith('/public_profiles'))data=state.profile?{display_name:'Fixture',is_test_account:state.test}:null;
     if(url.pathname.endsWith('/entry_photos'))data=state.photo?[{path:photoPath,type:'label'}]:[];
     if(url.pathname.endsWith('/rpc/can_access_wine_photo'))data=state.gate;

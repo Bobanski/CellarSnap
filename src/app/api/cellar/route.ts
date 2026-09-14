@@ -16,7 +16,7 @@ export async function GET(request: Request) {
   const { supabase, user } = auth;
 
   const { data, error } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select(
       "id, wine_name, producer, vintage, country, region, appellation, wine_type, cellar_quantity, bottle_format, label_image_path, created_at"
     )

@@ -1031,7 +1031,7 @@ export default function NewEntryScreen() {
           .select("id, display_name, email")
           .in("id", friendIds),
         supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("tasted_with_user_ids")
           .eq("user_id", user.id)
           .neq("tasted_with_user_ids", "{}"),

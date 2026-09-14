@@ -495,6 +495,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cellar_custom_field_values_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cellar_custom_field_values_field_def_id_fkey"
             columns: ["field_def_id"]
             isOneToOne: false
@@ -687,6 +694,13 @@ export type Database = {
             referencedRelation: "wine_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_comments: {
@@ -726,6 +740,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comments_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
           {
@@ -771,10 +792,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entry_comparison_feedback_comparison_entry_id_fkey"
+            columns: ["comparison_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entry_comparison_feedback_new_entry_id_fkey"
             columns: ["new_entry_id"]
             isOneToOne: true
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_comparison_feedback_new_entry_id_fkey"
+            columns: ["new_entry_id"]
+            isOneToOne: true
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -813,6 +848,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_group_slides_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
           {
@@ -863,6 +905,13 @@ export type Database = {
             referencedRelation: "wine_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entry_groups_anchor_entry_id_fkey"
+            columns: ["anchor_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_photos: {
@@ -898,6 +947,13 @@ export type Database = {
             referencedRelation: "wine_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entry_photos_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_primary_grapes: {
@@ -928,6 +984,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_primary_grapes_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
           {
@@ -967,6 +1030,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -1426,6 +1496,13 @@ export type Database = {
             referencedRelation: "wine_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "post_shares_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       producer_aliases: {
@@ -1714,6 +1791,13 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_resolution_log_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -2028,6 +2112,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "user_collection_items_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_collection_items_snapshot_entry_group_id_fkey"
             columns: ["snapshot_entry_group_id"]
             isOneToOne: false
@@ -2100,6 +2191,13 @@ export type Database = {
             columns: ["entry_id", "user_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "user_entry_knowledge_chunks_entry_id_user_id_fkey"
+            columns: ["entry_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id", "user_id"]
           },
         ]
@@ -2299,6 +2397,7 @@ export type Database = {
             | Database["public"]["Enums"]["price_paid_source"]
             | null
           producer: string | null
+          public_rating_label: string | null
           qpr_level: Database["public"]["Enums"]["qpr_level"] | null
           rating: number | null
           raw_classification: string | null
@@ -2369,6 +2468,7 @@ export type Database = {
             | Database["public"]["Enums"]["price_paid_source"]
             | null
           producer?: string | null
+          public_rating_label?: string | null
           qpr_level?: Database["public"]["Enums"]["qpr_level"] | null
           rating?: number | null
           raw_classification?: string | null
@@ -2439,6 +2539,7 @@ export type Database = {
             | Database["public"]["Enums"]["price_paid_source"]
             | null
           producer?: string | null
+          public_rating_label?: string | null
           qpr_level?: Database["public"]["Enums"]["qpr_level"] | null
           rating?: number | null
           raw_classification?: string | null
@@ -2477,6 +2578,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "wine_entries_cellared_from_id_fkey"
+            columns: ["cellared_from_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "wine_entries_entry_group_id_fkey"
             columns: ["entry_group_id"]
             isOneToOne: false
@@ -2488,6 +2596,46 @@ export type Database = {
             columns: ["root_entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entries_root_entry_id_fkey"
+            columns: ["root_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wine_entry_ratings: {
+        Row: {
+          entry_id: string
+          rating: number | null
+          user_id: string
+        }
+        Insert: {
+          entry_id: string
+          rating?: number | null
+          user_id: string
+        }
+        Update: {
+          entry_id?: string
+          rating?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wine_entry_ratings_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entry_ratings_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -2547,6 +2695,13 @@ export type Database = {
             columns: ["wine_entry_id"]
             isOneToOne: false
             referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entry_scores_wine_entry_id_fkey"
+            columns: ["wine_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
             referencedColumns: ["id"]
           },
         ]
@@ -2620,6 +2775,13 @@ export type Database = {
             referencedRelation: "wine_entries"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wine_notifications_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       wine_profiles: {
@@ -2683,6 +2845,116 @@ export type Database = {
           username: string | null
         }
         Relationships: []
+      }
+      wine_entries_with_ratings: {
+        Row: {
+          advanced_notes: Json | null
+          appellation: string | null
+          assembled_sensory: Json | null
+          bottle_format: string | null
+          canonical_classification: string | null
+          canonical_country: string | null
+          canonical_producer: string | null
+          canonical_region: string | null
+          canonical_sub_region: string | null
+          cellar_quantity: number | null
+          cellared_from_id: string | null
+          classification: string | null
+          comments_privacy: Database["public"]["Enums"]["privacy_level"] | null
+          comments_scope: string | null
+          consumed_at: string | null
+          country: string | null
+          created_at: string | null
+          drinking_now: boolean | null
+          entry_group_id: string | null
+          entry_privacy: string | null
+          entry_status: string | null
+          fallback_level: number | null
+          id: string | null
+          is_feed_visible: boolean | null
+          label_image_path: string | null
+          label_photo_privacy: string | null
+          location_place_id: string | null
+          location_text: string | null
+          notes: string | null
+          pairing_image_path: string | null
+          place_image_path: string | null
+          place_photo_privacy: string | null
+          price_paid: number | null
+          price_paid_currency:
+            | Database["public"]["Enums"]["price_paid_currency"]
+            | null
+          price_paid_source:
+            | Database["public"]["Enums"]["price_paid_source"]
+            | null
+          producer: string | null
+          public_rating_label: string | null
+          qpr_level: Database["public"]["Enums"]["qpr_level"] | null
+          rating: number | null
+          raw_classification: string | null
+          raw_producer: string | null
+          raw_region: string | null
+          raw_wine_type: string | null
+          reaction_privacy: Database["public"]["Enums"]["privacy_level"] | null
+          region: string | null
+          resolution_confidence: number | null
+          root_entry_id: string | null
+          sensory_resolved_at: string | null
+          survey_drink_again:
+            | Database["public"]["Enums"]["entry_survey_drink_again"]
+            | null
+          survey_enjoyment_intent:
+            | Database["public"]["Enums"]["entry_survey_enjoyment_intent"]
+            | null
+          survey_expectation_match:
+            | Database["public"]["Enums"]["entry_survey_expectation_match"]
+            | null
+          survey_how_was_it:
+            | Database["public"]["Enums"]["entry_survey_how_was_it"]
+            | null
+          tasted_with_user_ids: string[] | null
+          user_id: string | null
+          vintage: string | null
+          wine_name: string | null
+          wine_type: Database["public"]["Enums"]["wine_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wine_entries_cellared_from_id_fkey"
+            columns: ["cellared_from_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entries_cellared_from_id_fkey"
+            columns: ["cellared_from_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entries_entry_group_id_fkey"
+            columns: ["entry_group_id"]
+            isOneToOne: false
+            referencedRelation: "entry_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entries_root_entry_id_fkey"
+            columns: ["root_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wine_entries_root_entry_id_fkey"
+            columns: ["root_entry_id"]
+            isOneToOne: false
+            referencedRelation: "wine_entries_with_ratings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

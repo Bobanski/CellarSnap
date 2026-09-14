@@ -644,7 +644,7 @@ test.describe("WS2: Entry Normalization", () => {
               }),
             },
             from(table: string) {
-              if (table === "wine_entries") {
+              if ((table === "wine_entries" || table === "wine_entries_with_ratings")) {
                 return {
                   select(columns: string) {
                     if (columns === "id, user_id, rating, entry_group_id") {

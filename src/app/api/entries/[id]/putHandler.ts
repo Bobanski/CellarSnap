@@ -161,7 +161,7 @@ export function createEntryPutHandler(
     }
 
     const { data: targetEntry, error: targetEntryError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id, user_id, rating, entry_group_id")
       .eq("id", id)
       .maybeSingle();
@@ -241,7 +241,7 @@ export function createEntryPutHandler(
           attempt: async (payloadToApply) => {
             if (Object.keys(payloadToApply).length === 0) {
               const existingEntry = await supabase
-                .from("wine_entries")
+                .from("wine_entries_with_ratings")
                 .select("*")
                 .eq("id", id)
                 .eq("user_id", user.id)
@@ -260,10 +260,15 @@ export function createEntryPutHandler(
               .select("*")
               .maybeSingle();
 
-            return {
-              data: updateAttempt.data,
-              error: updateAttempt.error,
-            };
+            if (updateAttempt.error || !updateAttempt.data) return updateAttempt;
+            // A notes-only mutation returns the cleared input column after cutoff.
+            // Rehydrate the owner's current number from its RLS-protected source.
+            return supabase
+              .from("wine_entries_with_ratings")
+              .select("*")
+              .eq("id", id)
+              .eq("user_id", user.id)
+              .maybeSingle();
           },
         });
         const data = updateResult.data;
@@ -321,7 +326,7 @@ export function createEntryPutHandler(
         updatedEntry = data;
       } else {
         const { data, error } = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select("*")
           .eq("id", id)
           .eq("user_id", user.id)

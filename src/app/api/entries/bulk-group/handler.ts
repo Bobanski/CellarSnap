@@ -93,7 +93,7 @@ export function createBulkGroupHandler(
     }
 
     const { data: ownedEntries, error: ownedEntriesError } = await supabase
-      .from("wine_entries")
+      .from("wine_entries_with_ratings")
       .select("id")
       .in("id", entryIds)
       .eq("user_id", user.id);

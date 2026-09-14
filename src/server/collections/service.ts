@@ -349,7 +349,7 @@ async function loadVisibleEntryForCollections({
   entryId: string;
 }) {
   const { data, error } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select(
       "id, user_id, wine_name, producer, vintage, consumed_at, entry_group_id, entry_privacy, label_image_path"
     )

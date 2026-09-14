@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   // Load the cellar entry and verify ownership + status
   const { data: cellarEntry, error: fetchError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("*")
     .eq("id", cellar_entry_id)
     .eq("user_id", user.id)

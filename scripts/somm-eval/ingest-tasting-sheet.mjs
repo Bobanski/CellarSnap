@@ -540,7 +540,7 @@ async function applyPlan({ plans, problems }) {
       // Dedupe key: same taster, same bottle, same tasting date. Re-running
       // --apply updates in place instead of duplicating.
       let query = supabase
-        .from("wine_entries")
+        .from("wine_entries_with_ratings")
         .select("id")
         .eq("user_id", plan.userId)
         .eq("consumed_at", entry.consumed_at)

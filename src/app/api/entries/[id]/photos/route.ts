@@ -48,7 +48,7 @@ export async function GET(
   }
 
   const { data: entry, error: entryError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, user_id, entry_privacy")
     .eq("id", id)
     .single();
@@ -126,7 +126,7 @@ export async function POST(
   }
 
   const { data: entry, error: entryError } = await supabase
-    .from("wine_entries")
+    .from("wine_entries_with_ratings")
     .select("id, user_id")
     .eq("id", id)
     .single();

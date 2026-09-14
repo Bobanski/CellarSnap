@@ -188,7 +188,7 @@ async function getFeed(request: Request) {
   ).filter((id) => !blockedUserIdsSet.has(id));
 
   const baseSelectFieldsWithoutDrinkingNow =
-    "id, user_id, wine_name, producer, vintage, country, region, appellation, canonical_country, canonical_region, canonical_sub_region, classification, wine_type, notes, consumed_at, rating, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
+    "id, user_id, wine_name, producer, vintage, country, region, appellation, canonical_country, canonical_region, canonical_sub_region, classification, wine_type, notes, consumed_at, rating, public_rating_label, qpr_level, tasted_with_user_ids, label_image_path, place_image_path, pairing_image_path, entry_privacy, created_at";
   const baseSelectFields = `${baseSelectFieldsWithoutDrinkingNow}, drinking_now`;
   const extendedSelectFields = `${baseSelectFields}, root_entry_id, is_feed_visible, entry_group_id`;
   const extendedSelectFieldsWithoutDrinkingNow =
@@ -217,7 +217,7 @@ async function getFeed(request: Request) {
     withEntryStatusFilter: boolean;
     cursor: { createdAt: string; id: string | null } | null;
   }) => {
-    let query = supabase.from("wine_entries").select(fields);
+    let query = supabase.from("wine_entries_with_ratings").select(fields);
 
     if (withEntryStatusFilter) {
       query = query.eq("entry_status", "consumed");
@@ -637,7 +637,7 @@ async function getFeed(request: Request) {
       getFallbackColumns: (attempt) => attempt.missingColumns,
       attempt: async (attempt) => {
         const response = await supabase
-          .from("wine_entries")
+          .from("wine_entries_with_ratings")
           .select(attempt.select)
           .in("id", entryIds);
         return {

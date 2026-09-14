@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import ts from 'typescript';
+import {expectedCatalog} from './contract.mjs';
 
 const root=new URL('../../',import.meta.url);
 const read=path=>readFile(new URL(path,root),'utf8');
@@ -21,7 +22,7 @@ test('all generated table rows and insert requirements agree with the reviewed c
   const database=ast.statements.find(n=>ts.isTypeAliasDeclaration(n) && n.name.text==='Database');
   const publicSchema=members(database.type).get('public').type;
   const tables=members(members(publicSchema).get('Tables').type);
-  const catalog=JSON.parse(await read('supabase/baseline/catalog.json'));
+  const catalog=await expectedCatalog();
   const expected=catalog.relations.filter(r=>r.schema_name==='public' && ['r','p'].includes(r.kind)).map(r=>r.name).sort();
   assert.deepEqual([...tables.keys()].sort(),expected);
   for (const [table,node] of tables) {

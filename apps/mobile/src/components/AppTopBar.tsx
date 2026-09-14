@@ -218,7 +218,7 @@ export function AppTopBar() {
     const [{ data: entryRows }, profileResponse] = await Promise.all([
       entryIds.length > 0
         ? supabase
-            .from("wine_entries")
+            .from("wine_entries_with_ratings")
             .select("id, wine_name")
             .in("id", entryIds)
         : Promise.resolve({

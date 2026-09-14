@@ -22,7 +22,7 @@ function harness(rows = [row], fault?: string) {
   };
   const labels = {in: () => labels, eq: () => labels, order: () => labels,
     then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({data: [], error: fault === 'labels' ? {message:'private diagnostic'} : null}))};
-  const client = {from: (table: string) => table === 'wine_entries' ? builder : {select: () => labels}};
+  const client = {from: (table: string) => (table === 'wine_entries' || table === 'wine_entries_with_ratings') ? builder : {select: () => labels}};
   const handler = createOwnerLibraryGetHandler({
     requireRequestAuth: async (_request, options) => {
       calls.push(['auth',options]);

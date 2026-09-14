@@ -1,6 +1,7 @@
 // Explicit operator tool. Never imported by web/native code. Stops after a
-// committed reference swap; old-object retirement has no command in this release.
+// committed reference swap. Retirement is explicit, bounded and restartable.
 import { spawn } from 'node:child_process';
+import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -44,6 +45,9 @@ export function psqlAdapter(env = process.env) {
     get: id=>query(`select to_jsonb(o) from private.photo_rekey_operations o where id=(${literal(id)}#>>'{}')::uuid;`),
     snapshot: paths=>query(`select private.photo_rekey_snapshot(array(select jsonb_array_elements_text(${literal(paths)})));`),
     commit: (id,proof)=>query(`select private.commit_photo_rekey((${literal(id)}#>>'{}')::uuid,${literal(proof)});`),
+    prepareRetirement: id=>query(`select private.prepare_photo_retirement((${literal(id)}#>>'{}')::uuid);`),
+    confirmDeletion: id=>query(`select private.confirm_photo_deletion((${literal(id)}#>>'{}')::uuid);`),
+    recordEvidence: (id,observations)=>query(`select private.record_photo_revocation_evidence((${literal(id)}#>>'{}')::uuid,${literal(observations)});`),
     abandon: id=>query(`select private.abandon_photo_rekey((${literal(id)}#>>'{}')::uuid);`),
   };
 }
@@ -58,6 +62,11 @@ export function storageAdapter(url, key, fetcher = fetch) {
     return response;
   };
   return {
+    remove:async paths=>{
+      if(!Array.isArray(paths)||paths.length!==2)throw new Error('Exactly one photo cohort required');
+      const r=await request('/storage/v1/object/wine-photos',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({prefixes:paths})});
+      await r.body?.cancel();
+    },
     copy:async(oldPath,newPath)=>{
       const r=await request('/storage/v1/object/copy',{method:'POST',headers:{'Content-Type':'application/json','x-upsert':'false'},
         body:JSON.stringify({bucketId:'wine-photos',sourceKey:oldPath,destinationKey:newPath})});
@@ -105,21 +114,54 @@ export async function resumeRekey(db, storage, id) {
   for(const h of hashes)if(!same(objectFor(final,h.new),h.absent?null:h.object))throw new Error('Photo destination changed after verification');
   return db.commit(id,{objects:final.objects,hashes});
 }
+// Access acceptance is an explicit operator prerequisite, not inferred from a
+// successful service-key download. The callback must exercise current app access.
+export async function retireRekey(db, storage, id, verifyApplicationAccess) {
+  let op=await db.get(id);
+  if(op.retirement_phase==='deleted_pending_cdn'||op.retirement_phase==='verified')return op;
+  if(typeof verifyApplicationAccess!=='function')throw new Error('Current application access verification required');
+  if(op.state!=='pending_revocation')throw new Error('References not committed');
+  for(const proof of op.proof.hashes){
+    if(proof.absent)continue;
+    const copy=await storage.read(proof.new);
+    if(copy.bytes.length!==proof.size||copy.mimetype!==proof.mimetype||digest(copy.bytes)!==proof.sha256)throw new Error('Replacement byte verification failed');
+    if(await verifyApplicationAccess(proof.new)!==true)throw new Error('Replacement application access failed');
+  }
+  op=await db.prepareRetirement(id);
+  // Storage deletion is idempotent. A lost response stays in deleting and retries
+  // the same durable mapping; confirmation checks actual object absence in SQL.
+  await storage.remove(op.mapping.map(m=>m.old));
+  return db.confirmDeletion(id);
+}
+
 export function operationSummary(op) {
   return {operationId:op.id,state:op.state,objects:op.expected.objects.filter(o=>o.object).length,
-    references:op.expected.refs.length,retirementEnabled:false};
+    references:op.expected.refs.length,retirementEnabled:true,retirementPhase:op.retirement_phase??null};
 }
 async function main(){
   const [command,id,path,...extra]=process.argv.slice(2);
-  if(!['plan','resume','status','abandon'].includes(command) || !/^[0-9a-f-]{36}$/.test(id??'') || extra.length ||
-    (command==='plan'?!path:!!path))throw new Error('Usage: photo-rekey.mjs plan UUID SOURCE_PATH | resume UUID | status UUID | abandon UUID');
+  if(!['plan','resume','status','abandon','retire','observe'].includes(command) || !/^[0-9a-f-]{36}$/.test(id??'') || extra.length ||
+    (['plan','observe'].includes(command)?!path:!!path))throw new Error('Usage: photo-rekey.mjs plan UUID SOURCE_PATH | resume UUID | status UUID | abandon UUID | retire UUID | observe UUID EVIDENCE_JSON');
   const db=psqlAdapter();let result;
   if(command==='plan')result=await db.plan(id,path);
   else if(command==='status')result=await db.get(id);
   else if(command==='abandon')result=await db.abandon(id);
+  else if(command==='observe'){
+    if((await stat(path)).size>32768)throw new Error('Evidence file exceeds bound');
+    result=await db.recordEvidence(id,JSON.parse(await readFile(path,'utf8')));
+  }
+  else if(command==='retire'){
+    const origin=new URL(process.env.CELLARSNAP_REKEY_APP_ORIGIN??'');
+    if(origin.protocol!=='https:'||origin.username||origin.password||origin.pathname!=='/'||origin.search||origin.hash||!process.env.CELLARSNAP_REKEY_VERIFY_BEARER)throw new Error('Explicit app origin and verification bearer required');
+    result=await retireRekey(db,storageAdapter(process.env.CELLARSNAP_REKEY_STORAGE_URL,process.env.CELLARSNAP_REKEY_SERVICE_KEY),id,async path=>{
+      const target=new URL('/api/photos/image',origin);target.searchParams.set('path',path);target.searchParams.set('variant','original');
+      const response=await fetch(target,{redirect:'error',signal:AbortSignal.timeout(30000),headers:{Authorization:`Bearer ${process.env.CELLARSNAP_REKEY_VERIFY_BEARER}`}});
+      const ok=response.ok&&response.headers.get('content-type')==='image/webp';await response.body?.cancel();return ok;
+    });
+  }
   else result=await resumeRekey(db,storageAdapter(process.env.CELLARSNAP_REKEY_STORAGE_URL,process.env.CELLARSNAP_REKEY_SERVICE_KEY),id);
   console.log(JSON.stringify(operationSummary(result)));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(()=>{
-  console.error('Photo rekey did not complete. Inspect status with the same operation ID; no retirement was attempted.');process.exitCode=1;
+  console.error('Photo rekey did not complete. Inspect status with the same operation ID; inspect the durable retirement phase before retrying.');process.exitCode=1;
 });
