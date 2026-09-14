@@ -75,7 +75,8 @@ function isMissingGroupedPostSchemaError(message: string) {
 
 export async function resolveGroupedPostData(
   supabase: SupabaseClient,
-  entries: GroupAnchorEntry[]
+  entries: GroupAnchorEntry[],
+  options?: { strict?: boolean }
 ): Promise<Map<string, GroupedPostPayload>> {
   const entryGroupIdByEntryId = new Map<string, string>();
   entries.forEach((entry) => {
@@ -95,7 +96,7 @@ export async function resolveGroupedPostData(
     .in("id", groupIds);
 
   if (groupsError) {
-    if (isMissingGroupedPostSchemaError(groupsError.message)) {
+    if (!options?.strict && isMissingGroupedPostSchemaError(groupsError.message)) {
       return new Map<string, GroupedPostPayload>();
     }
     throw new Error(groupsError.message);
@@ -109,7 +110,7 @@ export async function resolveGroupedPostData(
     .order("created_at", { ascending: true });
 
   if (slidesError) {
-    if (isMissingGroupedPostSchemaError(slidesError.message)) {
+    if (!options?.strict && isMissingGroupedPostSchemaError(slidesError.message)) {
       return new Map<string, GroupedPostPayload>();
     }
     throw new Error(slidesError.message);
@@ -134,7 +135,7 @@ export async function resolveGroupedPostData(
       : { data: [] as SlideEntryRow[], error: null };
 
   if (slideEntriesError) {
-    if (isMissingGroupedPostSchemaError(slideEntriesError.message)) {
+    if (!options?.strict && isMissingGroupedPostSchemaError(slideEntriesError.message)) {
       return new Map<string, GroupedPostPayload>();
     }
     throw new Error(slideEntriesError.message);

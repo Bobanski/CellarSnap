@@ -44,7 +44,8 @@ export function normalizePrimaryGrapeIds(
 
 export async function fetchPrimaryGrapesByEntryId(
   supabase: SupabaseClient,
-  entryIds: string[]
+  entryIds: string[],
+  options?: { strict?: boolean }
 ): Promise<Map<string, PrimaryGrape[]>> {
   const map = new Map<string, PrimaryGrape[]>();
 
@@ -59,6 +60,7 @@ export async function fetchPrimaryGrapesByEntryId(
     .order("position", { ascending: true });
 
   if (error || !data) {
+    if (error && options?.strict) throw new Error(error.message);
     return map;
   }
 
