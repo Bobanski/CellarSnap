@@ -494,3 +494,7 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 ### B02n active — projected bearer/mobile feed
 - QC-01 P1/Partial, issue #81; `codex/b02n-mobile-feed-projection`, parent B02m `e65bc29`. Adopt the existing feed endpoint with verified bearer auth/no cookie fallback when Authorization is supplied, no-store/CORS, opaque cursor, signature-free adopted photos and per-slide public bands/notes/QPR. Remove direct mobile feed row/slide rating reads; retain detail interaction helpers.
 - Acceptance: raw entry/slide payload rejection, wrong-session rejection, finite fetch/body timeout, fault/recovery, stale scope/page response rejection; desktop/phone Expo groups/notes/bands/photos/interactions/circle/pagination/profile counterpart plus web regressions. No database privilege/cutoff change. Old installed feed clients and mobile detail direct reads remain open.
+
+### B05f active — Git-index worktree boundary
+- AUD-49 P2/Partial, issue #81; `codex/b05f-untrack-worktree-metadata`, base B02n `4c7a8de`. Remove three historical Git links and three local settings entries from the index only; all existing paths and file hashes preserved. Prior watcher exclusions remain accepted.
+- Three existing real Metro/Tailwind/tooling checks pass. Fresh clone, checkout cleanup and CI/release pending. No application or runtime change. [Checkpoint](handovers/batch-05f.md).
