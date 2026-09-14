@@ -260,6 +260,29 @@ test.describe("WS3 algorithm UI support", () => {
     expect(palateCalls).toBe(1);
   });
 
+  test("all-terminal batches skip preference and palate loading", async () => {
+    let preferenceLoads = 0;
+    let palateLoads = 0;
+    const handler = createAlgorithmScoreBatchHandler({
+      requireRequestAuth: async () => ({ supabase: {}, user: makeUser("user-1"), authMode: "bearer" }) as never,
+      readCachedEntryScores: async () => new Map(),
+      loadEntryForScoring: async () => null,
+      loadUserPreferenceEntries: async () => { preferenceLoads += 1; return []; },
+      readPalateProfile: async () => { palateLoads += 1; return null; },
+    });
+    const response = await handler(new Request("http://localhost/api/algorithm/score/batch", {
+      method: "POST",
+      body: JSON.stringify({ items: [{ entry_id: "11111111-1111-4111-8111-111111111111", request_id: "missing" }] }),
+    }));
+    expect(response.status).toBe(200);
+    const payload = await response.json();
+    expect(payload.results).toHaveLength(1);
+    expect(payload.results[0].ok).toBe(false);
+    expect(payload.results[0].request_id).toBe("missing");
+    expect(preferenceLoads).toBe(0);
+    expect(palateLoads).toBe(0);
+  });
+
   test("batch score handler uses direct fields when entry_id is present", async () => {
     let loadCalls = 0;
 

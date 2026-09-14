@@ -1,3 +1,4 @@
+import { assertReadableWineList, UNREADABLE_WINE_LIST_MESSAGE } from "@/server/listScan/readability";
 import { fetchRemoteMenu } from "@/server/listScan/remoteSource";
 import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -3626,7 +3627,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
   const resolvedVenueName = venueName ?? deriveVenueNameFromHostname(parsedUrl.hostname);
   const extractMs = Date.now() - tExtract0;
   if (!wineSectionText.trim()) {
-    throw new Error("That URL did not contain readable list text.");
+    throw new Error(UNREADABLE_WINE_LIST_MESSAGE);
   }
 
   // Compact the extracted text for the model input.
@@ -3690,7 +3691,7 @@ async function parseUrlSource({ url, userId }: { url: string; userId: string }) 
     return heuristic;
   }
 
-  throw new Error("That URL did not contain readable wine-list text.");
+  throw new Error(UNREADABLE_WINE_LIST_MESSAGE);
 }
 
 export async function parseWineListSource(
@@ -3726,6 +3727,9 @@ export async function parseWineListSource(
           });
   timing.parse_ms = Date.now() - tParse0;
 
+  const wines = cleanupNormalizedParsedWines(normalizeParsedWines(parsed));
+  assertReadableWineList(wines);
+
   const pdfDiag = (parsed as Record<string, unknown>)?._pdfDiag ?? null;
   if (pdfDiag && typeof pdfDiag === "object") {
     for (const [key, value] of Object.entries(pdfDiag as Record<string, unknown>)) {
@@ -3754,7 +3758,7 @@ export async function parseWineListSource(
 
   const tEnrich0 = Date.now();
   const enriched = await enrichParsedWines({
-    wines: cleanupNormalizedParsedWines(normalizeParsedWines(parsed)),
+    wines,
     userId: params.userId ?? null,
     userSupabase: params.userSupabase ?? null,
     preloadedInferenceMap,
@@ -3831,6 +3835,7 @@ export async function rescoreListScanResult(
 }
 
 export const __listScanTestUtils = {
+  buildHeuristicParsedResponse,
   applyInferenceToWine,
   applyStubMatchPercents,
   cleanupNormalizedParsedWines,
