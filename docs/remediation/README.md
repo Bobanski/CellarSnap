@@ -2,6 +2,7 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
+- **Current implementation/QC checkpoint:** [B02m](handovers/batch-02m.md) and [B02n](handovers/batch-02n.md), owner-aware detail/profile ratings and projected bearer/mobile feed. Release pending.
 - **Latest release and resume point:** [B02l](handovers/b02l-release.md), [operator contract](b02l-photo-rekey-operator.md), [sanitized release QC](evidence/b02l-release.json). #142 merged; private copy/hash/reference-swap machinery live and fixture-verified. No production retirement or native cutoff.
 - **Previous release and resume point:** [B02i/B02j/B02k](handovers/b02i-b02j-b02k-release.md), [sanitized QC](evidence/b02i-b02j-b02k-release.json). #138/#139/#140 merged; adopted metadata signing removed, canonical photo inventory available, web feed ratings projected. SQL and primary application live-verified; broader privacy/native rollout remains explicit.
 - **Photo inventory:** [B02j](handovers/batch-02j.md), [sanitized counts](evidence/b02j-inventory.json); review twelve missing references before any rekey/retirement.

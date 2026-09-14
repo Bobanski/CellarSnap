@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPublicProfileName } from "@/lib/publicProfiles";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
+import { PHOTO_DELIVERY_HEADER } from "@shared/photoDelivery";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import {
   canUserViewEntry,
@@ -129,15 +130,35 @@ function encodeCursorV2(cursor: FeedCursorPosition) {
   ).toString("base64url");
 }
 
-export async function GET(request: Request) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+const FEED_HEADERS = {
+  "Cache-Control": "private, no-store",
+  Vary: "Cookie, Authorization",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": `Authorization, ${PHOTO_DELIVERY_HEADER}`,
+};
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export function OPTIONS() {
+  return new Response(null, { status: 204, headers: FEED_HEADERS });
+}
+
+export async function GET(request: Request) {
+  const response = await getFeed(request);
+  for (const [key, value] of Object.entries(FEED_HEADERS)) response.headers.set(key, value);
+  return response;
+}
+
+async function getFeed(request: Request) {
+  let auth;
+  try {
+    auth = await requireRequestAuth(request, { allowCookieFallback: !request.headers.has("authorization") });
+  } catch (error) {
+    if (error instanceof RequestAuthError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    throw error;
   }
+  const { supabase, user } = auth;
 
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope");

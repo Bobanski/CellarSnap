@@ -83,6 +83,10 @@ export type GroupedEntrySlide = {
   appellation: string | null;
   consumed_at: string | null;
   created_at: string | null;
+  notes: string | null;
+  rating: null;
+  public_rating_label: string | null;
+  qpr_level: string | null;
 };
 
 export type WineEntry = {

@@ -39,6 +39,7 @@ export default defineConfig({
     "event-selection.spec.ts",
     "remote-menu.spec.ts",
     "audit-regressions.spec.ts",
+    "mobile-feed-request.spec.ts",
     "image-dependency.spec.ts",
   ],
 });

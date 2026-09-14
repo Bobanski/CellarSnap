@@ -490,3 +490,7 @@ Actual 386-source regeneration on September 12 took about one minute with one pu
 ### B02m active — owner-aware detail/profile rating responses
 - QC-01 P1/Partial, issue #81; branch `codex/b02m-owner-rating-projection`, base `8f39e21`. Detail, profile entries and tagged entries now project ratings by authenticated row ownership; public bands and owner 1–100 editing stay intact. Tagged-profile ownership is not entry ownership.
 - Acceptance: cookie/bearer owner and viewer payloads, mixed-owner tags, privacy/block/test exclusions, desktop/phone profile bands/detail/owner-save, error inspection and live release. No schema/native change; direct Data API, mobile direct consumers, other API payloads and physical isolation remain open.
+
+### B02n active — projected bearer/mobile feed
+- QC-01 P1/Partial, issue #81; `codex/b02n-mobile-feed-projection`, parent B02m `e65bc29`. Adopt the existing feed endpoint with verified bearer auth/no cookie fallback when Authorization is supplied, no-store/CORS, opaque cursor, signature-free adopted photos and per-slide public bands/notes/QPR. Remove direct mobile feed row/slide rating reads; retain detail interaction helpers.
+- Acceptance: raw entry/slide payload rejection, wrong-session rejection, finite fetch/body timeout, fault/recovery, stale scope/page response rejection; desktop/phone Expo groups/notes/bands/photos/interactions/circle/pagination/profile counterpart plus web regressions. No database privilege/cutoff change. Old installed feed clients and mobile detail direct reads remain open.

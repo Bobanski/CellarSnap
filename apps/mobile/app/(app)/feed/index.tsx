@@ -9,7 +9,6 @@ import {
   FEED_SCOPE_LABELS,
   FEED_TITLE_ALL,
   FEED_TITLE_CIRCLE,
-  getFeedDisplayRatingLabel as getDisplayRating,
   getFeedEmptyStateMessage,
   EVENT_TYPE_LABELS,
   type CollectionOption,
@@ -459,7 +458,7 @@ const FeedCard = React.memo(function FeedCard({
   showDrinkingNowGlow: boolean;
 }) {
   const metaFields = useMemo(() => buildEntryMetaFields(item), [item]);
-  const displayRating = getDisplayRating(item.rating);
+  const displayRating = item.public_rating_label;
   const galleryPhotos = useMemo(() => item.photo_gallery ?? [], [item.photo_gallery]);
   const notes = (item.notes ?? "").trim();
   const isGrouped = Boolean(
@@ -963,7 +962,7 @@ const FeedCard = React.memo(function FeedCard({
 
       {(() => {
         const activeRating = isGrouped
-          ? getDisplayRating(groupSlides[galleryActiveIndex]?.rating ?? null)
+          ? groupSlides[galleryActiveIndex]?.public_rating_label ?? null
           : displayRating;
         const activeQpr = isGrouped
           ? (groupSlides[galleryActiveIndex]?.qpr_level as QprLevel | null) ?? null
@@ -1460,6 +1459,7 @@ export default function FeedScreen() {
     setEntries,
     setErrorMessage,
   });
+  const feedRequestVersion = useRef(0);
   const isFeedScrollActiveRef = useRef(false);
   const feedOpenBlockUntilRef = useRef(0);
   const feedScrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1516,6 +1516,8 @@ export default function FeedScreen() {
         return;
       }
 
+      const requestVersion = ++feedRequestVersion.current;
+      setIsLoadingMore(false);
       if (refresh) {
         setIsRefreshing(true);
       } else {
@@ -1529,6 +1531,8 @@ export default function FeedScreen() {
         cursor: null,
         limit: PAGE_SIZE,
       });
+
+      if (requestVersion !== feedRequestVersion.current) return;
 
       if (result.errorMessage) {
         setErrorMessage(result.errorMessage);
@@ -1554,7 +1558,10 @@ export default function FeedScreen() {
       void loadFeed();
     }, 0);
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      feedRequestVersion.current++;
+    };
   }, [loadFeed]);
 
   const shareEntryByText = useCallback(
@@ -1710,6 +1717,7 @@ export default function FeedScreen() {
       return;
     }
 
+    const requestVersion = feedRequestVersion.current;
     setIsLoadingMore(true);
     setErrorMessage(null);
 
@@ -1719,6 +1727,8 @@ export default function FeedScreen() {
       cursor: nextCursor,
       limit: PAGE_SIZE,
     });
+
+    if (requestVersion !== feedRequestVersion.current) return;
 
     if (result.errorMessage) {
       setErrorMessage(result.errorMessage);
