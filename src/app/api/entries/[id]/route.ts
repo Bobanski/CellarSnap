@@ -13,6 +13,7 @@ import { signPhotoUrl } from "@/server/storage/signedUrls";
 import { RequestAuthError, requireRequestAuth } from "@/server/auth/requestAuth";
 import { createEntryPutHandler } from "./putHandler";
 import { createEntryDeleteHandler } from "./deleteHandler";
+import { projectEntryRatingForViewer } from "@/server/entries/publicFeed";
 
 export async function GET(
   request: Request,
@@ -190,7 +191,7 @@ export async function GET(
   });
 
   const entry = {
-    ...data,
+    ...projectEntryRatingForViewer(data, user.id),
     primary_grapes:
       (await fetchPrimaryGrapesByEntryId(supabase, [data.id])).get(data.id) ?? [],
     label_image_url: await signPhotoUrl(data.label_image_path, supabase),

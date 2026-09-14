@@ -127,6 +127,7 @@ export type WineEntry = {
 };
 
 export type WineEntryWithUrls = WineEntry & {
+  public_rating_label?: string | null;
   label_image_url: string | null;
   place_image_url: string | null;
   pairing_image_url: string | null;

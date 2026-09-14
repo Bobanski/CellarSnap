@@ -21,18 +21,19 @@ import RatingBadge from "@/components/RatingBadge";
  */
 function EntryRatingDisplay({
   rating,
+  publicRatingLabel,
   isOwnEntry,
 }: {
   rating: number | null | undefined;
+  publicRatingLabel?: string | null;
   isOwnEntry: boolean;
 }) {
-  if (typeof rating !== "number" || Number.isNaN(rating)) {
-    return null;
-  }
   if (isOwnEntry) {
-    return <RatingBadge rating={rating} variant="text" />;
+    return typeof rating === "number" && Number.isFinite(rating)
+      ? <RatingBadge rating={rating} variant="text" />
+      : null;
   }
-  const bandLabel = getPublicRatingBandLabel(rating);
+  const bandLabel = publicRatingLabel ?? getPublicRatingBandLabel(rating);
   return bandLabel ? (
     <span className="text-sm font-bold text-[var(--color-accent-secondary)]">
       {bandLabel}
@@ -664,6 +665,7 @@ export default function FriendProfilePage() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <EntryRatingDisplay
                               rating={entry.rating}
+                              publicRatingLabel={entry.public_rating_label}
                               isOwnEntry={entry.user_id === currentUserId}
                             />
                             {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}
@@ -757,6 +759,7 @@ export default function FriendProfilePage() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <EntryRatingDisplay
                               rating={entry.rating}
+                              publicRatingLabel={entry.public_rating_label}
                               isOwnEntry={entry.user_id === currentUserId}
                             />
                             {entry.qpr_level ? <QprBadge level={entry.qpr_level} /> : null}

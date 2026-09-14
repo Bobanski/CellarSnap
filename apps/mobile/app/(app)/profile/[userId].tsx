@@ -323,7 +323,7 @@ export default function UserProfileScreen() {
 
   const renderEntryCard = useCallback((entry: EntryTile, tagged: boolean) => {
     const producerLine = getEntryProducerLine(entry);
-    const ratingLabel = getFeedDisplayRatingLabel(entry.rating);
+    const ratingLabel = entry.public_rating_label ?? getFeedDisplayRatingLabel(entry.rating);
     const qprLabel = getEntryQprLabel(entry);
     return (
       <Pressable
@@ -583,4 +583,3 @@ const styles = StyleSheet.create({
   toggleButton: { alignSelf: "center", borderRadius: 999, borderWidth: 1, borderColor: colors.borderStrong, backgroundColor: colors.surfacePrimary, paddingHorizontal: 14, paddingVertical: 8 },
   toggleButtonText: { color: colors.textPrimary, fontSize: 12, fontWeight: "700" },
 });
-
