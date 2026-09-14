@@ -2,7 +2,8 @@
 
 This is the starting point for continuing the September 2026 audit. The plan preserves features and the dark Noir Refined theme while repairing correctness/privacy issues and reducing repeated work. It does not authorize feature removal or a theme replacement.
 
-- **Latest release and resume point:** [B02t/B02u](handovers/b02t-b02u-release.md), [sanitized evidence](evidence/b02t-b02u-release.json). #155/#156 merged; owner atomic edit API/mobile adoption and focus-loss fix final-primary verified. Physical/direct/native privacy remains Partial.
+- **Current implementation/resume:** [B02v/B02w privacy cutoff](handovers/b02v-b02w-privacy-cutover.md), [runbook](b02v-b02w-cutover.md), [local QC](evidence/b02v-b02w-qc.json). Rating isolation, durable photo fences/retirement and native 1.0.1/build 2 candidates implemented. No hosted SQL/cutoff or installed-native acceptance; QC-01/AUD-01 remain Partial.
+- **Latest release:** [B02t/B02u](handovers/b02t-b02u-release.md), [sanitized evidence](evidence/b02t-b02u-release.json). #155/#156 merged; owner atomic edit API/mobile adoption and focus-loss fix final-primary verified. Physical/direct/native privacy remains Partial.
 - **Previous release:** [B02r/B02s](handovers/b02r-b02s-release.md), [sanitized evidence](evidence/b02r-b02s-release.json). #152/#153 merged; owner-library API and mobile Library/Events adoption live-verified. Physical/direct/native rating privacy remains Partial.
 - **Previous release:** [B02o/B02p/B02q](handovers/b02o-b02p-b02q-release.md), [sanitized evidence](evidence/b02o-b02p-b02q-release.json). #148/#149/#150 merged; rating inventory, Home circle containment and required projected mobile detail live-verified. Physical/direct/native rating privacy remains Partial.
 - **Previous release:** [B02m/B02n/B05f](handovers/b02m-b02n-b05f-release.md), [sanitized evidence](evidence/b02m-b02n-b05f-release.json). #144/#145/#146 merged; owner-aware detail/profile ratings and projected bearer/mobile feed live-verified. AUD-49 Git-index cleanup closed; physical rating privacy/native rollout remain Partial.
@@ -24,6 +25,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B02v/B02w implementation is complete on `fix/privacy-cutover`; local activated-cutoff QC and 557 isolated/39 schema checks pass. Native candidates are in EAS. The next privacy work is coordinated staging, native acceptance/distribution, primary deployment and actual cutoff/retirement—not another public projection slice. [Current handover](handovers/b02v-b02w-privacy-cutover.md).**
 
 **B02t/B02u #155/#156 merged `59cf8d5`, exactly matching tested `62a7de4` tree. Bearer owner edit API and mobile normal/grouped/bulk-review adoption live-verified, including atomic grapes, lost-response retry, conflicts and the corrected focus-loss navigation bug. 557 isolated/30 schema checks, types/lint/exports/CI/primary builds pass. No SQL/native distribution; QC-01 physical/direct/native and broader AUD-13/15 remain Partial. [Release/resume](handovers/b02t-b02u-release.md).**
 

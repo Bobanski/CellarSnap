@@ -1,0 +1,727 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-14",
+  "base": "854dcff",
+  "implementationCommit": "cb2e19f44ed5b5c7a214cf2e5465c89f0e5ee2ae",
+  "project": "rbmkypbqavmnuycznssv",
+  "hostedWrites": 0,
+  "productionCutoffsActivated": false,
+  "productionPhotoRetirement": false,
+  "nativeRuntimeAvailable": false,
+  "environment": "Disposable PostgreSQL 17.6 + real PostgREST 16.3; loopback fixture Auth/Storage; Next browser and Expo web. Both local cutoffs active. No hosted CDN simulation claim.",
+  "checks": {
+    "isolated": 557,
+    "schema": 39,
+    "postgresCatalog": true,
+    "concurrency": {
+      "badge": 4,
+      "atomicEdit": 2,
+      "photoRekey": 3,
+      "cutoverOldSnapshots": 2
+    },
+    "webTypes": true,
+    "mobileTypes": "TypeScript 6.0.3 from mobile dependency tree",
+    "databaseTypeContracts": true,
+    "webAndMobileLint": true,
+    "nextProductionBuild": true,
+    "expoExport": [
+      "ios",
+      "android",
+      "web"
+    ]
+  },
+  "browser": {
+    "edits": {
+      "results": [
+        {
+          "api": "crossOriginOwnerAndTesterNonowner",
+          "ownerMinimalReceipt": true,
+          "anonymousMalformedAndForeignDenied": true
+        },
+        {
+          "api": "atomicRollbackAndOwnerBounds",
+          "invalidGrapeRollsBackRating": true,
+          "ratings1And100AndNull": true,
+          "staleSnapshot409": true
+        },
+        {
+          "validCookieCannotAuthorizeCommand": true,
+          "invalidBearerCannotFallBack": true
+        },
+        {
+          "device": "desktop",
+          "owner91to93": true,
+          "validation101PreventsWrite": true,
+          "notesPreserveGrapeLinkIds": true,
+          "explicitGrapesAtomic": true,
+          "failedSavePreservesAllData": true,
+          "lostSuccessRetryPreservesLinkIds": true,
+          "conflictPreservesSavedAndLocalText": true,
+          "emptyGrapeSelectionAndRecovery": true,
+          "webRatingNotesAndPhoto": true
+        },
+        {
+          "device": "phone",
+          "timeoutRetainsInputAndSavedData": true
+        },
+        {
+          "device": "phone",
+          "owner91to93": true,
+          "validation101PreventsWrite": true,
+          "notesPreserveGrapeLinkIds": true,
+          "explicitGrapesAtomic": true,
+          "failedSavePreservesAllData": true,
+          "lostSuccessRetryPreservesLinkIds": true,
+          "conflictPreservesSavedAndLocalText": true,
+          "emptyGrapeSelectionAndRecovery": true,
+          "webRatingNotesAndPhoto": true
+        },
+        {
+          "groupedOwnerDetails": true,
+          "companionUntouched": true
+        },
+        {
+          "foreignReceiptRejected": true,
+          "explicitRetryRecovers": true
+        },
+        {
+          "bulkPhoneFailureRetryPublish": true
+        },
+        {
+          "lateBulkSaveAfterTabNavigationDoesNotNavigateBack": true
+        },
+        {
+          "directSaveRpcOrGrapeWrites": 0,
+          "bearerOnlyCommands": true,
+          "commands": 18
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "api-authority",
+          "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "phase": "api-authority",
+          "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "phase": "api-authority",
+          "message": "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+        },
+        {
+          "phase": "api-authority",
+          "message": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+        },
+        {
+          "phase": "api-transaction",
+          "message": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "api-transaction",
+          "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+        },
+        {
+          "phase": "edit-desktop",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "lost-success-desktop",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "conflict-desktop",
+          "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+        },
+        {
+          "phase": "edit-phone",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "lost-success-phone",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "conflict-phone",
+          "message": "Failed to load resource: the server responded with a status of 409 (Conflict)"
+        },
+        {
+          "phase": "bulk-phone",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "api-authority",
+          "status": 401,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "api-authority",
+          "status": 401,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "api-authority",
+          "status": 401,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "api-authority",
+          "status": 403,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "api-transaction",
+          "status": 400,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "api-transaction",
+          "status": 409,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "edit-desktop",
+          "status": 503,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "lost-success-desktop",
+          "status": 503,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "conflict-desktop",
+          "status": 409,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "edit-phone",
+          "status": 503,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "lost-success-phone",
+          "status": 503,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "conflict-phone",
+          "status": 409,
+          "path": "/api/entries/fixture/details"
+        },
+        {
+          "phase": "bulk-phone",
+          "status": 503,
+          "path": "/api/entries/fixture/details"
+        }
+      ],
+      "directWrites": [],
+      "fixturesRemoved": true
+    },
+    "library": {
+      "results": [
+        {
+          "otherOwnerIsolated": true,
+          "crossOwnerCursorRejected": true
+        },
+        {
+          "ownerOnlyIncludingTester": true,
+          "ownerNumbers": true,
+          "grapes": true,
+          "groupBands": true,
+          "signatureFree": true,
+          "tiedMicrosecondPagination": {
+            "pages": 7,
+            "fixtureCount": 105,
+            "duplicates": 0
+          },
+          "badInputRejected": true
+        },
+        {
+          "device": "desktop",
+          "photoDecoded": true,
+          "privateRatingFilter": true,
+          "ratingSort": true,
+          "varietalGrouping": true,
+          "eventSelectionAndDetail": true
+        },
+        {
+          "device": "phone",
+          "photoDecoded": true,
+          "privateRatingFilter": true,
+          "ratingSort": true,
+          "varietalGrouping": true,
+          "eventSelectionAndDetail": true
+        },
+        {
+          "directLibraryEntryReads": 0,
+          "bearerWithoutCookies": true
+        },
+        {
+          "outageClears": true,
+          "retry": true
+        },
+        {
+          "rejected": "owner"
+        },
+        {
+          "rejected": "group"
+        },
+        {
+          "rejected": "viewer"
+        },
+        {
+          "laterPageFailureClearsPartialLibrary": true
+        },
+        {
+          "optionalMembershipDoesNotStrandLibrary": true
+        },
+        {
+          "cookieApi": true,
+          "invalidBearerNoCookieFallback": true,
+          "anonymousDenied": true,
+          "preflight": true,
+          "webOwnerDetailDesktopPhone": true
+        },
+        {
+          "unmountAndSignoutRejectHeldResult": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [
+        {
+          "phase": "api-pagination",
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "api-pagination",
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "api-pagination",
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "api-pagination",
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "api-pagination",
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        },
+        {
+          "phase": "library-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "library-outage",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "phase": "library-late-page-failure",
+          "text": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        }
+      ],
+      "failures": [
+        {
+          "phase": "api-pagination",
+          "path": "/api/entries/library",
+          "status": 400
+        },
+        {
+          "phase": "api-pagination",
+          "path": "/api/entries/library",
+          "status": 400
+        },
+        {
+          "phase": "api-pagination",
+          "path": "/api/entries/library",
+          "status": 400
+        },
+        {
+          "phase": "api-pagination",
+          "path": "/api/entries/library",
+          "status": 400
+        },
+        {
+          "phase": "api-pagination",
+          "path": "/api/entries/library",
+          "status": 400
+        },
+        {
+          "phase": "library-outage",
+          "path": "/api/entries/library",
+          "status": 503
+        },
+        {
+          "phase": "library-outage",
+          "path": "/api/entries/library",
+          "status": 503
+        },
+        {
+          "phase": "library-late-page-failure",
+          "path": "/api/entries/library",
+          "status": 503
+        }
+      ],
+      "directReads": [],
+      "requests": [
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "api-pagination",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-desktop",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-desktop",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-desktop",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-phone",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-phone",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-phone",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-outage",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-outage",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-outage",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-outage",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-invalid-owner",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-invalid-owner",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-invalid-group",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-invalid-group",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-invalid-viewer",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-invalid-viewer",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-late-page-failure",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-late-page-failure",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-late-page-failure",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-membership-timeout",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-membership-timeout",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-membership-timeout",
+          "bearer": true,
+          "cookie": false,
+          "cursor": true
+        },
+        {
+          "phase": "library-signout",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        },
+        {
+          "phase": "library-signout",
+          "bearer": true,
+          "cookie": false,
+          "cursor": false
+        }
+      ],
+      "fixturesRemoved": true
+    },
+    "profile": {
+      "results": [
+        {
+          "who": "A",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "who": "A",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": true
+        },
+        {
+          "device": "desktop",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "device": "phone",
+          "profileBands": true,
+          "detailNoNumericCard": true,
+          "profileToDetail": true
+        },
+        {
+          "testAuthorDenied": true,
+          "blockDeniedAndRestored": true
+        },
+        {
+          "who": "B",
+          "mode": "cookie",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "who": "B",
+          "mode": "bearer",
+          "detailOwnership": true,
+          "profileOwnership": true,
+          "mixedOwnerTags": true,
+          "privateDenied": false
+        },
+        {
+          "ownerSaveReload": true,
+          "rating": 93
+        },
+        {
+          "anonymousDenied": true
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "failures": [],
+      "fixturesRemoved": true,
+      "profilesRestored": true
+    },
+    "webCreateAvatar": {
+      "results": [
+        {
+          "device": "desktop",
+          "createAndDetail96": true,
+          "publicSourceNull": true
+        },
+        {
+          "device": "phone",
+          "createAndDetail96": true,
+          "publicSourceNull": true
+        },
+        {
+          "avatarUniqueReplacement": true,
+          "oldBytesPreservedForVerifiedRetirement": true,
+          "profileImageDecoded": true
+        }
+      ],
+      "errors": [],
+      "failures": [],
+      "fixturesRemoved": true
+    },
+    "expoCreate": {
+      "results": [],
+      "errors": [],
+      "failures": [],
+      "fixturesRemoved": true
+    },
+    "directRest": {
+      "results": [
+        {
+          "viewer": "owner",
+          "directRawNull": true,
+          "privateRelationAndEmbeddedOwnerOnly": true,
+          "filtersCannotInferForeignNumber": true
+        },
+        {
+          "viewer": "foreignTester",
+          "directRawNull": true,
+          "privateRelationAndEmbeddedOwnerOnly": true,
+          "filtersCannotInferForeignNumber": true
+        }
+      ],
+      "fixturesRemoved": true
+    }
+  },
+  "nativeCandidates": {
+    "version": "1.0.1",
+    "build": 2,
+    "sourceCommit": "cb2e19f44ed5b5c7a214cf2e5465c89f0e5ee2ae",
+    "ios": "d878c8d8-0c6f-43a9-8ec2-0b00d06c2f21",
+    "android": "cb90f8d5-4436-4e49-b4ec-5a8a05b676c5",
+    "distribution": "internal build candidates; no acceptance/install/store submission",
+    "status": "pending final check"
+  },
+  "knownVisualLimits": [
+    "QC-05 Expo router headings",
+    "QC-12 Expo single-photo detail gap despite decoded image bytes; library/events/web photos visible",
+    "QC-19 unbroken public profile display name overflows phone header"
+  ]
+}

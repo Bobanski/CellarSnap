@@ -85,3 +85,29 @@ test('service knowledge snapshots retain exact ratings and synchronous updates i
   assert.equal((await db.query('select rating from wine_entries_with_ratings where id=$1',[uid(101)])).rows[0].rating,88);
  }finally{await db.close();}
 });
+
+test('installing the staged migration preserves existing knowledge bytes and source fingerprints',async()=>{
+ const {PGlite}=await import('@electric-sql/pglite');
+ const {vector}=await import('@electric-sql/pglite-pgvector');
+ const {baselineFile,forwardSql}=await import('./contract.mjs');
+ const db=new PGlite({extensions:{vector}});
+ try{
+  await db.exec(await baselineFile('auth.fixture.sql'));await db.exec('create extension vector');
+  await db.exec((await baselineFile('app.sql')).replace('CREATE SCHEMA public;',''));
+  await db.exec('set search_path=public');await db.exec(await baselineFile('auth-hooks.sql'));
+  await db.exec(await baselineFile('managed-storage.fixture.sql'));
+  const migrations=await forwardSql();const boundary=migrations.findIndex(sql=>sql.startsWith('-- B02v / QC-01:'));
+  assert(boundary>0);for(const migration of migrations.slice(0,boundary))await db.exec(migration);
+  await db.exec('set row_security=on; set check_function_bodies=on; set search_path=public');
+  await db.query('insert into auth.users(id,email) values($1,$2)',[owner,'existing-owner@example.invalid']);
+  await db.query("insert into wine_entries(id,user_id,rating,wine_name) values($1,$2,93,'Existing source')",[entry,owner]);
+  await as(db,'service_role',null);const before=(await db.query('select entry_knowledge_snapshot($1) s',[entry])).rows[0].s;
+  await db.query('select publish_entry_knowledge($1,$2,$3,$4)',[entry,before,'Existing private knowledge',JSON.stringify(Array(1536).fill(0))]);
+  await as(db,'postgres',null);for(const migration of migrations.slice(boundary))await db.exec(migration);
+  assert.deepEqual((await db.query('select entry_knowledge_snapshot($1) s',[entry])).rows[0].s,before);
+  assert.equal((await db.query('select count(*)::int n from user_entry_knowledge_chunks')).rows[0].n,1);
+  await db.exec('select private.activate_rating_isolation()');
+  assert.deepEqual((await db.query('select entry_knowledge_snapshot($1) s',[entry])).rows[0].s,before);
+  assert.equal((await db.query('select count(*)::int n from user_entry_knowledge_chunks')).rows[0].n,1);
+ }finally{await db.close();}
+});
