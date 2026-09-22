@@ -1,3 +1,5 @@
+import { createAlgorithmScoreHandler, buildDirectInput } from "../src/app/api/algorithm/score/handler";
+import type { PalateProfileRecord } from "../src/server/algorithm/palateDistillation";
 import { expect, test } from "@playwright/test";
 import type { User } from "@supabase/supabase-js";
 import { createAlgorithmScoreBatchHandler } from "../src/app/api/algorithm/score/batch/handler";
@@ -83,7 +85,10 @@ function makeRefreshSupabase(rows: Record<string, unknown>[]) {
       return { data: rows, error: null };
     },
   };
-  return { from: () => ({ select: () => query }) } as never;
+  return { from: () => ({ select: (fields: string) => {
+    expect(fields).not.toContain("quality_tier");
+    return query;
+  } }) } as never;
 }
 
 test.describe("WS3 algorithm UI support", () => {
@@ -217,6 +222,7 @@ test.describe("WS3 algorithm UI support", () => {
         return [];
       },
       readPalateProfile: async () => { palateCalls += 1; return null; },
+      loadEntryForScoring: async () => buildDirectInput({ wine_type: "red" }),
     });
 
     const response = await handler(
@@ -283,7 +289,7 @@ test.describe("WS3 algorithm UI support", () => {
     expect(palateLoads).toBe(0);
   });
 
-  test("batch score handler uses direct fields when entry_id is present", async () => {
+  test("batch score handler rejects inaccessible entry IDs even with direct fields", async () => {
     let loadCalls = 0;
 
     const handler = createAlgorithmScoreBatchHandler({
@@ -334,9 +340,9 @@ test.describe("WS3 algorithm UI support", () => {
     const payload = (await response.json()) as {
       results: Array<{ ok: boolean; data: { score: number } | null }>;
     };
-    expect(payload.results[0]?.ok).toBeTruthy();
-    expect(payload.results[0]?.data?.score).toBeGreaterThan(0);
-    expect(loadCalls).toBe(0);
+    expect(payload.results[0]?.ok).toBe(false);
+    expect(payload.results[0]?.data).toBeNull();
+    expect(loadCalls).toBe(1);
   });
 
   test("batch score handler merges loaded entry data with direct overrides", async () => {
@@ -621,4 +627,73 @@ test.describe("WS3 algorithm UI support", () => {
     expect(loadPreferenceCalls).toBe(0);
     expect(writeCalls).toBe(0);
   });
+});
+
+for (const seeded of [false, true]) {
+  test(`single, batch and refresh produce identical complete cold scores with distilled seed ${seeded}`, async () => {
+    const entryId = "11111111-1111-4111-8111-111111111111";
+    const profile = makeProfile();
+    const palate: PalateProfileRecord | null = seeded ? {
+      signal_hash: "fixture", model: "fixture", updated_at: "2026-09-22T00:00:00Z",
+      profile: { narrative: "Fixture", adventurousness: 6, confidence: 0.9, wine_types: [{
+        wine_type: "red", narrative: "Fixture", axis_seeds: [{ axis: "body", value: 1, confidence: 0.9 },
+          { axis: "acidity", value: 5, confidence: 0.9 }],
+        favored_varietals: ["Merlot"], favored_regions: ["Bordeaux"], favored_countries: ["France"], avoided_styles: [],
+      }] },
+    } : null;
+    const input = { wine_type: "red" as const, canonical_region: "Bordeaux", canonical_sub_region: "Left Bank",
+      canonical_country: "France", primary_grapes: "Merlot", producer: "Fixture", classification: "Reserve", quality_tier: "Reserve", vintage: 2019 };
+    const entries = [{ rating: 90, wine_type: "red" as const, assembled_sensory: profile.sensory, advanced_notes: null }];
+    const dependencies = {
+      requireRequestAuth: async () => ({ supabase: {} as never, user: makeUser("user-1"), authMode: "bearer" as const }),
+      loadEntryForScoring: async () => input, loadUserPreferenceEntries: async () => entries,
+      readPalateProfile: async () => palate, assembleProfile: async (actual: unknown) => { expect(actual).toEqual(input); return profile; },
+      readCachedEntryScore: async () => null, readCachedEntryScores: async () => new Map(), writeCachedEntryScore: async () => {},
+    };
+    const request = (body: unknown) => new Request("http://localhost/api/algorithm/score", { method: "POST", body: JSON.stringify(body) });
+    const single = await (await createAlgorithmScoreHandler(dependencies)(request({ entry_id: entryId }))).json();
+    const batch = await (await createAlgorithmScoreBatchHandler(dependencies)(request({ items: [{ entry_id: entryId }] }))).json();
+    expect(batch.results[0].data).toEqual(single);
+    let refreshed: unknown;
+    await refreshRecentUserScoreCache(makeRefreshSupabase([{ ...input, id: entryId, vintage: "2019" }]), "user-1", {
+      ...dependencies, fetchPrimaryGrapesByEntryId: async () => new Map([[entryId, [{ id: "merlot", name: "Merlot", position: 0 }]]]),
+      writeCachedEntryScore: async (_client, _owner, id, value) => { expect(id).toBe(entryId); refreshed = value; },
+    });
+    expect(refreshed).toEqual(single);
+    expect(single.axis_contributions.body.user_value).toBeDefined();
+    if (seeded) expect(single.axis_contributions.body.user_value).toBeLessThan(profile.sensory.body);
+  });
+}
+
+test("batch hydrates distinct misses once, preserves order and direct items on a hydration failure", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  let calls = 0, writes = 0, fail = false;
+  const handler = createAlgorithmScoreBatchHandler({
+    requireRequestAuth: async () => ({ supabase: {} as never, user: makeUser("user-1"), authMode: "bearer" }),
+    loadEntriesForScoring: async (_client, owner, ids) => { calls++; expect(owner).toBe("user-1"); expect(ids).toEqual([id]);
+      if (fail) throw Error("private database diagnostic"); return new Map([[id, buildDirectInput({ wine_type: "red" })]]); },
+    loadUserPreferenceEntries: async () => [], readPalateProfile: async () => null,
+    readCachedEntryScores: async () => new Map(), assembleProfile: async () => makeProfile(),
+    writeCachedEntryScoresBulk: async (_client, _owner, rows) => { writes++; expect(rows).toHaveLength(1); },
+  });
+  const request = () => new Request("http://localhost/batch", { method: "POST", body: JSON.stringify({ items: [
+    { entry_id: id, request_id: "first" }, { wine_type: "red", request_id: "direct" }, { entry_id: id, request_id: "duplicate" },
+  ] }) });
+  const good = await (await handler(request())).json();
+  expect(good.results.map((r: { request_id: string }) => r.request_id)).toEqual(["first", "direct", "duplicate"]);
+  expect(good.results.every((r: { ok: boolean }) => r.ok)).toBe(true); expect(calls).toBe(1); expect(writes).toBe(1);
+  fail = true;
+  const bad = await (await handler(request())).json();
+  expect(bad.results.map((r: { ok: boolean }) => r.ok)).toEqual([false, true, false]);
+  expect(JSON.stringify(bad)).not.toContain("private database diagnostic"); expect(writes).toBe(1);
+});
+
+test("refresh does not publish incomplete scores after a primary-grape read failure", async () => {
+  let writes = 0;
+  await expect(refreshRecentUserScoreCache(makeRefreshSupabase([{ id: "entry", wine_type: "red" }]), "user-1", {
+    loadUserPreferenceEntries: async () => [], readPalateProfile: async () => null,
+    fetchPrimaryGrapesByEntryId: async (_client, _ids, options) => { expect(options?.strict).toBe(true); throw Error("grape outage"); },
+    writeCachedEntryScore: async () => { writes++; },
+  })).rejects.toThrow("grape outage");
+  expect(writes).toBe(0);
 });

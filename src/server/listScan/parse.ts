@@ -1,3 +1,4 @@
+import { createScoringPreferences } from "@/server/algorithm/scoringPreferences";
 import { assertReadableWineList, UNREADABLE_WINE_LIST_MESSAGE } from "@/server/listScan/readability";
 import { fetchRemoteMenu } from "@/server/listScan/remoteSource";
 import OpenAI from "openai";
@@ -30,12 +31,10 @@ import {
 } from "@/server/algorithm/profileAssembly";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import {
-  distilledSeedForWineType,
   readPalateProfile,
   type PalateProfileRecord,
 } from "@/server/algorithm/palateDistillation";
 import {
-  buildUserPreferenceVector,
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
@@ -1872,7 +1871,7 @@ async function enrichParsedWines(params: {
   const prefetchMs = Date.now() - prefetchStartTime;
   console.log(`[Team Alpha] Prefetch completed in ${prefetchMs}ms for ${uniqueWineTypes.length} wine types and ${uniqueVintages.length} vintages`);
 
-  const preferenceVectors = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
+  const preferenceFor = createScoringPreferences(preferenceEntries, palateRecord);
   const profileCache = new Map<
     string,
     Promise<Awaited<ReturnType<typeof assembleWineProfileWithDataSource>>>
@@ -1915,14 +1914,7 @@ async function enrichParsedWines(params: {
           assembleWineProfileWithDataSource(profileInput, prefetchedDataSource);
         profileCache.set(profileKey, profilePromise);
         const profile = await profilePromise;
-        const preferenceVector =
-          preferenceVectors.get(wineType) ??
-          buildUserPreferenceVector(
-            preferenceEntries,
-            wineType,
-            palateRecord ? distilledSeedForWineType(palateRecord, wineType) : null
-          );
-        preferenceVectors.set(wineType, preferenceVector);
+        const preferenceVector = preferenceFor(wineType);
         const match = computeMatchScore(profile, preferenceVector);
         scoredWineCount += 1;
 

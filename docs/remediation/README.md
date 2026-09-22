@@ -1,6 +1,8 @@
 # Remediation hub
 
-- **Latest handover / five closures:** [B11a–B11c / B01 verification](handovers/b11a-b11c-release.md), [sanitized evidence](evidence/b11a-b11c-release.json). #161 merged `83454a1`, primary live; AUD-17/AUD-27/QC-11/QC-18/QC-19 Closed. 13 Closed / 72 total, including newly recorded QC-20 (Open/P2).
+- **Latest handover / larger release candidate:** [B02x/B07b/B09a](handovers/b02x-b07b-b09a.md), [sanitized evidence](evidence/b02x-b07b-b09a-qc.json). #164 source `f504e4e`: seeded scoring/refresh correctness, bounded batch reads and score retry pass local QC; historical photo preservation/reconciliation verified read-only. Merge, production deployment and live acceptance pending.
+
+- **Previous release / five closures:** [B11a–B11c / B01 verification](handovers/b11a-b11c-release.md), [sanitized evidence](evidence/b11a-b11c-release.json). #161 merged `83454a1`, primary live; AUD-17/AUD-27/QC-11/QC-18/QC-19 Closed. 13 Closed / 72 total, including newly recorded QC-20 (Open/P2).
 
 - **Previous web release:** [B02v/B02w](handovers/b02v-b02w-web-release.md), [sanitized evidence](evidence/b02v-b02w-web-release.json). #158 merged, primary and SQL live, both cutoffs active, all 487 referenced photo cohorts retired/verified and all 882 files preserved. QC-01 Closed for current web scope; AUD-01 remains Partial for retained historical media. Native acceptance is deferred to mobile launch by owner.
 
@@ -29,6 +31,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**B02x/B07b/B09a is ready for release review in #164, source `f504e4e`.** Scores after refresh now use the same palate seeds as on-demand/list scoring and preserve canonical location/vintage. Batch hydration uses two queries for up to 50 owned entries, preserves mixed-item results and deduplicates cache writes; scoring outages offer an accurate alert and keyboard retry. 568 isolated / 41 schema-tool checks, web lint/types/build and desktop/phone production-build browser QC pass. Historical reconciliation verified all 882 backup files and all 198 retained live objects without Storage mutation. No new finding closures: AUD-11/28 are QC passed/release pending; AUD-01 remains P0/Partial, AUD-22 remains Open. [Current handover](handovers/b02x-b07b-b09a.md).
 
 **B11a–B11c and B01 release verification are complete at application `83454a1` (#161).** Five findings closed: Explore grape statistics, all-hit/terminal scoring batches, empty scans, editor input labels and phone profile wrapping. 562 isolated tests and web/mobile CI pass; final-primary desktop/phone browser and cookie-stripped Expo web scan/retry acceptance passed. Fixtures removed and temporary profile names restored. QC-20 separately records a pre-existing mobile notes-authentication failure; it remains Open. Current totals: **13 Closed, 21 Partial, 35 Open, 2 Needs triage, 1 Not reproducible (72)**. Native runtimes are unavailable and launch acceptance remains deferred by owner. [Current handover](handovers/b11a-b11c-release.md).
 

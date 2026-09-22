@@ -109,7 +109,8 @@ export default function EntryDetailPage() {
   const [loading, setLoading] = useState(true);
   const [scoreResult, setScoreResult] = useState<AlgorithmScoreResponse | null>(null);
   const [scoreLoading, setScoreLoading] = useState(false);
-  const [scoreError, setScoreError] = useState<string | null>(null);
+  const [scoreError, setScoreError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [scoreRetry, setScoreRetry] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [shareToast, setShareToast] = useState<ShareToast | null>(null);
@@ -344,7 +345,7 @@ export default function EntryDetailPage() {
       if (!payload.entry_id && !payload.wine_type) {
         if (isMounted) {
           setScoreResult(null);
-          setScoreError("We need more wine detail before we can score this bottle.");
+          setScoreError({ message: "We need more wine detail before we can score this bottle.", retryable: false });
           setScoreLoading(false);
         }
         return;
@@ -360,9 +361,7 @@ export default function EntryDetailPage() {
         }
       } catch {
         if (isMounted) {
-          setScoreError(
-            "Add a wine type and a tasting note, and we'll read how this bottle fits your palate."
-          );
+          setScoreError({ message: "We couldn't load your match. Please try again.", retryable: true });
           setScoreResult(null);
         }
       } finally {
@@ -377,7 +376,7 @@ export default function EntryDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [entry, currentUserId]);
+  }, [entry, currentUserId, scoreRetry]);
 
   const onDelete = async () => {
     if (!entryId) {
@@ -914,18 +913,23 @@ export default function EntryDetailPage() {
                 className="mt-2 text-2xl font-light text-[var(--color-text-primary)]"
                 style={{ fontFamily: "var(--font-serif)" }}
               >
-                {isScoreProfileBuilding ? "Your palate is still forming" : "Match not ready yet"}
+                {scoreError?.retryable ? "Match temporarily unavailable" : isScoreProfileBuilding ? "Your palate is still forming" : "Match not ready yet"}
               </h2>
-              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+              <p role={scoreError?.retryable ? "alert" : undefined} className="mt-2 text-sm text-[var(--color-text-secondary)]">
                 {isScoreProfileBuilding
                   ? `We need at least 5 scored entries with sensory notes — you have ${
                       scoreResult?.preference_event_count ?? 0
                     }.`
                   : scoreResult?.confidence_warning ??
-                    scoreError ??
+                    scoreError?.message ??
                     "Add a little more detail — a wine type and a tasting note — and we'll read how this bottle fits your palate."}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
+                {scoreError?.retryable ? (
+                  <Button variant="secondary" onClick={() => setScoreRetry((attempt) => attempt + 1)}>
+                    Retry match
+                  </Button>
+                ) : null}
                 <Link
                   href="/entries/new"
                   className="rounded-full bg-[var(--color-accent-primary)] px-4 py-2 text-sm font-medium text-[var(--color-text-on-accent)] transition hover:bg-[var(--color-accent-hover)]"

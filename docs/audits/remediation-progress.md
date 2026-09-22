@@ -131,3 +131,8 @@ PR #108 (`719ad1d`) restores typed bearer grape autocomplete; PR #110 (`d4e5cd2`
 
 ## B02r/B02s — September 13, 2026
 Owner-library API and required mobile Library/Events adoption merged #152/#153 as `05f912d`, exact tested `db3225f` tree. 509 isolated/30 schema checks and actual final-primary desktop/phone browser acceptance pass. No SQL/native release; physical rating and photo retirement gates remain. [Release/resume](../remediation/handovers/b02r-b02s-release.md).
+
+
+## B02x/B07b/B09a candidate — September 22, 2026
+
+PR #164, source `f504e4e`, base `32dea83`: shared seeded scoring/refresh preferences, corrected canonical/vintage loading, bounded owner entry/grape batch hydration, duplicate-write protection and actionable score failure/retry. Read-only reconciliation verifies all 882 recovery files and 198 retained live objects; no photo mutation. 568 isolated / 41 schema-tool checks, web types/lint/build, web/mobile CI and desktop/phone production-build browser QC pass; primary preview Ready, known duplicate OPS-01 fails. Merge/production deployment/live verification pending. AUD-11/28 are QC passed/release pending, no new closures. [Handover](../remediation/handovers/b02x-b07b-b09a.md), [evidence](../remediation/evidence/b02x-b07b-b09a-qc.json).

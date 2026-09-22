@@ -9,6 +9,8 @@ import {
   createPreFetchedProfileDataSource,
   createSupabaseProfileAssemblyDataSource,
 } from "@/server/algorithm/profileAssembly";
+import { defaultLoadEntriesForScoring } from "@/server/algorithm/scoringEntries";
+import { createScoringPreferences } from "@/server/algorithm/scoringPreferences";
 import { computeMatchScore } from "@/server/algorithm/scoringEngine";
 import type { AssembleWineProfileInput, EffectiveWineProfile } from "@/server/algorithm/types";
 import {
@@ -16,7 +18,6 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import {
-  distilledSeedForWineType,
   readPalateProfile,
 } from "@/server/algorithm/palateDistillation";
 import {
@@ -40,6 +41,7 @@ import {
 } from "../handler";
 
 type BatchDependencies = {
+  loadEntriesForScoring: typeof defaultLoadEntriesForScoring;
   requireRequestAuth: typeof requireRequestAuth;
   loadEntryForScoring: (
     supabase: RequestSupabaseClient,
@@ -150,6 +152,7 @@ export function createAlgorithmScoreBatchHandler(
 
   const resolvedDependencies: BatchDependencies = {
     requireRequestAuth,
+    loadEntriesForScoring: defaultLoadEntriesForScoring,
     loadEntryForScoring: defaultAlgorithmScoreDependencies.loadEntryForScoring,
     loadUserPreferenceEntries: defaultAlgorithmScoreDependencies.loadUserPreferenceEntries,
     assembleProfile: defaultAlgorithmScoreDependencies.assembleProfile,
@@ -198,6 +201,25 @@ export function createAlgorithmScoreBatchHandler(
         .filter((entryId): entryId is string => typeof entryId === "string")
     );
 
+    const entryIdsToLoad = [...new Set(payload.data.items
+      .filter(item => item.entry_id && (hasDirectScoreOverrides(item) || !cachedScores.has(item.entry_id)))
+      .map(item => item.entry_id!))];
+    let loadedEntries = new Map<string, LoadedEntryForScoring>();
+    let entryLoadFailed = false;
+    if (entryIdsToLoad.length) {
+      try {
+        // Retain the injected single-loader seam for existing callers/tests.
+        loadedEntries = dependencies.loadEntryForScoring && !dependencies.loadEntriesForScoring
+          ? new Map((await Promise.all(entryIdsToLoad.map(async id =>
+              [id, await resolvedDependencies.loadEntryForScoring(auth.supabase, auth.user.id, id)] as const
+            ))).filter((pair): pair is readonly [string, LoadedEntryForScoring] => pair[1] !== null))
+          : await resolvedDependencies.loadEntriesForScoring(auth.supabase, auth.user.id, entryIdsToLoad);
+      } catch {
+        entryLoadFailed = true;
+        console.warn("[algorithm/score/batch] Entry hydration failed", { entries: entryIdsToLoad.length });
+      }
+    }
+
     // Phase 1: resolve every item's score input (loading entries as needed,
     // honoring the cache), without assembling a profile yet. This lets us
     // collect every distinct wine_type/vintage in the request before doing
@@ -224,12 +246,9 @@ export function createAlgorithmScoreBatchHandler(
 
           let scoreInput = buildDirectInput(item);
 
-          if (item.entry_id && !scoreInput.wine_type) {
-            const loaded = await resolvedDependencies.loadEntryForScoring(
-              auth.supabase,
-              auth.user.id,
-              item.entry_id
-            );
+          if (item.entry_id) {
+            if (entryLoadFailed) throw new Error("Unable to load score entries.");
+            const loaded = loadedEntries.get(item.entry_id);
 
             if (!loaded) {
               return {
@@ -313,7 +332,7 @@ export function createAlgorithmScoreBatchHandler(
       resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
       resolvedDependencies.readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
     ]);
-    const preferenceCache = new Map<WineType, ReturnType<typeof buildUserPreferenceVector>>();
+    const preferenceFor = createScoringPreferences(preferenceEntries, palateRecord, resolvedDependencies.buildUserPreferenceVector);
 
     // Phase 2: assemble profiles + compute scores. In production (no
     // assembleProfile override) prefetch every reference table once for the
@@ -367,19 +386,7 @@ export function createAlgorithmScoreBatchHandler(
             quality_tier: scoreInput.quality_tier,
           });
 
-          const userPreference =
-            preferenceCache.get(scoreInput.wine_type) ??
-            resolvedDependencies.buildUserPreferenceVector(
-              preferenceEntries,
-              scoreInput.wine_type,
-              palateRecord
-                ? distilledSeedForWineType(palateRecord, scoreInput.wine_type)
-                : null
-            );
-
-          if (!preferenceCache.has(scoreInput.wine_type)) {
-            preferenceCache.set(scoreInput.wine_type, userPreference);
-          }
+          const userPreference = preferenceFor(scoreInput.wine_type);
 
           const match = resolvedDependencies.computeMatchScore(
             effectiveProfile,
@@ -428,7 +435,7 @@ export function createAlgorithmScoreBatchHandler(
       await resolvedDependencies.writeCachedEntryScoresBulk(
         auth.supabase,
         auth.user.id,
-        cacheWrites
+        [...new Map(cacheWrites.map(row => [row.entryId, row])).values()]
       );
     }
 

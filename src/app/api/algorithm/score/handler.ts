@@ -5,6 +5,8 @@ import type { AlgorithmScoreResponse } from "@/lib/algorithm/api";
 import { createPrivateBetaFeatureDeniedResponse, userHasPrivateBetaFeatureAccess } from "@/lib/access/privateBetaFeatures";
 import { fetchPrimaryGrapesByEntryId } from "@/lib/primaryGrapes";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { defaultLoadEntryForScoring } from "@/server/algorithm/scoringEntries";
+import { createScoringPreferences } from "@/server/algorithm/scoringPreferences";
 import { MIN_DISPLAY_CONFIDENCE } from "@/server/algorithm/constants";
 import {
   assembleWineProfile,
@@ -23,7 +25,6 @@ import {
   type PreferenceSourceEntry,
 } from "@/server/algorithm/userPreferences";
 import {
-  distilledSeedForWineType,
   readPalateProfile,
 } from "@/server/algorithm/palateDistillation";
 import {
@@ -42,30 +43,6 @@ export type RequestSupabaseClient = RequestAuthResult["supabase"];
 
 export type LoadedEntryForScoring = Omit<AssembleWineProfileInput, "wine_type"> & {
   wine_type: WineType | null;
-};
-
-type EntryRowWithCanonicalFields = {
-  id: string;
-  user_id: string;
-  wine_type: WineType | null;
-  canonical_region: string | null;
-  canonical_sub_region: string | null;
-  canonical_country: string | null;
-  producer: string | null;
-  classification: string | null;
-  vintage: string | null;
-};
-
-type EntryRowFallback = {
-  wine_type?: WineType | null;
-  id: string;
-  user_id: string;
-  producer: string | null;
-  classification: string | null;
-  vintage: string | null;
-  region: string | null;
-  appellation: string | null;
-  country: string | null;
 };
 
 type PreferenceEntryRow = {
@@ -97,6 +74,7 @@ type AlgorithmScoreHandlerDependencies = {
   assembleProfile: (input: AssembleWineProfileInput) => Promise<EffectiveWineProfile>;
   buildUserPreferenceVector: typeof buildUserPreferenceVector;
   computeMatchScore: typeof computeMatchScore;
+  readPalateProfile: typeof readPalateProfile;
   readCachedEntryScore: typeof readCachedEntryScore;
   writeCachedEntryScore: typeof writeCachedEntryScore;
 };
@@ -162,92 +140,7 @@ function isWineType(value: string | null | undefined): value is WineType {
   return WINE_TYPE_VALUES.includes(value as WineType);
 }
 
-export async function defaultLoadEntryForScoring(
-  supabase: RequestSupabaseClient,
-  userId: string,
-  entryId: string
-): Promise<LoadedEntryForScoring | null> {
-  const entrySelectAttempts = [
-    {
-      fields:
-        "id, user_id, wine_type, canonical_region, canonical_sub_region, canonical_country, producer, classification, vintage",
-      includesCanonicalFields: true,
-      missingColumns: [
-        "wine_type",
-        "canonical_region",
-        "canonical_sub_region",
-        "canonical_country",
-      ] as const,
-    },
-    {
-      fields: "id, user_id, wine_type, producer, classification, vintage, region, appellation, country",
-      includesCanonicalFields: false,
-      missingColumns: ["wine_type"] as const,
-    },
-    {
-      fields: "id, user_id, producer, classification, vintage, region, appellation, country",
-      includesCanonicalFields: false,
-      missingColumns: [] as const,
-    },
-  ] as const;
-
-  const result = await executeSelectWithFallback({
-    attempts: entrySelectAttempts,
-    getFallbackColumns: (attempt) => attempt.missingColumns,
-    fallbackOnAnyMissingColumn: false,
-    attempt: async (attempt) => {
-      const response = await supabase
-        .from("wine_entries_with_ratings")
-        .select(attempt.fields)
-        .eq("id", entryId)
-        .eq("user_id", userId)
-        .maybeSingle();
-      return {
-        data: response.data,
-        error: response.error,
-      };
-    },
-  });
-
-  if (result.error) {
-    throw new Error(result.error.message);
-  }
-
-  if (!result.data) {
-    return null;
-  }
-
-  const primaryGrapeMap = await fetchPrimaryGrapesByEntryId(supabase, [entryId]);
-  const primaryGrapes = primaryGrapeMap.get(entryId)?.map((grape) => grape.name).join(", ") ?? null;
-
-  if (result.usedAttempt?.includesCanonicalFields) {
-    const row = result.data as unknown as EntryRowWithCanonicalFields;
-    return {
-      wine_type: isWineType(row.wine_type) ? row.wine_type : null,
-      canonical_region: row.canonical_region ?? null,
-      canonical_sub_region: row.canonical_sub_region ?? null,
-      canonical_country: row.canonical_country ?? null,
-      primary_grapes: primaryGrapes,
-      vintage: row.vintage ? Number.parseInt(row.vintage, 10) || null : null,
-      producer: row.producer ?? null,
-      classification: row.classification ?? null,
-      quality_tier: row.classification ?? null,
-    };
-  }
-
-  const row = result.data as unknown as EntryRowFallback;
-  return {
-    wine_type: isWineType(row.wine_type) ? row.wine_type : null,
-    canonical_region: row.region ?? null,
-    canonical_sub_region: row.appellation ?? null,
-    canonical_country: row.country ?? null,
-    primary_grapes: primaryGrapes,
-    vintage: row.vintage ? Number.parseInt(row.vintage, 10) || null : null,
-    producer: row.producer ?? null,
-    classification: row.classification ?? null,
-    quality_tier: row.classification ?? null,
-  };
-}
+export { defaultLoadEntryForScoring } from "@/server/algorithm/scoringEntries";
 
 export async function defaultLoadUserPreferenceEntries(
   supabase: RequestSupabaseClient,
@@ -372,6 +265,7 @@ export const defaultAlgorithmScoreDependencies: AlgorithmScoreHandlerDependencie
   },
   buildUserPreferenceVector,
   computeMatchScore,
+  readPalateProfile,
   readCachedEntryScore,
   writeCachedEntryScore,
 };
@@ -548,15 +442,11 @@ export function createAlgorithmScoreHandler(
 
     const [preferenceEntries, palateRecord] = await Promise.all([
       resolvedDependencies.loadUserPreferenceEntries(auth.supabase, auth.user.id),
-      readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
+      resolvedDependencies.readPalateProfile(auth.supabase, auth.user.id).catch(() => null),
     ]);
-    const userPreference = resolvedDependencies.buildUserPreferenceVector(
-      preferenceEntries,
-      scoreInput.wine_type,
-      palateRecord
-        ? distilledSeedForWineType(palateRecord, scoreInput.wine_type)
-        : null
-    );
+    const userPreference = createScoringPreferences(
+      preferenceEntries, palateRecord, resolvedDependencies.buildUserPreferenceVector
+    )(scoreInput.wine_type);
     const match = resolvedDependencies.computeMatchScore(
       effectiveProfile,
       userPreference
