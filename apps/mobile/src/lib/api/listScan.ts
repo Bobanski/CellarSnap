@@ -1,5 +1,11 @@
 import type { ListScanResult } from "@cellarsnap/shared";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
+import { createRecommendationNotesRequester } from "./recommendationNotesRequest";
+
+export const requestRecommendationNotes = createRecommendationNotesRequester({
+  getBaseUrl: getWebApiBaseUrl,
+  getAccessToken: getAccessTokenForApi,
+});
 
 export type MobileListScanUpload =
   | {

@@ -150,8 +150,8 @@ export default function SignInScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <View style={styles.blobTop} />
-      <View style={styles.blobBottom} />
+      <View pointerEvents="none" accessibilityElementsHidden style={styles.blobTop} />
+      <View pointerEvents="none" accessibilityElementsHidden style={styles.blobBottom} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.brandRow}>
@@ -166,6 +166,7 @@ export default function SignInScreen() {
           <View style={styles.formField}>
             <AppText style={styles.label}>{getCredentialText(authMode)}</AppText>
             <DoneTextInput
+              accessibilityLabel={getCredentialText(authMode)}
               value={identifier}
               onChangeText={setIdentifier}
               autoCapitalize="none"
@@ -192,6 +193,7 @@ export default function SignInScreen() {
             <AppText style={styles.label}>Password</AppText>
             <View style={styles.passwordWrap}>
               <DoneTextInput
+                accessibilityLabel="Password"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -205,6 +207,8 @@ export default function SignInScreen() {
                 style={styles.passwordInput}
               />
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
                 onPress={() => setShowPassword((previous) => !previous)}
                 style={styles.passwordToggle}
               >
@@ -217,6 +221,8 @@ export default function SignInScreen() {
           {infoMessage ? <AppText style={styles.infoText}>{infoMessage}</AppText> : null}
 
           <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSubmit, busy: isSubmitting }}
             onPress={() => void submitPasswordSignIn()}
             disabled={!canSubmit}
             style={[styles.primaryButton, !canSubmit ? styles.disabledButton : null]}
@@ -246,7 +252,7 @@ export default function SignInScreen() {
           ) : null}
 
           <Link href="/(auth)/sign-up" asChild>
-            <Pressable style={styles.secondaryButton}>
+            <Pressable accessibilityRole="link" style={styles.secondaryButton}>
               <AppText style={styles.secondaryButtonText}>Create Account</AppText>
             </Pressable>
           </Link>
@@ -275,6 +281,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    overflow: "hidden",
     backgroundColor: colors.screenBg,
   },
   blobTop: {

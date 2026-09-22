@@ -115,6 +115,9 @@ Read the [batch plan and workflow](README.md) and the latest handover linked the
 | QC-18 | P2 | Web entry editor labels are not associated with inputs | Closed | B11/#161 `83454a1` merged/deployed/live-verified. Unique label/input associations and named controls; normal/bulk/group desktop/phone accessibility trees, label focus, Tab navigation and normal saves pass. [Release/evidence](handovers/b11a-b11c-release.md). |
 | QC-19 | P2 | Long public profile names overflow phone headers | Closed | B11/#161 `83454a1` merged/deployed/live-verified. Long display names and projected real names wrap within 390px and desktop layouts; complete accessible text and keyboard-accessible controls retained. Current web scope closed; native launch acceptance remains deferred by owner. [Release/evidence](handovers/b11a-b11c-release.md). |
 | QC-20 | P2 | Mobile recommendation notes omit bearer authentication | Open | B11/B13: cookie-free Expo scan succeeds but optional notes POST is 401; mobile caller uses a relative URL and omits the bearer header. Adopt the configured API/auth adapter and test error/retry. Confirmed at `83454a1`; separate from QC-11. [Evidence](evidence/b11a-b11c-release.json). |
+| QC-21 | P1 | Native Apple sign-in sends an unhashed nonce | In progress | B04e/#166: cryptographic nonce, SHA-256 to Apple/raw nonce to Supabase; protocol regression and installed-device acceptance. Source-confirmed; native reproduction unavailable. |
+| QC-22 | P1 | Launch privacy disclosures lag actual data processing | Open | B04f/App Review: reconcile web/mobile privacy text and App Privacy declarations with Anthropic/Google Vision, current photo delivery, deletion/retention and any required third-party AI consent. |
+| OPS-03 | P1 | iOS store build and native launch acceptance are unverified | In progress | #166: production store build, Apple account/app record, installed-device acceptance and review metadata; [release gates](ios-launch-readiness.md). |
 | OPS-01 | P2 | Duplicate legacy Vercel project fails deployments | Open | Missing Supabase env confirmed at prerender. B04: identify intended ownership/domain/deployment targets; repair or retire duplicate only after confirming routing and rollback. Preserve working primary project. |
 | OPS-02 | P2 | Historical local UI reports need reconciliation | Needs triage | Intake before the relevant batch: reproduce/deduplicate the nine March topics listed below; do not import historical static “PASS” as current QC. |
 
@@ -611,3 +614,28 @@ Added QC-20 as a separate pre-existing mobile auth defect; it was not added to t
 - Verification complete for this candidate: 568 isolated / 41 schema-tool checks, lint/types/build, desktop/phone owner edit and refresh parity, mixed/duplicate/denied score requests, explanations, outage/keyboard retry and personalized list scanning. #164 merge/deployment/live acceptance pending; no migration or ordinary-user/Storage mutation.
 
 - B07b browser fault intake / AUD-50 (same failure-visibility root): on September 22 candidate, intercept `/api/algorithm/score` with 503 on a complete red-wine fixture. Detail says “Add a wine type and a tasting note” and offers no score retry. This branch adds an explicit temporary-unavailability alert and Retry match action; valid low-history/missing-input states retain their existing guidance. Desktop/phone injected-failure and keyboard-retry retests passed.
+
+### B11d/B11e active — iOS launch readiness, September 22, 2026
+- Scope: QC-20 authenticated notes; QC-05 nested headers, QC-10 auth viewport, QC-12 single-photo sizing; related scoped QC-06 accessibility. Issue #166; branch `fix/ios-launch-readiness`, base `421f244`. Implementation/QC in progress.
+- Owner now targets iOS launch/App Review, so prior web-only native deferral is no longer sufficient launch evidence. Native runtime absent (`simctl`, `adb`, `emulator` unavailable); EAS production build and installed-device acceptance are separate gates.
+- #165 protected archive work remains independently open; latest continuation is [B02y handover on its branch](https://github.com/Bobanski/CellarSnap/blob/codex/b02y-protected-photo-archive/docs/remediation/handovers/b02y-release-archive.md). AUD-01 P0 remains Partial; no archival SQL or Storage mutations in this mobile slice.
+
+### QC-21 — Native Apple sign-in nonce mismatch
+- Priority / status: P1 / In progress, B04e launch prerequisite; issue #166.
+- Discovered: September 22, 2026 on main `421f244`, `apps/mobile/src/lib/api/appleAuth.ts`.
+- Evidence: caller passes the same raw nonce to Expo and Supabase and falls back to Date.now/Math.random. Installed Expo 56 `AppleAuthenticationRequest.swift:31` forwards nonce unchanged. [Supabase Auth verifier](https://github.com/supabase/auth/blob/master/internal/api/token_oidc.go) compares the token nonce against SHA-256 of the submitted raw nonce (lines 294–304 at inspection). This deterministically mismatches when nonce validation is enabled. Also remove the authorization code supplied as an OAuth access token; they are distinct credentials.
+- Impact: native Apple login can fail; no device reproduction or bypass claim. Preserve provider-side nonce validation.
+- Acceptance: secure native random source, hashed Apple nonce/raw Supabase nonce, no credential confusion, cancellation/missing-token/exchange failures tested; Apple first/repeat/cancelled login on the installed signed binary before submission.
+- Deployment / rollback: rebuilt iOS app; no schema or provider-setting change.
+
+### QC-22 — Privacy disclosures lag current app processing
+- Priority / status: P1 / Open; discovered September 22 at `421f244`, B04f launch gate.
+- Source: `apps/mobile/app/privacy.tsx:25` and `src/app/privacy/page.tsx:33` describe signed photo URLs and OpenAI-only processing. Current notes route invokes Anthropic and image OCR uses Google Vision. `docs/APP_PRIVACY_LABELS.md` must be reconciled with actual data flows; it is not verified App Store Connect state.
+- Acceptance: source-grounded web/mobile disclosures and privacy labels; verify third-party AI consent requirements and real flows against current Apple guidelines. Confirm support/contact, retention and deletion statements with actual behavior. Browser and native review of reachable policy links. No legal/compliance certification claimed.
+- Related: AUD-01/26/50, OPS-03. No disclosure edits silently included in B11 fixes.
+
+### OPS-03 — iOS launch gates
+- Priority / status: P1 / In progress; September 22, #166. User now explicitly targets Apple review.
+- Evidence: EAS is authenticated; latest inspected binary is internal/preview 1.0.1/build 2, not store distribution. Xcode/simctl and Android tools absent. Production environment names present; submit profile empty. Apple membership/app record state unverified.
+- Acceptance: store-signed candidate from reviewed commit, valid deployment hosts, installed-device acceptance, accurate disclosures/artwork/listing/reviewer access, exact-build App Store Connect upload and review-state receipt. [Release plan](ios-launch-readiness.md).
+- Deployment: native candidate only, no implied review submission or production migration authorization.
