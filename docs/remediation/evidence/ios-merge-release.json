@@ -1,0 +1,236 @@
+{
+  "date": "2026-09-22",
+  "scope": "Reviewed source merges and primary production acceptance; no native submission or hosted archive operations",
+  "pullRequests": [
+    {
+      "number": 167,
+      "merge": "1427ebd72268f8514255bb62149ef5f6140868df"
+    },
+    {
+      "number": 168,
+      "merge": "6f69d8360b6a2921f942a7387825c23e9785fda9"
+    },
+    {
+      "number": 165,
+      "head": "023bfe7a8b66edd05ae61ebdc2e4a3310b753dc2",
+      "merge": "2205a5cf41fb602d1c37ddc4a83408c265cf5200"
+    }
+  ],
+  "ci": {
+    "combinedRun": "https://github.com/Bobanski/CellarSnap/actions/runs/35749023957",
+    "web": "passed",
+    "mobile": "passed",
+    "isolatedTests": 597,
+    "schemaToolTests": 47,
+    "dependencyContracts": 7,
+    "toolingContracts": 3,
+    "primaryPreview": "passed",
+    "duplicateVercel": "Known OPS-01 missing-environment failure; owner explicitly approved nonblocking exception"
+  },
+  "production": {
+    "host": "https://cellarsnap.app",
+    "testedCommit": "6f69d8360b6a2921f942a7387825c23e9785fda9",
+    "testedDeployment": "dpl_GP91dZJS5JzJiNzAunT1fmKkV6rS",
+    "appTreeIdenticalAtArchiveMerge": true,
+    "finalMergedCommit": "2205a5cf41fb602d1c37ddc4a83408c265cf5200",
+    "finalDeployment": "dpl_DBDLDMaPuiYA3CvQt6GJxyWd9CKK",
+    "finalStatus": "Ready; build log confirms 2205a5c; public privacy HTTP 200"
+  },
+  "browser": {
+    "checks": [
+      "web desktop: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "web phone: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "web: manual entry editor reachable while AI disabled",
+      "expo desktop: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "expo phone: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "expo: manual entry editor reachable while AI disabled"
+    ],
+    "errors": [],
+    "http": [
+      {
+        "platform": "web",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      },
+      {
+        "platform": "web",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      },
+      {
+        "platform": "expo",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      },
+      {
+        "platform": "expo",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      }
+    ],
+    "consoleErrors": [
+      {
+        "platform": "web",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "platform": "web",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "platform": "expo",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "platform": "expo",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "requests": [
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": false
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": false
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "expo",
+        "method": "GET",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "GET",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "GET",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "GET",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "PUT",
+        "bearer": true,
+        "cookie": false
+      },
+      {
+        "platform": "expo",
+        "method": "GET",
+        "bearer": true,
+        "cookie": false
+      }
+    ]
+  },
+  "cleanup": {
+    "fixtureEntriesCreated": 0,
+    "fixturePhotosCreated": 0,
+    "metadataRestoredExactly": true,
+    "generatedSessionSignedOut": true,
+    "finalFixtureEntryRecheck": 0
+  },
+  "native": {
+    "xcode": "CommandLineTools only",
+    "simctl": "unavailable",
+    "adb": "unavailable",
+    "coverage": "Expo web runtime only, not native acceptance"
+  },
+  "runtimeLogs": "45-second production CLI capture returned no application records; no claim of complete server-log coverage. Browser errors and actual API responses checked.",
+  "sqlApplied": false,
+  "historicalStorageMutations": false,
+  "nativeBinaryUploaded": false,
+  "appReviewSubmitted": false
+}
