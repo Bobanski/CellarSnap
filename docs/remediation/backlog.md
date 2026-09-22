@@ -617,12 +617,12 @@ Added QC-20 as a separate pre-existing mobile auth defect; it was not added to t
 - B07b browser fault intake / AUD-50 (same failure-visibility root): on September 22 candidate, intercept `/api/algorithm/score` with 503 on a complete red-wine fixture. Detail says “Add a wine type and a tasting note” and offers no score retry. This branch adds an explicit temporary-unavailability alert and Retry match action; valid low-history/missing-input states retain their existing guidance. Desktop/phone injected-failure and keyboard-retry retests passed.
 
 ### B11d/B11e active — iOS launch readiness, September 22, 2026
-- Scope: QC-20 authenticated notes; QC-05 nested headers, QC-10 auth viewport, QC-12 single-photo sizing; related scoped QC-06 accessibility. Issue #166; branch `fix/ios-launch-readiness`, base `421f244`. Implementation/QC in progress.
+- Scope: QC-20 authenticated notes; QC-05 nested headers, QC-10 auth viewport, QC-12 single-photo sizing; related scoped QC-06 accessibility. Issue #166; branch `fix/ios-launch-readiness`, base `421f244`. Implementation and desktop/phone Expo browser QC complete; native acceptance remains pending.
 - Owner now targets iOS launch/App Review, so prior web-only native deferral is no longer sufficient launch evidence. Native runtime absent (`simctl`, `adb`, `emulator` unavailable); EAS production build and installed-device acceptance are separate gates.
 - #165 protected archive work remains independently open; latest continuation is [B02y handover on its branch](https://github.com/Bobanski/CellarSnap/blob/codex/b02y-protected-photo-archive/docs/remediation/handovers/b02y-release-archive.md). AUD-01 P0 remains Partial; no archival SQL or Storage mutations in this mobile slice.
 
 ### QC-21 — Native Apple sign-in nonce mismatch
-- Priority / status: P1 / In progress, B04e launch prerequisite; issue #166.
+- Priority / status: P1 / Implemented — QC pending, B04e launch prerequisite; issue #166.
 - Discovered: September 22, 2026 on main `421f244`, `apps/mobile/src/lib/api/appleAuth.ts`.
 - Evidence: caller passes the same raw nonce to Expo and Supabase and falls back to Date.now/Math.random. Installed Expo 56 `AppleAuthenticationRequest.swift:31` forwards nonce unchanged. [Supabase Auth verifier](https://github.com/supabase/auth/blob/master/internal/api/token_oidc.go) compares the token nonce against SHA-256 of the submitted raw nonce (lines 294–304 at inspection). This deterministically mismatches when nonce validation is enabled. Also remove the authorization code supplied as an OAuth access token; they are distinct credentials.
 - Impact: native Apple login can fail; no device reproduction or bypass claim. Preserve provider-side nonce validation.
@@ -636,16 +636,19 @@ Added QC-20 as a separate pre-existing mobile auth defect; it was not added to t
 - Related: AUD-01/26/50, OPS-03. No disclosure edits silently included in B11 fixes.
 
 ### OPS-03 — iOS launch gates
-- Priority / status: P1 / In progress; September 22, #166. User now explicitly targets Apple review.
+- Priority / status: P1 / Partial; September 22, #166. User now explicitly targets Apple review.
 - Evidence: EAS is authenticated; latest inspected binary is internal/preview 1.0.1/build 2, not store distribution. Xcode/simctl and Android tools absent. Production environment names present; submit profile empty. Apple membership/app record state unverified.
 - Acceptance: store-signed candidate from reviewed commit, valid deployment hosts, installed-device acceptance, accurate disclosures/artwork/listing/reviewer access, exact-build App Store Connect upload and review-state receipt. [Release plan](ios-launch-readiness.md).
 - Deployment: native candidate only, no implied review submission or production migration authorization.
 
 ### QC-23 — Mobile scan foreground contrast
-- Priority / status: P2 / Implemented — QC pending; B11f within #166/#167.
+- Priority / status: P2 / Partial; B11f within #166/#167.
 - Discovered: September 22, final candidate visual QC, `1a06fd0`. `ListScanResultsScreen.tsx` warningText/headerPrimaryButtonText/primaryButtonText/segmentButtonTextActive and intake/history primary labels use `colors.screenBg` as foreground on dark surfaces. Screenshot visibly loses the match-scoring warning and My scans label.
 - Expected / actual: readable foreground without changing the Noir theme; dark-on-dark text observed in Expo at 390×844. Native uses the same tokens but installed verification is unavailable.
 - Acceptance: intended foreground tokens; measure contrast and visually inspect intake, results warnings/actions/active controls and history at desktop/phone; exercise affected controls, retain native gate. No data changes.
 
 ### OPS-03 native generation checkpoint
 - Expo 56.0.21's installed `expo/template.tgz` generated a template recommending Expo 57 / React Native 0.86 despite resolved SDK 56 / RN 0.85.3. Default and explicit local SDK-56 CLI reproduced in a disposable copy. Pinning the production prebuild to official `expo-template-bare-minimum@56.0.36` generated cleanly with the correct family and retained Apple entitlement. Native compilation remains untested. See the [Expo prebuildCommand contract](https://docs.expo.dev/eas/json/). No upstream package or existing preview profile modified.
+
+### B11 merge review — September 22
+- Reconciled detailed QC-21/QC-23/OPS-03 statuses with their canonical rows following PR review. Protocol/browser QC and export results remain as recorded; installed-native Apple login and release acceptance are still pending. No runtime change in this correction.
