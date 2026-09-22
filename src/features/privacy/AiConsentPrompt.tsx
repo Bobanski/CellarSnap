@@ -31,7 +31,13 @@ export default function AiConsentPrompt() {
     return () => { active = false; window.removeEventListener("cluster-ai-choice", load); };
   }, [userId, isLegal]);
   useEffect(() => {
-    if (open) dialog.current?.showModal(); else dialog.current?.close();
+    if (open && dialog.current) {
+      dialog.current.showModal();
+      // While the choice loads, disabled buttons make the browser focus the
+      // policy link below the disclosure. Start at the title on small screens.
+      dialog.current.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
+      dialog.current.scrollTop = 0;
+    } else dialog.current?.close();
   }, [open]);
   if (!userId || isLegal) return null;
   return <dialog ref={dialog} onCancel={() => setOpen(false)} aria-label="Your choice about AI" className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-2xl bg-[var(--color-screen-bg)] p-0 text-[var(--color-text-primary)] backdrop:bg-black/70">

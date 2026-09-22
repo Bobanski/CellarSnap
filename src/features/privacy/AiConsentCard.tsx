@@ -27,7 +27,7 @@ export default function AiConsentCard({ onComplete }: { onComplete?: () => void 
     finally { setBusy(false); }
   };
   return <section aria-labelledby="ai-choice-title" className="space-y-4 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-primary)] p-6 text-sm leading-6">
-    <h2 id="ai-choice-title" className="font-serif text-2xl text-[var(--color-text-primary)]">{AI_CONSENT_TITLE}</h2>
+    <h2 id="ai-choice-title" tabIndex={-1} className="font-serif text-2xl text-[var(--color-text-primary)]">{AI_CONSENT_TITLE}</h2>
     {AI_CONSENT_PARAGRAPHS.map(text => <p key={text} className="text-[var(--color-text-secondary)]">{text}</p>)}
     <p role="status">{busy ? "Loading your choice…" : consent ? `AI sharing is ${consent.granted ? "on" : "off"}.` : "AI sharing is off until you allow it."}</p>
     {error && <p role="alert" className="text-[var(--color-text-primary)]">{error}</p>}
