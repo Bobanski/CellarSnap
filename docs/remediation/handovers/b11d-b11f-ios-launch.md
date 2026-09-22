@@ -57,3 +57,7 @@ Local Expo servers on 8087/8088 and Apple setup prompt are stopped at handoff. T
 ## Next slice
 
 Ordered launch path: Apple provisioning/store build → installed iPhone acceptance and native screenshots → QC-22 disclosures/required consent and App Store metadata → AUD-01/#165 preservation and historical retirement → exact-build upload/review. These are distinct gates; a green build or uploaded TestFlight binary does not establish App Review submission. Broader AUD-13/15 lifecycle and remaining backlog remain visible; this push did not resolve all launch risks by renaming statuses.
+
+## Pre-merge review follow-up
+
+September 22: resolved the automated review comment about inconsistent finding statuses. QC-21 remains Implemented — QC pending for installed Apple login; QC-23 and OPS-03 remain Partial. This correction changes documentation only and does not claim native acceptance or submission.
