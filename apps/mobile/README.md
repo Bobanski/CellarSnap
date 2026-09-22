@@ -87,9 +87,9 @@ npx eas submit --platform ios --profile production
 
 Current release metadata is defined in `app.json`:
 
-- version: `1.0.0`
-- iOS build number: `1`
-- Android version code: `1`
+- version: `1.0.1`
+- iOS build number: `3`
+- Android version code: `2`
 
 ## App Review Checklist
 
@@ -97,3 +97,7 @@ Current release metadata is defined in `app.json`:
 - Privacy Policy and Terms are available in the mobile app.
 - Provide App Review with a valid demo account if your production sign-in is gated.
 - Verify `EXPO_PUBLIC_WEB_API_BASE_URL` points to the deployed environment before submitting.
+
+For the current candidate, release gates and device acceptance, see [iOS release readiness](../../docs/remediation/ios-launch-readiness.md). An internal preview IPA cannot be submitted to App Store Connect; use the production store profile. EAS Submit uploads to App Store Connect/TestFlight; App Review submission is a separate step.
+
+AI features require an explicit account-wide choice in Privacy & AI. Declining keeps manual logging, cellar and social features available. Deploy the matching consent API/backend before distributing this candidate. See [submission runbook](../../docs/IOS_SUBMISSION_RUNBOOK.md).

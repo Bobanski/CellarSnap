@@ -139,7 +139,7 @@ function LogTabButton(props: Record<string, unknown>) {
     | undefined;
   const s = 26;
   return (
-    <Pressable onPress={onPress} style={fabStyles.wrapper}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Log a wine" style={fabStyles.wrapper}>
       <View style={fabStyles.circle}>
         <Svg width={s} height={s} viewBox={`0 0 ${s} ${s}`} fill="none">
           <Circle cx={s*.5} cy={s*.54} r={s*.26} fill="#F5EDD6" opacity={0.9} />

@@ -215,7 +215,7 @@ test("real ingestion skips an edit during embedding, then retries current conten
   const db = await lifecycleDatabase();
   try {
     await asKnowledgeRole(db, "service_role");
-    const result = await ingestWineEntryEmbeddings({
+    const result = await ingestWineEntryEmbeddings({ canProcessOwner: async () => true,
       supabase: ingestionClient(db),
       generateEmbeddings: async inputs => {
         expect(inputs[0]).toContain("Private marker A");
@@ -225,7 +225,7 @@ test("real ingestion skips an edit during embedding, then retries current conten
     });
     expect(result).toEqual({ sourceTable: "wine_entries", insertedCount: 1, skippedCount: 1 });
     expect((await db.query("select * from user_entry_knowledge_chunks where entry_id=$1", [uid(11)])).rows).toEqual([]);
-    const retried = await ingestWineEntryEmbeddings({ supabase: ingestionClient(db), generateEmbeddings: async inputs => inputs.map(() => JSON.parse(embedding)) });
+    const retried = await ingestWineEntryEmbeddings({ canProcessOwner: async () => true, supabase: ingestionClient(db), generateEmbeddings: async inputs => inputs.map(() => JSON.parse(embedding)) });
     expect(retried.insertedCount).toBe(2);
     expect((await db.query<{ content: string }>("select content from user_entry_knowledge_chunks where entry_id=$1", [uid(11)])).rows[0].content).toContain("Fresh note after generation began");
   } finally { await db.close(); }
@@ -235,7 +235,7 @@ test("ingestion rejects incomplete embedding responses before publication", asyn
   const db = await lifecycleDatabase();
   try {
     await asKnowledgeRole(db, "service_role");
-    await expect(ingestWineEntryEmbeddings({ supabase: ingestionClient(db), generateEmbeddings: async () => [] })).rejects.toThrow("invalid dimensions or count");
+    await expect(ingestWineEntryEmbeddings({ canProcessOwner: async () => true, supabase: ingestionClient(db), generateEmbeddings: async () => [] })).rejects.toThrow("invalid dimensions or count");
     expect((await db.query("select * from user_entry_knowledge_chunks")).rows).toEqual([]);
   } finally { await db.close(); }
 });
@@ -246,7 +246,7 @@ test("ingestion keyset pages cover more than one hundred entries without duplica
     for (let i = 100; i < 201; i++) await db.query("insert into wine_entries(id,user_id,notes) values ($1,$2,'Paged fixture')", [uid(i),uid(1)]);
     await asKnowledgeRole(db, "service_role");
     const sizes: number[] = [];
-    const result = await ingestWineEntryEmbeddings({ supabase: ingestionClient(db), generateEmbeddings: async inputs => { sizes.push(inputs.length); return inputs.map(() => JSON.parse(embedding)); } });
+    const result = await ingestWineEntryEmbeddings({ canProcessOwner: async () => true, supabase: ingestionClient(db), generateEmbeddings: async inputs => { sizes.push(inputs.length); return inputs.map(() => JSON.parse(embedding)); } });
     expect(sizes).toEqual([100,3]);
     expect(result.insertedCount).toBe(103);
     expect((await db.query("select count(*)::int as count from user_entry_knowledge_chunks")).rows).toEqual([{ count: 103 }]);
@@ -273,5 +273,29 @@ test("malformed later batch item rolls back earlier publications", async () => {
     const chunks = sources.map((source,index)=>({...source,content:'Transactional fixture',embedding:index ? [1] : JSON.parse(embedding)}));
     await expect(db.query("select * from publish_entry_knowledge_batch($1)",[JSON.stringify(chunks)])).rejects.toMatchObject({code:"22000"});
     expect((await db.query("select * from user_entry_knowledge_chunks")).rows).toEqual([]);
+  } finally { await db.close(); }
+});
+
+test("personal ingestion excludes nonconsenting owners before sending any text to AI", async () => {
+  const db = await lifecycleDatabase();
+  try {
+    await asKnowledgeRole(db, "service_role");
+    const seen: string[] = [];
+    const result = await ingestWineEntryEmbeddings({ supabase: ingestionClient(db), canProcessOwner: async owner => owner === uid(2), generateEmbeddings: async inputs => { seen.push(...inputs); return inputs.map(() => JSON.parse(embedding)); } });
+    expect(result).toMatchObject({ insertedCount: 1, skippedCount: 1 });
+    expect(seen.join(" ")).not.toContain("Private marker A");
+    const denied = await ingestWineEntryEmbeddings({ supabase: ingestionClient(db), canProcessOwner: async () => false, generateEmbeddings: async () => { throw new Error("AI must not be called"); } });
+    expect(denied).toMatchObject({ insertedCount: 0, skippedCount: 2 });
+  } finally { await db.close(); }
+});
+
+test("long ingestion rechecks each page and advances through fully denied pages", async () => {
+  const db = await lifecycleDatabase();
+  try {
+    for (let i = 100; i < 301; i++) await db.query("insert into wine_entries(id,user_id,notes) values ($1,$2,'Paged consent fixture')", [uid(i), uid(1)]);
+    await asKnowledgeRole(db, "service_role");
+    let allowed = true;
+    const result = await ingestWineEntryEmbeddings({ supabase: ingestionClient(db), canProcessOwner: async () => allowed, generateEmbeddings: async inputs => { allowed = false; return inputs.map(() => JSON.parse(embedding)); } });
+    expect(result).toMatchObject({ insertedCount: 100, skippedCount: 103 });
   } finally { await db.close(); }
 });

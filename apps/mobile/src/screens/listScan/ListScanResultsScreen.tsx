@@ -40,6 +40,7 @@ import FacetMultiSelect from "@/src/screens/listScan/FacetMultiSelect";
 import RegionFilterSelect from "@/src/screens/listScan/RegionFilterSelect";
 import { readListScanResult } from "@/src/lib/listScan/storage";
 import { colors } from "@/src/lib/theme";
+import { requestRecommendationNotes } from "@/src/lib/api/listScan";
 
 function formatCurrencyValue(value: number | null) {
   return typeof value === "number" && Number.isFinite(value) ? `$${value}` : "";
@@ -336,6 +337,8 @@ export default function ListScanResultsScreen() {
     [filteredWines]
   );
   const [recommendationNotes, setRecommendationNotes] = useState<Record<string, string>>({});
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const [notesAttempt, setNotesAttempt] = useState(0);
   const highlightedIds = useMemo(
     () => new Set(topRecommendations.map((wine) => wine.id)),
     [topRecommendations]
@@ -355,50 +358,16 @@ export default function ListScanResultsScreen() {
     const controller = new AbortController();
     const eligibleItems = topRecommendations.filter((wine) => wine.match_percent > 59);
 
-    if (eligibleItems.length === 0) {
-      return () => {
-        isActive = false;
-        controller.abort();
-      };
-    }
+    setRecommendationNotes({});
+    setNotesError(null);
+    if (eligibleItems.length === 0) return;
 
     const timeoutId = setTimeout(() => {
-      void (async () => {
-        try {
-          const response = await fetch("/api/list-scan/recommendation-notes", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ items: eligibleItems }),
-            signal: controller.signal,
-          });
-
-          if (!response.ok || !isActive) {
-            return;
-          }
-
-          const payload = (await response.json()) as {
-            notes?: Array<{ id: string; note: string | null }>;
-          };
-
-          if (!isActive) {
-            return;
-          }
-
-          const nextNotes: Record<string, string> = {};
-          (payload.notes ?? []).forEach((entry) => {
-            if (entry.id && typeof entry.note === "string" && entry.note.trim().length > 0) {
-              nextNotes[entry.id] = entry.note.trim();
-            }
-          });
-          setRecommendationNotes(nextNotes);
-        } catch {
-          if (isActive) {
-            setRecommendationNotes({});
-          }
-        }
-      })();
+      void requestRecommendationNotes(eligibleItems, controller.signal).then((response) => {
+        if (!isActive) return;
+        if (response.ok) setRecommendationNotes(response.notes);
+        else setNotesError(response.errorMessage);
+      });
     }, 150);
 
     return () => {
@@ -406,7 +375,7 @@ export default function ListScanResultsScreen() {
       controller.abort();
       clearTimeout(timeoutId);
     };
-  }, [topRecommendations]);
+  }, [topRecommendations, notesAttempt]);
   const filterColumns = width >= 320 ? 2 : 1;
   const collapsedFilterCardWidth =
     filterColumns === 2 ? Math.max(140, Math.floor((width - 88) / 2)) : "100%";
@@ -757,6 +726,19 @@ export default function ListScanResultsScreen() {
             </View>
           </View>
 
+          {notesError ? (
+            <View style={styles.infoCardCompact}>
+              <AppText accessibilityRole="alert" style={styles.infoText}>{notesError}</AppText>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Retry recommendation notes"
+                onPress={() => setNotesAttempt((attempt) => attempt + 1)}
+                style={{ minHeight: 44, justifyContent: "center" }}
+              >
+                <AppText style={styles.recommendationNoteText}>Retry notes</AppText>
+              </Pressable>
+            </View>
+          ) : null}
           {topRecommendations.length > 0 ? (
             <View style={styles.recommendationStack}>
               {topRecommendations.map((wine, index) => {
@@ -1007,7 +989,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerPrimaryButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1060,7 +1042,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   warningText: {
-    color: colors.screenBg,
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -1338,7 +1320,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   segmentButtonTextActive: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
   },
   segmentButtonTextWhite: {
     color: colors.accentGold,
@@ -1631,7 +1613,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 15,
     fontWeight: "700",
   },

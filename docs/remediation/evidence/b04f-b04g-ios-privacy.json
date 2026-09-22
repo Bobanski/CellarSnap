@@ -1,0 +1,346 @@
+{
+  "date": "2026-09-22",
+  "sourceCommit": "2fd2c002f2cfcbfc533d18e230b825a800e45f88",
+  "baseImplementationCommit": "5a2d9a4ea1e7f1a7cf3e34f4157edd2d372dbb39",
+  "baseBranch": "fix/ios-launch-readiness",
+  "baseCommit": "d65e659",
+  "branch": "fix/ios-review-privacy",
+  "pr": 168,
+  "issues": [
+    166,
+    97
+  ],
+  "findings": [
+    "QC-22",
+    "AUD-08"
+  ],
+  "automated": {
+    "isolatedTests": 597,
+    "productionBuild": "pass, repeated after focus fix",
+    "webMobileLint": "pass; web repeated after focus fix",
+    "webTypes": "pass via build and CI",
+    "mobileTypes": "pass",
+    "mobileDependencyContracts": 7,
+    "mobileToolingContracts": 3,
+    "expoExports": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "nativeCompile": false,
+    "npmAudit": {
+      "root": 0,
+      "mobile": 0
+    },
+    "exifreader": "4.41.1",
+    "ciRun": "https://github.com/Bobanski/CellarSnap/actions/runs/35739976856",
+    "ciResult": "Web and Mobile passed on final application source"
+  },
+  "browser": {
+    "engine": "Chromium",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "targets": [
+      "local production Next 3013",
+      "Expo web 8089, cookie-stripped proxy to candidate API"
+    ],
+    "settings": {
+      "checks": [
+        "web desktop: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+        "web phone: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+        "web: manual entry editor reachable while AI disabled",
+        "expo desktop: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+        "expo phone: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+        "expo: manual entry editor reachable while AI disabled"
+      ],
+      "errors": [],
+      "http": [
+        {
+          "platform": "web",
+          "path": "/api/privacy/ai-consent",
+          "status": 503
+        },
+        {
+          "platform": "web",
+          "path": "/api/privacy/ai-consent",
+          "status": 503
+        },
+        {
+          "platform": "expo",
+          "path": "/api/privacy/ai-consent",
+          "status": 503
+        },
+        {
+          "platform": "expo",
+          "path": "/api/privacy/ai-consent",
+          "status": 503
+        }
+      ],
+      "consoleErrors": [
+        {
+          "platform": "web",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "platform": "web",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "platform": "expo",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        },
+        {
+          "platform": "expo",
+          "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        }
+      ],
+      "requests": [
+        {
+          "platform": "web",
+          "method": "GET",
+          "bearer": false,
+          "cookie": false
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "GET",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "GET",
+          "bearer": false,
+          "cookie": false
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "GET",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "web",
+          "method": "PUT",
+          "bearer": false,
+          "cookie": true
+        },
+        {
+          "platform": "expo",
+          "method": "GET",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "GET",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "GET",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "GET",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "PUT",
+          "bearer": true,
+          "cookie": false
+        },
+        {
+          "platform": "expo",
+          "method": "GET",
+          "bearer": true,
+          "cookie": false
+        }
+      ]
+    },
+    "initialPromptFocus": {
+      "checks": [
+        "phone: initial focus/title/top, scrollable disclosure and decline pass",
+        "desktop: initial focus/title/top, scrollable disclosure and decline pass"
+      ],
+      "errors": []
+    },
+    "realFlows": {
+      "checks": [
+        "web initial prompt/decline continues into manual logging",
+        "patched web photo intake renders selected JPEG while AI remains disabled",
+        "web saves a disposable manual entry with AI off",
+        "expo initial prompt/decline continues into manual logging",
+        "expo saves a disposable manual entry with AI off",
+        "Expo opt-in followed by real list parsing: 48 wines"
+      ],
+      "errors": [],
+      "http": [
+        {
+          "platform": "web",
+          "path": "/api/label-autofill",
+          "status": 403
+        },
+        {
+          "platform": "web",
+          "path": "/api/photo-context",
+          "status": 403
+        },
+        {
+          "platform": "web",
+          "path": "/api/lineup-autofill",
+          "status": 403
+        },
+        {
+          "platform": "web",
+          "path": "/api/bottle-count",
+          "status": 403
+        }
+      ],
+      "scanCreated": true
+    },
+    "allPersonalAiRoutesDeniedBeforeConsent": [
+      "label-autofill",
+      "lineup-autofill",
+      "photo-context",
+      "bottle-count",
+      "cellar/map-columns",
+      "list-scan/parse",
+      "list-scan/recommendation-notes",
+      "palate/distill",
+      "sommelier/chat",
+      "sommelier/identify-bottle",
+      "sommelier/ingest",
+      "sommelier/upload-document"
+    ],
+    "actualAllowedScanWines": 48,
+    "manualPublicPolicyTermsNavigation": "pass in in-app browser",
+    "serverExceptionsObserved": 0,
+    "logScope": "local server logs overlapping scoped acceptance only; not a production historical audit",
+    "scanSaveConsoleSeparatelyPersisted": false
+  },
+  "cleanup": {
+    "deletedFixtureEntries": 5,
+    "removedFixturePhotoPaths": 8,
+    "deletedScans": 1,
+    "wine_entries": 0,
+    "entry_photos": 0,
+    "list_scan_results": 0,
+    "list_scan_wines": 0,
+    "remainingFixturePhotos": 0,
+    "metadataRestoredExactly": true,
+    "designatedTesters": 4,
+    "generatedSessionSignedOut": true,
+    "finalFixtureEntryRecheck": 0
+  },
+  "native": {
+    "xcodeInstalled": false,
+    "simctlAvailable": false,
+    "androidEmulatorAvailable": false,
+    "coverage": "Expo web only; no installed-native acceptance"
+  },
+  "release": {
+    "merged": false,
+    "productionDeployed": false,
+    "sqlMigration": false,
+    "storeBuildCreated": false,
+    "uploaded": false,
+    "submittedForReview": false,
+    "primaryPreview": "Ready",
+    "duplicatePreview": "Failed, existing OPS-01; prior environment diagnosis not reinspected"
+  },
+  "screenshots": [
+    "b04f-web-prompt-phone.png",
+    "b04f-web-privacy-desktop.png",
+    "b04f-expo-choice-phone.png",
+    "b04f-expo-prompt-phone.png",
+    "b04f-allowed-scan-phone.png"
+  ],
+  "remaining": [
+    "Deploy backend/web and verify on intended host before distributing mobile",
+    "Apple authentication/provisioning and store-signed build",
+    "Installed iPhone acceptance and screenshots",
+    "Actual App Store privacy/provider retention/location and support metadata",
+    "AUD-01 historical photo archive and retirement, PR165"
+  ],
+  "observedFailuresAndCorrections": [
+    "Next internal URL host caused false cookie CSRF denial; use incoming Host plus protocol and retest",
+    "Dialog initial focus scrolled heading away on phone; focus title and reset scroll, retested at both sizes",
+    "Turbopack rejected cross-worktree node_modules symlink; local npm ci and production rebuild passed",
+    "Harness corrected route-announcer collision, collapsed fields/required label, survey workflow and case-normalized wine names",
+    "Cleanup script duplicate variable corrected before execution; final counts and exact metadata restoration verified"
+  ]
+}

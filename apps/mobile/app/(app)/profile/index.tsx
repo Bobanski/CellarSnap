@@ -2546,6 +2546,9 @@ export default function ProfileScreen() {
                     void savePrivacyDefaults({ name_display_preference: value });
                   }}
                 />
+                <Pressable accessibilityRole="button" accessibilityLabel="Privacy & AI" style={{ minHeight: 48, justifyContent: "center" }} onPress={() => { closeSettings(); router.push("/privacy"); }}>
+                  <AppText style={{ color: colors.textPrimary }}>Privacy & AI</AppText>
+                </Pressable>
                 <PrivacySelector
                   title={PROFILE_SETTINGS_COPY.postVisibilityLabel}
                   value={entryPrivacyValue}

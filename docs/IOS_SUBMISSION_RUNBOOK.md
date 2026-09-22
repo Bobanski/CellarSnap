@@ -1,116 +1,22 @@
-# iOS Submission Runbook
+# iOS submission runbook
 
-Everything below requires Eitan's own accounts (Apple Developer, App Store Connect,
-Google Cloud, Supabase, EAS) — an agent cannot do any of this. Work through it
-top to bottom before running `eas build --platform ios --profile production`
-and `eas submit --platform ios --profile production`.
+Updated September 22, 2026. Start with [current launch gates](remediation/ios-launch-readiness.md) and the latest [remediation handover](remediation/README.md). This replaces the older March instructions. Connected tools can perform preparation and verification; the account owner completes interactive Apple authentication, agreements and any missing account configuration.
 
-## 1. Apple Developer account
+1. **Reconcile the exact candidate.** #167 contains mobile launch fixes; the B04f privacy candidate builds on it. Merge/release state must be checked, including the separate #165 historical-photo work. Deploy the matching backend and privacy UI before distributing the mobile candidate. Do not submit an older internal build.
+2. **Apple prerequisites.** Verify active membership, App Store Connect role/agreements, app record, and `com.cellarsnap.mobile` with Sign in with Apple. Verify the Supabase Apple provider/audience and `cluster://auth/callback`; do not rotate keys or change the bundle ID speculatively.
+3. **Complete signing locally.** In `apps/mobile`, run `eas credentials --platform ios` and finish Apple authentication/2FA. Do not paste passwords/codes into chat. The last attempt stopped at 2FA before upload; no store IPA was produced. Record the signing outcome without secrets.
+4. **Verify production environment.** EAS production must resolve `EXPO_PUBLIC_WEB_API_BASE_URL=https://cellarsnap.app` and the intended Supabase URL/public key/auth mode. Exclude temporary local env overrides. Inspect the resolved build configuration and final binary's requests. Never ship a loopback/LAN QC host or service-role key.
+5. **Build for the store.** Production profile uses store distribution and an explicit official SDK56 prebuild template. Verify the actual Xcode/iOS SDK image meets current Apple requirements, generated entitlements and privacy manifests. Export/prebuild are not native compile or device acceptance. Check `app.json` for current version/build number and choose an unused build number if a prior upload already used it.
+6. **Install and test.** Record iPhone model/iOS/version/build. Exercise Apple first/repeat/cancel login, password login/recovery, session restore; consent decline/manual logging, allow/AI and revoke; camera/library denial and recovery, scan/crop; create/edit/private photos and ratings; social report/block; sign-out and deletion with a disposable review fixture account. Capture screenshots from this exact binary. Browser Expo evidence is only fallback coverage.
+7. **Prepare the listing.** Verify final name/icon/splash, description, support/contact, screenshots and territories. Reconcile the source-grounded [App Privacy draft](APP_PRIVACY_LABELS.md) with actual provider retention/logging settings and enter the answers in App Store Connect. Complete Apple's current age-rating questionnaire, including alcohol/UGC and any higher override required by the app's age terms; “always 17+” is obsolete guidance.
+8. **Reviewer access.** Provide a dedicated working review account, synthetic populated fixtures and navigation notes in App Store Connect. Do not expose internal tester credentials or private users' content. Confirm reporting/support ownership and that reviewer access includes the relevant features.
+9. **Upload the exact store build.** Resolve the App Store Connect numeric app ID and team from the real account; do not invent identifiers. Configure submission through the authenticated account or protected CI secrets. Use the verified EAS build ID, not `--latest`.
+10. **Submit for review separately.** Wait for processing, select the exact build, finish metadata/privacy/export-compliance/review information and choose release timing. Uploading with EAS only delivers to App Store Connect/TestFlight; record the actual App Review status/receipt before calling it submitted.
 
-- [ ] Confirm an active Apple Developer Program membership ($99/yr) under the account
-      that will own this app.
-- [ ] In [developer.apple.com](https://developer.apple.com) → Certificates, Identifiers &
-      Profiles → Identifiers, create (or confirm) the App ID `com.cellarsnap.mobile`.
-      This bundle ID is permanent — do not change it.
-- [ ] On that App ID, enable the **Sign in with Apple** capability. The mobile app
-      already ships `expo-apple-authentication` and `usesAppleSignIn: true` in
-      `apps/mobile/app.json` — this step just needs to be turned on server-side in
-      the Apple portal to match.
+```sh
+# apps/mobile; after signing, final code/backend and production env are ready
+eas build --platform ios --profile production --non-interactive
+eas submit --platform ios --profile production --id <verified-store-build-id>
+```
 
-## 2. Supabase Apple provider
-
-- [ ] Enable the **Apple** auth provider in the Supabase dashboard (Authentication →
-      Providers) for the project used by production (`rbmkypbqavmnuycznssv` per
-      `CLAUDE.md`).
-- [ ] Follow `docs/CODEX_APPLE_SIGN_IN.md` for the exact Services ID / Key ID / private
-      key values Supabase needs and how the mobile `signInWithIdToken()` flow expects
-      them to be configured.
-- [ ] Confirm the Supabase Auth redirect URL allow-list includes `cluster://auth/callback`
-      (see `apps/mobile/README.md`).
-
-## 3. `eas.json` submit config
-
-- [ ] `apps/mobile/eas.json` currently has an empty `submit.production: {}`. Fill in:
-      - `appleId` — the Apple ID email used for App Store Connect.
-      - `ascAppId` — the App Store Connect app's numeric ID (create the app record in
-        App Store Connect first if it doesn't exist yet — see §5).
-      - `appleTeamId` — the Apple Developer Team ID (found in the Apple Developer
-        portal membership details).
-- [ ] These are account-specific and should not be committed with real values checked
-      into a public/shared repo unless the repo's visibility is confirmed private.
-
-## 4. EAS environment variables — production API base URL
-
-- [ ] **Critical:** `apps/mobile/.env.local` currently points
-      `EXPO_PUBLIC_WEB_API_BASE_URL` at a LAN IP for local dev. This value gets
-      **baked into the built binary at build time** (it's an `EXPO_PUBLIC_*` var, inlined
-      by Expo/Metro, not read at runtime).
-- [ ] Before running an EAS production build, set `EXPO_PUBLIC_WEB_API_BASE_URL` in the
-      EAS project's environment variables (`eas env:create --environment production`,
-      or via the Expo dashboard) to the deployed production Vercel URL — not localhost,
-      not a LAN IP.
-- [ ] Also confirm `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and
-      `EXPO_PUBLIC_AUTH_MODE` are set correctly for production in EAS (mirroring
-      `apps/mobile/README.md`'s `.env.local` template, but pointed at prod).
-- [ ] After the first production build, sanity-check the IPA/build logs (or a TestFlight
-      install) to confirm API calls are hitting the Vercel URL, not the LAN IP.
-
-## 5. App Store Connect listing + privacy labels
-
-- [ ] Create the app record in App Store Connect (if not already created) using bundle ID
-      `com.cellarsnap.mobile`, name "Cluster".
-- [ ] Fill out screenshots, description, keywords, support URL, marketing URL.
-- [ ] Complete the **App Privacy** section using `docs/APP_PRIVACY_LABELS.md` as the
-      exact mapping of CellarSnap/Cluster's data flows to App Store Connect's privacy
-      questionnaire — don't re-derive this from scratch, the doc already has the answers.
-
-## 6. Age rating
-
-- [ ] Set the age rating to **17+** in App Store Connect (App Information → Age Rating).
-      This app is wine-focused (alcohol content) and requires the 17+ tier regardless of
-      other content flags.
-- [ ] The mobile app's own in-app age gate (`apps/mobile/app/age-gate.tsx`) is separate
-      from this — both are required.
-
-## 7. Demo account for App Review
-
-- [ ] Create a real, working demo account (email/password or phone, matching whatever
-      `EXPO_PUBLIC_AUTH_MODE` production is set to) that App Review can sign in with.
-- [ ] Seed it with at least a few cellar entries so reviewers see a populated app, not an
-      empty state.
-- [ ] Add the credentials to the **App Review Information** section in App Store Connect
-      (Sign-In Required → demo username/password + any notes about the flow).
-
-## 8. Google Maps API key restriction
-
-- [ ] In Google Cloud Console, find the Maps API key currently used by the mobile app
-      (location/place search).
-- [ ] Restrict it to the iOS bundle ID `com.cellarsnap.mobile` (Application restrictions →
-      iOS apps) so the key can't be abused if extracted from the shipped binary.
-- [ ] Confirm the restricted key still works end-to-end (location search / place autocomplete)
-      in a production build before submitting — overly-tight restrictions can silently break
-      this feature.
-
-## 9. `PrivacyInfo.xcprivacy` check
-
-- [ ] iOS 17+ / Xcode 15+ requires a Privacy Manifest (`PrivacyInfo.xcprivacy`) declaring
-      "required reason" API usage (e.g. UserDefaults, file timestamps) for any SDK that
-      accesses them — several Expo/RN dependencies now ship their own manifests.
-- [ ] On the **first** EAS production build, check the build logs for any privacy manifest
-      warnings or App Store Connect "Missing Privacy Manifest" / "ITMS-91053" style
-      rejection emails after upload.
-- [ ] If a warning appears, identify which dependency is missing a manifest entry (EAS/Expo
-      usually surfaces this by package name) and either update that package to a version
-      that ships a manifest, or add the declaration per Apple's Privacy Manifest docs.
-
-## 10. Final pre-submit checklist
-
-- [ ] `apps/mobile/app.json` version/build numbers are correct for this submission
-      (`version: 1.0.0`, iOS `buildNumber`, Android `versionCode` per
-      `apps/mobile/README.md`).
-- [ ] Account deletion flow (Profile → Settings → Delete account) works end-to-end against
-      production.
-- [ ] Privacy Policy and Terms screens (`apps/mobile/app/privacy.tsx`,
-      `apps/mobile/app/terms.tsx`) show current, accurate content.
-- [ ] Run `eas build --platform ios --profile production` from `apps/mobile`, then
-      `eas submit --platform ios --profile production` once the build is green.
+Sources: [Expo iOS submission](https://docs.expo.dev/submit/ios/), [Apple submission](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/submit-an-app/), [Apple age ratings](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating/). Keep build, installation, upload and review states distinct.

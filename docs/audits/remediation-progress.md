@@ -136,3 +136,7 @@ Owner-library API and required mobile Library/Events adoption merged #152/#153 a
 ## B02x/B07b/B09a candidate — September 22, 2026
 
 PR #164, source `f504e4e`, base `32dea83`: shared seeded scoring/refresh preferences, corrected canonical/vintage loading, bounded owner entry/grape batch hydration, duplicate-write protection and actionable score failure/retry. Read-only reconciliation verifies all 882 recovery files and 198 retained live objects; no photo mutation. 568 isolated / 41 schema-tool checks, web types/lint/build, web/mobile CI and desktop/phone production-build browser QC pass; primary preview Ready, known duplicate OPS-01 fails. Merge/production deployment/live verification pending. AUD-11/28 are QC passed/release pending, no new closures. [Handover](../remediation/handovers/b02x-b07b-b09a.md), [evidence](../remediation/evidence/b02x-b07b-b09a-qc.json).
+
+
+## September 22 — iOS launch candidate (#166/#167)
+Six repairs (QC-05/10/12/20/21/23), scoped QC-06 accessibility and OPS-03 build configuration. 582 isolated tests, Expo all-platform exports, browser desktop/phone and explicit SDK56 iOS prebuild pass; Apple credentials/2FA block store build, native acceptance absent. New QC-22 records disclosure drift. No new closures, merge, SQL, binary upload or review submission. See [handover](../remediation/handovers/b11d-b11f-ios-launch.md).

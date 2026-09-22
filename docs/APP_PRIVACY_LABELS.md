@@ -1,211 +1,50 @@
-# CellarSnap — App Store Privacy Labels Guide
+# Cluster — App Privacy source review
 
-> **Purpose:** Step-by-step reference for filling out the App Privacy section in App Store Connect.  
-> **Last updated:** March 2026  
-> **App:** CellarSnap (com.cellarsnap.mobile)
+Updated September 22, 2026, QC-22 / B04f. Bundle: `com.cellarsnap.mobile`.
+This is a source-grounded draft for the final App Store Connect questionnaire, **not a receipt that its answers have been entered or verified**. The previous March guide contained unsupported claims about diagnostics, AI recipients and age ratings and is superseded here.
 
----
+## Data and evidence
 
-## Overview
+Purpose is App Functionality unless the final production configuration establishes another use. Treat the following stored data as linked to the account. Optional collection still needs disclosure when Apple's exceptions do not apply.
 
-Apple requires every app submission to declare its data practices via [App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/) in App Store Connect. This document maps CellarSnap's actual data flows to the exact selections you'll make in the App Store Connect form.
+| App Privacy type | Source / intended declaration |
+|---|---|
+| Name, Email Address | Auth and profile, including Apple-supplied/relay email and optional names. Linked. |
+| Phone Number | Supported phone authentication/profile fields; optional does not mean absent. Confirm enabled production mode and profile collection in the final binary. Linked when collected. |
+| User ID | Auth UUID, username, social graph, entry ownership. Linked. |
+| Photos or Videos | Wine/tasting photos and avatars stored in Supabase; selected images sent to AI only after permission. No video feature claimed. Linked. |
+| Other User Content | Wine details, notes, ratings, survey answers, sommelier messages/results, cellar imports, selected/typed tasting venue text and saved scan content. Linked. |
+| Customer Support | In-app feedback and safety reports are stored with account context. The previous guide incorrectly excluded this because feedback lives in Supabase. Linked. |
+| Product Interaction | Stored social interactions, scans and recommendation activity; no separate analytics SDK was found in the candidate's dependency list. Linked. |
+| Other Diagnostic Data | API/error logs may include account IDs, request metadata and network identifiers. Do not label these anonymous without proving de-identification. Confirm actual Vercel/Supabase collection and retention settings before entering the final answer. |
+| Crash Data / Performance Data | No dedicated crash-analytics SDK or runtime Expo crash collection was established by source review. EAS build logs are not evidence that user crash data is collected. Inspect the final binary, service settings and Apple reporting separately; do not copy the old automatic Yes/Not Linked answers. |
 
-**CellarSnap does NOT track users across other apps or websites.** There are no advertising SDKs, no analytics SDKs that use IDFA, and no data broker integrations. This means the "Data Used to Track You" section will be empty.
+No advertising/IDFA, cross-app tracking, payments/IAP, device contacts, audio recording, or native GPS permission was found in this source review. This does not replace the final dependency/native-manifest inspection. App Privacy's Location category cannot be ruled out solely because GPS permission is absent: inspect structured venue/place-ID storage and any provider enrichment against Apple's definitions. Free-form location text is Other User Content; source inspection found no mobile latitude/longitude API. Uploaded originals may retain EXIF location: inspect final native picker/upload bytes before answering Location. Web explicitly reads EXIF GPS and requests optional browser geolocation for Google Maps venue bias (`src/lib/exifGps.ts`, `src/components/LocationAutocomplete.tsx`); the shared public policy discloses this. Saved sommelier prompts and scan URLs/content are user content; do not describe them as unpersisted searches. Confirm with the current questionnaire whether any structured search-history collection warrants a separate selection.
 
----
+## Processors and permission
 
-## Quick Summary
+| Processor | Data sent / source |
+|---|---|
+| Supabase | Authentication, profiles, entries, social data, storage and generated results. Both platforms use it. |
+| Vercel | Web and **mobile** API traffic and operational logs. Mobile is not exempt from this disclosure. |
+| OpenAI | Label/photo/bottle/lineup analysis; list parsing; import column mapping; recommendation notes fallback; sommelier messages/context and embeddings. See `src/app/api/`, `src/server/listScan/parse.ts`, `src/server/sommelier/`. |
+| Anthropic | Taste survey and tasting-history signal for palate distillation; personalized scan explanations. See `src/server/algorithm/palateDistillation.ts`, `src/app/api/list-scan/recommendation-notes/route.ts`. |
+| Google Cloud Vision | Uploaded list images for OCR when configured; OpenAI fallback also exists. See `src/server/listScan/parse.ts`. |
+| Google Maps | Web venue search text and photo/browser coordinates for location bias. Verify the final mobile implementation and uploaded EXIF metadata before final Location answers. |
+| Apple / Expo EAS | Apple sign-in and build/distribution infrastructure. Do not infer app runtime diagnostics collection from using EAS. |
 
-| Category | Declared? | Linked to User? | Used to Track? |
-|----------|-----------|-----------------|----------------|
-| Contact Info | Yes | Yes | No |
-| User Content | Yes | Yes | No |
-| Identifiers | Yes | Yes | No |
-| Usage Data | Yes | Yes | No |
-| Diagnostics | Yes | Not Linked | No |
-| Photos or Videos | Yes | Yes | No |
-| Search History | No | — | — |
-| Location | No | — | — |
-| Health & Fitness | No | — | — |
-| Financial Info | No | — | — |
-| Purchases | No | — | — |
-| Sensitive Info | No | — | — |
-| Contacts | No | — | — |
-| Browsing History | No | — | — |
+The candidate introduces a versioned account-wide AI permission: both platforms identify recipients, data and purpose; Allow, Continue without AI and later revocation are available through Privacy & AI. The API checks fresh server-owned account metadata before any protected AI request. Operator personal-entry embedding also checks each owner's permission per page. No existing account is opted in automatically. Public reference-only Explore generation does not use personal history and is separate from these personal-content routes.
 
----
+Revocation stops subsequent requests/batches, including requests using previously issued JWTs; it cannot recall in-flight requests, erase prior provider copies or delete existing generated results. Account deletion and provider retention are separate. **Do not promise zero retention, no training or a fixed deletion window without verifying the actual provider contracts/account settings.** Historical media retention (AUD-01/22), cleanup retries (AUD-26) and diagnostic work (AUD-50) remain separate obligations.
 
-## Step-by-Step: App Store Connect Selections
+## Public links and remaining operator checks
 
-### Step 1: "Do you or your third-party partners collect data from this app?"
+- Intended Privacy Policy: `https://cellarsnap.app/privacy` (candidate changes must first be deployed).
+- Existing `/privacy/more` uses the same policy; mobile renders the same shared content.
+- Terms: `https://cellarsnap.app/terms`; support/privacy contact already published by the project: `cellarsnap@gmail.com`. Verify that inbox is monitored and provide a working public support URL in the listing.
+- Enter and review the actual App Store Connect data-type/purpose/linkage/tracking answers, including third-party processing and optional features.
+- Verify deployed web policy, installed-native policy access, consent denial/allow/revoke, and the signed app's privacy manifests.
+- Verify retention/backups/provider settings and customer-support response ownership; this code review cannot establish those contractual or operational facts.
+- Complete the **current age-rating questionnaire**, including alcohol references and UGC. Do not force the obsolete blanket “17+” answer from the old guide. Apple computes regional ratings; apply an appropriate higher override if the terms' minimum age exceeds that result. The app's 21+ age gate is a separate constraint.
 
-**Answer: Yes**
-
----
-
-### Step 2: Select Data Types Collected
-
-Check the following data types:
-
-#### 1. Contact Info
-
-| Data Element | Collected? | Why |
-|-------------|-----------|-----|
-| **Name** | Yes | Display name on profile (user-provided) |
-| **Email Address** | Yes | Account creation, authentication, profile |
-| **Phone Number** | Yes | Phone-based auth (when auth mode = phone) |
-| Physical Address | No | — |
-| Other User Contact Info | No | — |
-
-**Purpose:** App Functionality  
-**Linked to User:** Yes  
-**Used to Track:** No
-
-#### 2. User Content
-
-| Data Element | Collected? | Why |
-|-------------|-----------|-----|
-| **Photos or Videos** | Yes | Wine label photos, tasting photos, profile avatars — uploaded via expo-image-picker, stored in Supabase Storage |
-| **Other User Content** | Yes | Wine tasting notes, ratings, reviews, entry descriptions, comments, feedback submissions |
-| Emails or Text Messages | No | — |
-| Audio Data | No | — |
-| Gameplay Content | No | — |
-| Customer Support | No | Not collected through the app directly (feedback goes to Supabase) |
-
-**Purpose:** App Functionality  
-**Linked to User:** Yes  
-**Used to Track:** No
-
-#### 3. Identifiers
-
-| Data Element | Collected? | Why |
-|-------------|-----------|-----|
-| **User ID** | Yes | Supabase auth UUID, username — used for account management and social features |
-| Device ID | No | No device-level identifiers collected |
-
-**Purpose:** App Functionality  
-**Linked to User:** Yes  
-**Used to Track:** No
-
-#### 4. Usage Data
-
-| Data Element | Collected? | Why |
-|-------------|-----------|-----|
-| **Product Interaction** | Yes | App interactions logged for operational purposes — e.g., feature usage patterns used to improve the app. Social interactions (likes, follows, comments) are stored as app functionality. |
-| Advertising Data | No | No ads in the app |
-| Other Usage Data | No | — |
-
-**Purpose:** App Functionality  
-**Linked to User:** Yes  
-**Used to Track:** No
-
-#### 5. Diagnostics
-
-| Data Element | Collected? | Why |
-|-------------|-----------|-----|
-| **Crash Data** | Yes | Expo/EAS may collect crash logs for stability monitoring |
-| **Performance Data** | Yes | Basic operational telemetry |
-| Other Diagnostic Data | No | — |
-
-**Purpose:** App Functionality  
-**Linked to User:** Not Linked to User (crash data is aggregated, not tied to individual identity)  
-**Used to Track:** No
-
----
-
-### Step 3: Data NOT Collected (Do Not Check These)
-
-| Data Type | Why Not Collected |
-|-----------|-------------------|
-| Health & Fitness | Not a health app |
-| Financial Info | No payments, no credit card data (no in-app purchases currently) |
-| Location (Precise or Coarse) | App does not request location permissions. Wine entries may include user-typed location text, but this is "Other User Content" not GPS/location services data. |
-| Sensitive Info | No racial, ethnic, religious, biometric, or similar data collected |
-| Contacts | No access to device contacts |
-| Browsing History | No web browsing tracked |
-| Search History | No search queries persisted for profiling (in-app search is functional only) |
-| Purchases | No purchase tracking (no IAP, no commerce) |
-
----
-
-### Step 4: Third-Party Data Disclosure
-
-CellarSnap integrates the following third-party services. Their data practices must be reflected in the privacy label:
-
-#### Supabase (Auth, Database, Storage)
-- **What it receives:** Email, phone, password (hashed), user content, photos
-- **Data linked to user:** Yes (it's the primary backend)
-- **Tracking:** No
-- **Note:** Supabase is the data processor, not a third-party partner that independently uses data. All data is under CellarSnap's control.
-
-#### OpenAI (AI Features — Label Scan, Autofill, Pocket Sommelier)
-- **What it receives:** Wine label photos (images), tasting notes text, wine entry data for AI analysis
-- **Data linked to user:** The data is sent with context but OpenAI's API does not persistently link it to a CellarSnap user identity
-- **Tracking:** No
-- **Disclosure needed:** Yes — declare under "User Content: Photos or Videos" and "User Content: Other User Content" that data is shared with a third-party AI service for app functionality
-- **Note:** OpenAI's [data usage policy](https://openai.com/policies/api-data-usage-policies) states API data is not used to train models (as of current policy). Mention this if asked during review.
-
-#### Expo / EAS (Build & Distribution)
-- **What it receives:** Crash logs, basic device diagnostics during builds
-- **Data linked to user:** Not linked (aggregated diagnostics)
-- **Tracking:** No
-
-#### Vercel (Web Hosting)
-- **What it receives:** Standard web request logs (IP addresses, user agents) for the web version
-- **Data linked to user:** Not linked
-- **Tracking:** No
-- **Note:** This is for the web deployment only, not the iOS app directly. May not need to be declared if the iOS app doesn't route through Vercel for API calls. CellarSnap's API routes through Vercel (Next.js API routes), so basic server logs apply.
-
----
-
-## Privacy Nutrition Label Preview
-
-Based on the above, CellarSnap's App Store page will show:
-
-### Data Linked to You
-- Contact Info (Name, Email Address, Phone Number)
-- User Content (Photos or Videos, Other User Content)
-- Identifiers (User ID)
-- Usage Data (Product Interaction)
-
-### Data Not Linked to You
-- Diagnostics (Crash Data, Performance Data)
-
-### Data Used to Track You
-- *None* — CellarSnap does not track users across apps or websites
-
----
-
-## Privacy Links (Required)
-
-You'll need to provide these URLs in App Store Connect:
-
-| Field | URL |
-|-------|-----|
-| **Privacy Policy URL** (required) | `https://cellar-snap.vercel.app/privacy` |
-| **Privacy Choices URL** (optional) | — (not needed; users manage privacy in-app via entry-level privacy controls and account deletion) |
-
-> **Note:** The Privacy Policy URL must be publicly accessible (not behind auth). The current `/privacy` route renders in the mobile app but should also be accessible via web. Verify `https://cellar-snap.vercel.app/privacy` loads correctly in a browser. If it doesn't, consider creating a static HTML version at the same URL path in the Next.js web app.
-
----
-
-## Checklist Before Submission
-
-- [ ] All data types above are declared in App Store Connect → App Privacy
-- [ ] "Data Used to Track You" is empty (no tracking)
-- [ ] Privacy Policy URL is set and publicly accessible
-- [ ] Privacy Policy content matches what's declared in the labels (AI disclosure, third-party services, data types)
-- [ ] Terms of Use URL is accessible
-- [ ] Age rating is set to 17+ (alcohol/wine content)
-- [ ] Age gate is implemented in the app
-- [ ] `NSCameraUsageDescription` is set in Info.plist ✅ (done — PR #12 merged)
-- [ ] `NSPhotoLibraryUsageDescription` is set in Info.plist ✅ (already present)
-- [ ] Sign in with Apple is implemented (required since app has third-party auth)
-
----
-
-## Notes
-
-- If CellarSnap adds in-app purchases, analytics SDKs (e.g., Mixpanel, Firebase Analytics), or advertising in the future, this document and the App Store Connect selections must be updated.
-- Apple can audit your privacy declarations against your actual code. The Privacy Manifest (`PrivacyInfo.xcprivacy`) may be required if you use any "Required Reason APIs." Currently, CellarSnap's SDK dependencies (Expo, Supabase) may trigger this — check `npx expo prebuild` output for any privacy manifest warnings.
-- Keep this document updated alongside the Privacy Policy and Terms of Use whenever data practices change.
+References reviewed September 22: [Apple App Privacy details](https://developer.apple.com/app-store/app-privacy-details/), [Review Guidelines 5.1.2(i)](https://developer.apple.com/app-store/review/guidelines/#data-use-and-sharing), [current age-rating questionnaire](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating/). No legal certification or App Review approval is asserted.

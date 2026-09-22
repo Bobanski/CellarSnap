@@ -830,7 +830,7 @@ const FeedCard = React.memo(function FeedCard({
                 ))}
               </ScrollView>
             ) : (
-              <Pressable onPress={handleCardPress}>
+              <Pressable onPress={handleCardPress} style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel={`Open ${item.wine_name || "wine"}`}>
                 <Image
                   source={{ uri: activePhoto.url }}
                   style={styles.feedPhotoStatic}

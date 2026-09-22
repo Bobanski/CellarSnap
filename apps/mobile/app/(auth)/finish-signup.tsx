@@ -205,8 +205,8 @@ export default function FinishSignupScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.screen}
     >
-      <View style={styles.blobTop} />
-      <View style={styles.blobBottom} />
+      <View pointerEvents="none" accessibilityElementsHidden style={styles.blobTop} />
+      <View pointerEvents="none" accessibilityElementsHidden style={styles.blobBottom} />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.headBlock}>
@@ -369,6 +369,7 @@ function Field({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
+    overflow: "hidden",
     backgroundColor: colors.screenBg,
   },
   blobTop: {

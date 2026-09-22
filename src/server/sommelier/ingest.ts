@@ -1,3 +1,4 @@
+import { hasAiConsent } from "@shared";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import {
   formatAdvancedNoteValue,
@@ -683,10 +684,16 @@ export async function ingestWineEntryEmbeddings(
   dependencies: {
     supabase?: AdminClient;
     generateEmbeddings?: typeof generateEmbeddings;
+    canProcessOwner?: (userId: string) => Promise<boolean>;
   } = {}
 ): Promise<StructuredIngestionSummary> {
   const supabase = dependencies.supabase ?? createSupabaseAdminClient();
   const embed = dependencies.generateEmbeddings ?? generateEmbeddings;
+  const canProcessOwner = dependencies.canProcessOwner ?? (async (userId: string) => {
+    const { data, error } = await supabase.auth.admin.getUserById(userId);
+    if (error) throw new Error("Unable to verify AI sharing choice; personal ingestion stopped.");
+    return hasAiConsent(data.user?.app_metadata);
+  });
   let cursor: string | null = null;
   let insertedCount = 0;
   let skippedCount = 0;
@@ -699,8 +706,18 @@ export async function ingestWineEntryEmbeddings(
       batch_size: 100,
     });
     if (error) throw new Error(`Failed to load personal knowledge sources: ${error.message}`);
-    const sources = (data ?? []) as EntryKnowledgeSource[];
-    if (sources.length === 0) break;
+    const page = (data ?? []) as EntryKnowledgeSource[];
+    if (page.length === 0) break;
+    cursor = page[page.length - 1]!.entry_id;
+    // Operator permission cannot grant sharing on behalf of entry owners. Recheck
+    // every page so revocation during a long job stops subsequent batches.
+    const allowedOwners = new Set<string>();
+    for (const owner of new Set(page.map(source => source.source_snapshot.entry.user_id))) {
+      if (await canProcessOwner(owner)) allowedOwners.add(owner);
+    }
+    const sources = page.filter(source => allowedOwners.has(source.source_snapshot.entry.user_id));
+    skippedCount += page.length - sources.length;
+    if (sources.length === 0) continue;
     const contents = sources.map(({ source_snapshot: snapshot }) =>
       serializeWineEntryRow(snapshot.entry, snapshot.primary_grapes.map((grape) => grape.name)).trim()
     );
@@ -726,7 +743,6 @@ export async function ingestWineEntryEmbeddings(
     }
     insertedCount += publications.filter((result) => result.published).length;
     skippedCount += publications.filter((result) => !result.published).length;
-    cursor = sources[sources.length - 1]!.entry_id;
   }
   return { sourceTable: "wine_entries", insertedCount, skippedCount };
 }

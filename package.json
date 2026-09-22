@@ -26,7 +26,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
-    "exifreader": "^4.40.5",
+    "exifreader": "4.41.1",
     "ipaddr.js": "2.5.0",
     "next": "^16.3.5",
     "openai": "^6.18.0",

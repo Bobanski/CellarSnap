@@ -892,7 +892,7 @@ export function AppTopBar() {
                     color={colors.textSecondary}
                   />
                   <AppText style={menuStyles.menuItemText}>
-                    Privacy & Terms
+                    Privacy & AI
                   </AppText>
                 </Pressable>
               </View>

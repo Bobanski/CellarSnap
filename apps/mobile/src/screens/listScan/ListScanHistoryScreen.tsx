@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   primaryButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 15,
     fontWeight: "700",
   },
