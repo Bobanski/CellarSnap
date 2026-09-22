@@ -61,6 +61,10 @@ jobs:
         working-directory: apps/mobile
         run: npm run test:tooling
 
+      - name: iOS release configuration contracts
+        working-directory: apps/mobile
+        run: npm run test:release
+
       - name: Typecheck
         working-directory: apps/mobile
         run: npm run typecheck

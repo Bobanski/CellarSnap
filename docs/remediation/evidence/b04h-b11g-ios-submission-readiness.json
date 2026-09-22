@@ -1,0 +1,66 @@
+{
+  "date": "2026-09-22",
+  "base": "d57a58523d27d6066fa3b811525704e5d9ae0dbb",
+  "branch": "fix/ios-submission-readiness",
+  "findings": ["AUD-08", "QC-22", "QC-24", "OPS-03"],
+  "candidate": {
+    "bundleIdentifier": "com.cellarsnap.mobile",
+    "version": "1.0.1",
+    "buildNumber": "3",
+    "expo": "57.0.24",
+    "reactNative": "0.86.3",
+    "prebuildTemplate": "expo-template-bare-minimum@57.0.26",
+    "distribution": "store",
+    "environment": "production"
+  },
+  "automated": {
+    "applicationTests": 597,
+    "schemaAndToolChecks": 47,
+    "mobileDependencyContracts": 7,
+    "mobileToolingContracts": 3,
+    "iosReleaseContracts": 4,
+    "expoDoctor": "21/21 passed",
+    "mobileAudit": "0 vulnerabilities",
+    "webLint": "passed",
+    "webTypecheck": "passed",
+    "databaseTypeContract": "passed",
+    "mobileLint": "passed",
+    "mobileTypecheck": "passed",
+    "productionEnvironmentExport": ["web passed", "ios passed", "android passed"]
+  },
+  "generatedNative": {
+    "prebuild": "passed",
+    "deploymentTarget": "16.4",
+    "appleSignInEntitlement": "present",
+    "privacyManifest": "generated and referenced",
+    "cameraAndPhotoUsage": "present",
+    "microphoneUsage": "absent",
+    "faceIdUsage": "absent",
+    "androidRecordAudio": "absent",
+    "compile": "not run: full Xcode/CocoaPods unavailable"
+  },
+  "manualBrowser": {
+    "surface": "Expo web production export in in-app Chromium",
+    "viewports": ["390x844", "1440x1000"],
+    "scope": "age-gate layout and console",
+    "result": "visual fit passed; zero console errors/warnings",
+    "limitation": "deeper flows require user age assertion; not treated as SDK 57 interaction acceptance"
+  },
+  "externalState": {
+    "productionBuilds": 0,
+    "submissions": 0,
+    "latestExistingBinary": "internal preview 1.0.1 build 2",
+    "appStoreConnect": "bundle unresolved with currently available API keys",
+    "appleSigning": "2FA/provisioning incomplete",
+    "stateMutations": "none"
+  },
+  "unavailable": [
+    "full Xcode native compile",
+    "iOS simulator or installed iPhone acceptance",
+    "Android emulator acceptance",
+    "signed archive privacy report",
+    "TestFlight upload",
+    "App Review submission"
+  ],
+  "secretsIncluded": false
+}
