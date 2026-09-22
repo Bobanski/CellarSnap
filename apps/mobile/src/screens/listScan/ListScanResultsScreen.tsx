@@ -989,7 +989,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerPrimaryButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   warningText: {
-    color: colors.screenBg,
+    color: colors.textPrimary,
     fontSize: 13,
     lineHeight: 20,
   },
@@ -1320,7 +1320,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   segmentButtonTextActive: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
   },
   segmentButtonTextWhite: {
     color: colors.accentGold,
@@ -1613,7 +1613,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   primaryButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 15,
     fontWeight: "700",
   },

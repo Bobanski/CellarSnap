@@ -12,7 +12,8 @@
     },
     "production": {
       "environment": "production",
-      "distribution": "store"
+      "distribution": "store",
+      "prebuildCommand": "prebuild --template expo-template-bare-minimum@56.0.36"
     }
   },
   "submit": {

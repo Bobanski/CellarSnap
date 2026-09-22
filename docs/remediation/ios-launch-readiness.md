@@ -8,6 +8,8 @@ This is a release gate record, not a certification that the app is ready for rev
 - EAS project `97b28ad8-6330-4762-9ca3-a9be0204b401`; production profile explicitly uses store distribution and the production environment.
 - Last existing binary inspected: preview/internal build `d878c8d8-0c6f-43a9-8ec2-0b00d06c2f21`, version 1.0.1/build 2, September 14. It predates this candidate and is not an App Store binary.
 - EAS production has the four expected public environment variable names. Verify resolved production API/Supabase hosts against the final build. Do not embed private keys or the local QC proxy.
+- Store-build attempt at `1a06fd0`: failed before upload because production credentials are incomplete. Interactive setup reached Apple 2FA after the cached session expired; canceled cleanly and restored local QC environment. No new EAS build ID, IPA, App Store upload or App Review submission. Complete Apple authentication and production provisioning, then rebuild the final PR head.
+- Production prebuild pins `expo-template-bare-minimum@56.0.36`: installed Expo 56.0.21 bundled an SDK 57 template and emitted Expo/RN mismatch warnings in disposable prebuild. Explicit SDK 56 template regenerates successfully without those warnings; this is native project generation, not compilation/device acceptance.
 - Code repairs: QC-20 notes bearer authentication/retry, QC-05 nested headers, QC-10 auth viewport, QC-12 single-photo size, scoped QC-06 accessible controls, QC-21 Apple nonce exchange.
 
 ## Gates before review
