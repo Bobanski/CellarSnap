@@ -1,8 +1,8 @@
 # Remediation hub
 
-- **Merge integration checkpoint:** owner approved the known duplicate-hosting exception. #167 merged `1427ebd`, #168 merged `6f69d83`. #165 now includes the reviewed app changes; conflicts were documentation-only and preserve both histories. Combined CI/primary preview and #165 merge remain pending; archive SQL and native distribution are separate.
+- **Latest release handover:** [iOS PR merges and web release](handovers/ios-merge-release.md), [sanitized evidence](evidence/ios-merge-release.json). #167/#168/#165 merged at `1427ebd`/`6f69d83`/`2205a5c`; combined CI and primary preview pass. Production web and Expo browser consent/retry/revocation pass at desktop/phone widths. Owner approved OPS-01 duplicate-check exception. Archive SQL and native Apple submission remain pending; queue **76 / 15 Closed**.
 
-- **Latest review checkpoint:** [#165/#167/#168 merge review](handovers/ios-pr-merge-review.md). No code blockers; review comments addressed, corrected-head Web/Mobile CI and primary previews pass, fresh hosted-preview browser and archive replay pass. No merges yet: owner’s green-check condition awaits a decision on the known failing duplicate Vercel check (OPS-01). Design draft #75 remains separate.
+- **Historical pre-merge review checkpoint:** [#165/#167/#168 merge review](handovers/ios-pr-merge-review.md). No code blockers; review comments addressed, corrected-head Web/Mobile CI and primary previews pass, fresh hosted-preview browser and archive replay pass. No merges yet: owner’s green-check condition awaits a decision on the known failing duplicate Vercel check (OPS-01). Design draft #75 remains separate.
 
 - **Latest handover / iOS privacy:** [B04f–B04g](handovers/b04f-b04g-ios-privacy.md), [sanitized evidence](evidence/b04f-b04g-ios-privacy.json). #168 adds account-wide AI permission/enforcement and shared disclosures; patches a fresh ExifReader advisory. 597 isolated tests, production build and desktop/phone web + Expo QC pass. Stacked on #167; deployment, Apple signing, native acceptance and actual store metadata remain pending. Queue **76 / 15 Closed**.
 
@@ -42,7 +42,7 @@ The backlog is the source of truth for work status. Original reports remain date
 
 ## Where we are now
 
-**#167/#168 are merged; #165 integration is under verification.** The owner explicitly accepted OPS-01’s duplicate hosting check as nonblocking. No runtime conflict occurred; archive schema/operator source is unchanged. Recheck combined CI before merging #165, then verify the primary deployment and publish the release handover. No SQL applied or native binary distributed.
+**#167/#168/#165 are merged; privacy backend/web is live-verified.** Owner approved the duplicate hosting exception. Combined Web/Mobile CI, 597 isolated tests and 47 schema/tool checks pass. Desktop/phone cookie web and bearer Expo-browser production acceptance passed; test metadata restored. No hosted archive SQL/copies/retirement or new native binary/submission. [Current release/resume handover](handovers/ios-merge-release.md). The dated checkpoints below preserve earlier states and are superseded by this release.
 
 **PR review completed; conditional merge remains pending.** #167 `c00448c` reconciles finding statuses; #168 `148ba4b` includes that documentation correction with unchanged tested runtime. #165 archival schema/replay passes afresh. All three primary application checks pass; duplicate hosting still fails from missing env, verified from logs. No production/SQL/native release occurred. [Review checkpoint](handovers/ios-pr-merge-review.md).
 
