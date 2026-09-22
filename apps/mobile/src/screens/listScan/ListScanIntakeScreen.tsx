@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
     opacity: 0.68,
   },
   submitButtonText: {
-    color: colors.screenBg,
+    color: colors.textOnAccent,
     fontSize: 16,
     fontWeight: "700",
   },

@@ -41,6 +41,8 @@ export default defineConfig({
     "audit-regressions.spec.ts",
     "mobile-feed-request.spec.ts",
     "mobile-home-request.spec.ts",
+    "mobile-recommendation-notes.spec.ts",
+    "mobile-apple-auth.spec.ts",
     "mobile-detail-request.spec.ts",
     "owner-library.spec.ts",
     "owner-entry-edit.spec.ts",
