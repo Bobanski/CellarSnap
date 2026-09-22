@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
-import type { Database } from "@shared";
+import { hasAiConsent, requiresAiConsent, type Database } from "@shared";
 import { createTypedSupabaseServerClient } from "@/lib/supabase/server";
 import { registerRequestPhotoClient } from "@/lib/storage/photoDelivery";
 import { PHOTO_DELIVERY_HEADER, PHOTO_DELIVERY_VERSION } from "@shared/photoDelivery";
@@ -49,6 +49,17 @@ export class RequestAuthError extends Error {
     this.name = "RequestAuthError";
     this.status = status;
     this.code = code;
+  }
+}
+
+// getUser() fetches current server-owned metadata, never the potentially stale JWT
+// or user-editable user_metadata. Revocation applies even to an old access token.
+function enforceAiSharingChoice(request: Request, user: User) {
+  if (requiresAiConsent(request) && !hasAiConsent(user.app_metadata)) {
+    throw new RequestAuthError(
+      "AI sharing is off. You can enable it in Privacy & AI, or continue without AI.",
+      403, "AI_CONSENT_REQUIRED"
+    );
   }
 }
 
@@ -114,6 +125,7 @@ async function resolveRequestAuth<Client extends RequestAuthClientLike>(
       } = await bearerClient.auth.getUser();
 
       if (user) {
+        enforceAiSharingChoice(request, user);
         if (request.headers.get(PHOTO_DELIVERY_HEADER) === PHOTO_DELIVERY_VERSION) {
           registerRequestPhotoClient(bearerClient);
         }
@@ -133,6 +145,7 @@ async function resolveRequestAuth<Client extends RequestAuthClientLike>(
     } = await supabase.auth.getUser();
 
     if (user) {
+      enforceAiSharingChoice(request, user);
       return {
         supabase,
         user,

@@ -53,7 +53,7 @@ export function createListScanParseHandler(
       auth = await resolvedDependencies.requireRequestAuth(request);
     } catch (error) {
       if (error instanceof RequestAuthError) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json({ error: error.message }, { status: error.status });
       }
       throw error;
     }

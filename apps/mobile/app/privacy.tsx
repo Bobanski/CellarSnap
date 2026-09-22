@@ -3,42 +3,26 @@ import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
 
-const LAST_UPDATED = "February 12, 2026";
+import { PRIVACY_UPDATED, PRIVACY_SECTIONS } from "@cellarsnap/shared";
+import { AiConsentCard } from "@/src/components/AiConsentCard";
+import { useAuth } from "@/src/providers/AuthProvider";
 
 export default function PrivacyScreen() {
+  const { user } = useAuth();
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.card}>
         <View style={styles.head}>
           <AppText style={styles.eyebrow}>Legal</AppText>
           <AppText style={styles.title}>Privacy Policy</AppText>
-          <AppText style={styles.updated}>Last updated: {LAST_UPDATED}</AppText>
+          <AppText style={styles.updated}>Last updated: {PRIVACY_UPDATED}</AppText>
         </View>
 
-        <View style={styles.section}>
-          <AppText style={styles.paragraph}>
-            CellarSnap stores the account details and wine-log content needed to run
-            the app, including profile info, entries, photos, social relationships,
-            and feedback submissions.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            Photos and entry metadata are access-controlled by your privacy settings
-            (public, friends, or private). Signed URLs are used for photo delivery.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            AI features process uploaded images and notes through OpenAI APIs to
-            provide autofill and summary assistance. Do not upload sensitive personal
-            images.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            We use operational logs and error telemetry to keep the product reliable
-            during testing. Data is retained as needed for product operation and safety.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            For feedback-related requests during the friends-and-family phase, submit a
-            note through the in-app feedback page.
-          </AppText>
-        </View>
+        {user && <AiConsentCard key={user.id} userId={user.id} />}
+        {PRIVACY_SECTIONS.map(section => <View key={section.title} style={styles.section}>
+          <AppText accessibilityRole="header" style={styles.sectionTitle}>{section.title}</AppText>
+          {section.paragraphs.map(text => <AppText key={text} style={styles.paragraph}>{text}</AppText>)}
+        </View>)}
 
         <View style={styles.footerRow}>
           <Link href="/terms" style={styles.footerLink}>
@@ -89,6 +73,7 @@ const styles = StyleSheet.create({
   section: {
     gap: 10,
   },
+  sectionTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "600" },
   paragraph: {
     color: colors.textSecondary,
     fontSize: 13,

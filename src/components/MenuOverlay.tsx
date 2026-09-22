@@ -231,7 +231,7 @@ export default function MenuOverlay({ open, onClose }: MenuOverlayProps) {
           />
           <MenuLink
             href="/privacy"
-            label="Privacy & Terms"
+            label="Privacy & AI"
             onClose={onClose}
           />
         </div>

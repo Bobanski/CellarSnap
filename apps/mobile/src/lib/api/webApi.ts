@@ -6,7 +6,7 @@ export function getWebApiBaseUrl() {
   return baseUrl ? baseUrl.replace(/\/$/, "") : null;
 }
 
-export async function getAccessTokenForApi() {
+export async function getAccessTokenForApi(expectedUserId?: string) {
   const { data: sessionResult } = await supabase.auth.getSession();
   let session = sessionResult.session;
   const expiresSoon =
@@ -20,6 +20,7 @@ export async function getAccessTokenForApi() {
     }
   }
 
+  if (expectedUserId && session?.user.id !== expectedUserId) return null;
   return session?.access_token ?? null;
 }
 

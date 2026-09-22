@@ -2,6 +2,7 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Redirect, Stack, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { AiConsentPrompt } from "@/src/components/AiConsentPrompt";
 import { AuthProvider } from "@/src/providers/AuthProvider";
 import { KeyboardDoneAccessory } from "@/src/components/KeyboardDoneAccessory";
 import { AgeVerificationProvider, useAgeVerification } from "@/src/lib/ageVerificationContext";
@@ -98,6 +99,7 @@ function RootNavigator() {
         />
       </Stack>
       <KeyboardDoneAccessory />
+      <AiConsentPrompt />
     </AuthProvider>
   );
 }

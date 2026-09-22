@@ -48,7 +48,7 @@ export function createSommelierUploadDocumentHandler(
         resolvedDependencies.assertSommelierAdminUser(auth.user.id);
       } catch (error) {
         if (error instanceof RequestAuthError) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          return NextResponse.json({ error: error.message }, { status: error.status });
         }
         if (error instanceof SommelierAdminError) {
           return NextResponse.json({ error: error.message }, { status: error.status });
@@ -86,7 +86,7 @@ export function createSommelierUploadDocumentHandler(
         resolvedDependencies.assertSommelierAdminUser(auth.user.id);
       } catch (error) {
         if (error instanceof RequestAuthError) {
-          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+          return NextResponse.json({ error: error.message }, { status: error.status });
         }
         if (error instanceof SommelierAdminError) {
           return NextResponse.json({ error: error.message }, { status: error.status });

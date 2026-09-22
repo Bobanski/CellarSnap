@@ -35,3 +35,6 @@ export * from './activity-summary';
 export * from './entryGrapes';
 export * from './entryEdit';
 export * from './photoDelivery';
+export * from './aiConsent';
+export * from './privacyPolicy';
+export * from './aiConsentRequest';
