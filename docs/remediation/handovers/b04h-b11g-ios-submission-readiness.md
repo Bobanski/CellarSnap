@@ -2,11 +2,11 @@
 
 ## Objective and IDs
 
-Move the merged iOS launch source toward an App Store-reviewable binary without claiming Apple-account or native-device work that has not happened. Scope: AUD-08 (native runtime dependency risk), QC-24 (unused sensitive permissions), QC-22 (generated privacy declarations) and OPS-03 (store gates). Base is main `d57a585`; candidate branch is `fix/ios-submission-readiness`. Queue is **77 records / 15 Closed**.
+Move the merged iOS launch source toward an App Store-reviewable binary without claiming Apple-account or native-device work that has not happened. Scope: AUD-08 (native runtime dependency risk), QC-24 (unused sensitive permissions), QC-22 (generated privacy declarations) and OPS-03 (store gates). Base is main `d57a585`; source candidate `8ad26f2` is [PR #170](https://github.com/Bobanski/CellarSnap/pull/170) on `fix/ios-submission-readiness`. Queue is **77 records / 15 Closed**.
 
 ## Resume here
 
-Start with [iOS release gates](../ios-launch-readiness.md), the [submission runbook](../../IOS_SUBMISSION_RUNBOOK.md) and the [canonical backlog](../backlog.md). The source candidate is ready for PR review. Do not build or submit an older internal binary. The next executable gate requires verified Apple signing plus an App Store Connect app record/API key; no secret should be committed or pasted into documentation.
+Start with [iOS release gates](../ios-launch-readiness.md), the [submission runbook](../../IOS_SUBMISSION_RUNBOOK.md) and the [canonical backlog](../backlog.md). PR #170 has green Web/Mobile CI and primary `cellar-snap` preview; the known duplicate `cellarsnap` deployment fails under OPS-01. Do not build or submit an older internal binary. The next executable gate requires merge, verified Apple signing and an App Store Connect app record/API key; no secret should be committed or pasted into documentation.
 
 ## Implemented
 

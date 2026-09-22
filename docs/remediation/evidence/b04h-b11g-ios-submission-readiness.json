@@ -2,6 +2,8 @@
   "date": "2026-09-22",
   "base": "d57a58523d27d6066fa3b811525704e5d9ae0dbb",
   "branch": "fix/ios-submission-readiness",
+  "sourceCandidate": "8ad26f279e4dace4ae4396f9c2241e250b0acccf",
+  "pullRequest": 170,
   "findings": ["AUD-08", "QC-22", "QC-24", "OPS-03"],
   "candidate": {
     "bundleIdentifier": "com.cellarsnap.mobile",
@@ -26,7 +28,8 @@
     "databaseTypeContract": "passed",
     "mobileLint": "passed",
     "mobileTypecheck": "passed",
-    "productionEnvironmentExport": ["web passed", "ios passed", "android passed"]
+    "productionEnvironmentExport": ["web passed", "ios passed", "android passed"],
+    "pullRequestChecks": "Web CI, Mobile CI and primary cellar-snap preview passed; known OPS-01 duplicate cellarsnap deployment failed"
   },
   "generatedNative": {
     "prebuild": "passed",
