@@ -1,0 +1,136 @@
+{
+  "date": "2026-09-22",
+  "base": "32dea83",
+  "testedSourceCommit": "f504e4e84023a4cc990f4c5ecad1d17e8465f182",
+  "applicationCommit": "01a8a76",
+  "pullRequest": "https://github.com/Bobanski/CellarSnap/pull/164",
+  "automated": {
+    "isolatedTestsPassed": 568,
+    "schemaAndToolTestsPassed": 41,
+    "webTypes": "pass",
+    "webLint": "pass",
+    "productionBuild": "pass",
+    "githubCI": {
+      "run": "https://github.com/Bobanski/CellarSnap/actions/runs/35694448820",
+      "web": "pass",
+      "mobile": "pass"
+    }
+  },
+  "privacy": {
+    "inventoryCapturedAt": "2026-09-22T06:01:44.169Z",
+    "reconciliation": {
+      "currentObjects": 921,
+      "verifiedBackupObjects": 882,
+      "verifiedBackupBytes": 2320713813,
+      "retainedHistoricalObjects": 198,
+      "retainedHistoricalBytes": 588900830,
+      "classifications": {
+        "unreferenced-archive-review": 189,
+        "missing-base-recovery-review": 9
+      },
+      "missingReferences": 12,
+      "originalOnlyRecoveryCandidates": 9,
+      "noKnownBytes": 3
+    },
+    "retainedLiveHashVerification": {
+      "verifiedAt": "2026-09-22T06:09:15.440Z",
+      "objects": 198,
+      "bytes": 588900830,
+      "sha256Matches": 198,
+      "storageMutations": 0
+    },
+    "priorVerifiedRetirements": 487,
+    "legacySigningCutoffActive": true,
+    "productionStorageMutations": 0,
+    "retirementAuthorized": false
+  },
+  "browser": {
+    "environment": "local production build against hosted backend; designated accounts; disposable fixtures",
+    "viewports": [
+      [
+        1440,
+        1000
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "checks": [
+      {
+        "viewport": "desktop",
+        "score": 66,
+        "ownerEdit": true,
+        "refreshParity": true,
+        "overflow": false
+      },
+      {
+        "viewport": "phone",
+        "score": 66,
+        "ownerEdit": true,
+        "refreshParity": true,
+        "overflow": false
+      },
+      {
+        "viewport": "desktop",
+        "scoreFailureAndKeyboardRetry": true
+      },
+      {
+        "viewport": "phone",
+        "scoreFailureAndKeyboardRetry": true
+      },
+      {
+        "coldBatchFullParity": true,
+        "duplicateIds": true,
+        "foreignOverrideDenied": true,
+        "warmScoreParity": true
+      },
+      {
+        "listScanWines": 48,
+        "scoreSummary": {
+          "mode": "personalized",
+          "based_on_entry_count": 6,
+          "warning": null
+        }
+      }
+    ],
+    "pageExceptions": 0,
+    "httpErrors": [
+      {
+        "status": 503,
+        "path": "/api/algorithm/score"
+      },
+      {
+        "status": 503,
+        "path": "/api/algorithm/score"
+      }
+    ],
+    "consoleErrors": {
+      "intentionalScore503": 2,
+      "existingNavigationAuthFetchDiagnostic": 1
+    },
+    "directApiDeliberateStatuses": [
+      404
+    ],
+    "visualReview": "desktop/phone score, explanations, editing, error/retry, and list recommendations reviewed",
+    "nativeCoverage": "simctl unavailable; adb/emulator absent; no native acceptance or Expo export claimed",
+    "supplementalListControls": {
+      "showHideFilters": "pass at desktop and phone",
+      "bestMatchSort": "pass at desktop and phone"
+    }
+  },
+  "release": {
+    "merge": "pending",
+    "productionDeployment": "pending",
+    "migration": "none",
+    "liveApplicationVerification": "pending",
+    "primaryPreview": "ready",
+    "duplicateHosting": "OPS-01 missing Supabase environment variables",
+    "primaryPreviewDeployment": "dpl_5wwEV5dYj6ezL9oKhyeXq1KXcWZj"
+  },
+  "cleanup": {
+    "verifiedAt": "2026-09-22T06:28:29.263Z",
+    "remainingFixtureEntries": 0,
+    "remainingSessionScans": 0
+  }
+}
