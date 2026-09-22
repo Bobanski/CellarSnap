@@ -1,0 +1,134 @@
+{
+  "applicationCommit": "4dd13f5",
+  "base": "421f244",
+  "issue": 166,
+  "pr": 167,
+  "status": "native acceptance and release pending",
+  "automated": {
+    "isolatedTests": 582,
+    "notesTests": 11,
+    "appleProtocolTests": 3,
+    "dependencyContracts": 7,
+    "toolingContracts": 3,
+    "webTypecheck": "passed",
+    "mobileTypecheck": "passed",
+    "lint": "passed",
+    "expoExports": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "iosPrebuild": {
+      "status": "passed using explicit SDK56 template",
+      "template": "expo-template-bare-minimum@56.0.36",
+      "nativeCompilation": false
+    }
+  },
+  "baseline": {
+    "authDocumentWidth": 450,
+    "phoneViewportWidth": 390,
+    "routeGroupHeaders": true,
+    "singlePhoto": [
+      {
+        "loaded": true,
+        "height": 0,
+        "width": 1242
+      }
+    ]
+  },
+  "browser": {
+    "checks": [
+      "phone auth sign-in/recovery/signup viewport, no group header",
+      "desktop auth sign-in/recovery/signup viewport, no group header",
+      "desktop single image loaded, nonzero frame, Enter opens correct detail",
+      "phone single image loaded, nonzero frame, Enter opens correct detail"
+    ],
+    "errors": [],
+    "http": [],
+    "consoleErrors": [],
+    "notesRequests": []
+  },
+  "scan": {
+    "checks": [
+      "real parse and generated notes 200, current bearer, no cookies",
+      "phone notes failure announced, keyboard retry succeeds, no overflow",
+      "desktop notes failure announced, keyboard retry succeeds, no overflow"
+    ],
+    "errors": [],
+    "http": [
+      {
+        "path": "/api/list-scan/recommendation-notes",
+        "status": 503
+      },
+      {
+        "path": "/api/list-scan/recommendation-notes",
+        "status": 503
+      }
+    ],
+    "requests": [
+      {
+        "bearer": true,
+        "cookies": false
+      },
+      {
+        "bearer": true,
+        "cookies": false
+      },
+      {
+        "bearer": true,
+        "cookies": false
+      },
+      {
+        "bearer": true,
+        "cookies": false
+      },
+      {
+        "bearer": true,
+        "cookies": false
+      }
+    ],
+    "wineCount": 48
+  },
+  "contrast": {
+    "checks": [
+      "phone intake/result foreground, warning and history navigation/layout",
+      "desktop intake/result foreground, warning and history navigation/layout"
+    ],
+    "errors": [],
+    "primaryActionContrast": 8.64207850257858,
+    "previousPrimaryActionContrast": 1.8989719051637453
+  },
+  "runtime": {
+    "nativeRuntimes": [],
+    "serverLogWindowSeconds": 30,
+    "serverRuntimeRecords": 0,
+    "serverLogScope": "bounded tail, not historical audit"
+  },
+  "eas": {
+    "candidateVersion": "1.0.1",
+    "iosBuildNumber": "3",
+    "attemptedDistribution": "store",
+    "result": "blocked before build/upload: production credentials incomplete; Apple login requires 2FA",
+    "createdBuildId": null,
+    "appStoreUpload": false,
+    "appReviewSubmitted": false,
+    "productionApiHost": "https://cellarsnap.app"
+  },
+  "fixtureCleanup": {
+    "wine_entries": 0,
+    "list_scan_results": 0,
+    "list_scan_wines": 0,
+    "photoFixtureEntries": 0,
+    "fixturePhotoObjects": 0,
+    "testerCount": 4,
+    "generatedTesterSessionSignedOut": true
+  },
+  "ci": {
+    "applicationCommit": "4dd13f5",
+    "run": "https://github.com/Bobanski/CellarSnap/actions/runs/35699133121",
+    "web": "passed",
+    "mobile": "passed",
+    "primaryPreview": "Ready",
+    "duplicatePreview": "failed: known OPS-01; missing Supabase environment variables confirmed in preceding candidate logs"
+  }
+}

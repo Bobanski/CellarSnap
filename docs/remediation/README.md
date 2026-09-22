@@ -1,5 +1,7 @@
 # Remediation hub
 
+- **Latest handover / iOS launch push:** [B11d–B11f / B04e](handovers/b11d-b11f-ios-launch.md), [sanitized evidence](evidence/b11d-b11f-ios-launch.json), [submission gates](ios-launch-readiness.md). #167 repairs six mobile issues and prepares build 3; browser/Expo QC passes. Apple production signing/2FA, installed-native acceptance and release remain pending. Queue **76 / 15 Closed**. Prior #164 release closures reconciled; #165 historical archive remains separate/open.
+
 - **Latest handover / larger release candidate:** [B02x/B07b/B09a](handovers/b02x-b07b-b09a.md), [sanitized evidence](evidence/b02x-b07b-b09a-qc.json). #164 source `f504e4e`: seeded scoring/refresh correctness, bounded batch reads and score retry pass local QC; historical photo preservation/reconciliation verified read-only. Merge, production deployment and live acceptance pending.
 
 - **Previous release / five closures:** [B11a–B11c / B01 verification](handovers/b11a-b11c-release.md), [sanitized evidence](evidence/b11a-b11c-release.json). #161 merged `83454a1`, primary live; AUD-17/AUD-27/QC-11/QC-18/QC-19 Closed. 13 Closed / 72 total, including newly recorded QC-20 (Open/P2).
@@ -31,6 +33,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**iOS is now an explicit launch target.** #167 implements notes auth/retry, Apple nonce exchange, nested-header/viewport/photo repairs, scan contrast and a matching SDK56 prebuild template. 582 isolated tests and desktop/phone Expo flows pass; native unavailable. EAS production build was blocked before upload by missing credentials and Apple 2FA. No App Store submission. [Current handover](handovers/b11d-b11f-ios-launch.md). The previous web-only native deferral does not certify this launch. #164 is already live (`421f244`), AUD-11/28 Closed; #165 archive code/SQL remain unmerged/unhosted.
 
 **B02x/B07b/B09a is ready for release review in #164, source `f504e4e`.** Scores after refresh now use the same palate seeds as on-demand/list scoring and preserve canonical location/vintage. Batch hydration uses two queries for up to 50 owned entries, preserves mixed-item results and deduplicates cache writes; scoring outages offer an accurate alert and keyboard retry. 568 isolated / 41 schema-tool checks, web lint/types/build and desktop/phone production-build browser QC pass. Historical reconciliation verified all 882 backup files and all 198 retained live objects without Storage mutation. No new finding closures: AUD-11/28 are QC passed/release pending; AUD-01 remains P0/Partial, AUD-22 remains Open. [Current handover](handovers/b02x-b07b-b09a.md).
 
