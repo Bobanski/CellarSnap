@@ -1,3 +1,4 @@
+import { defaultLoadEntriesForScoring } from "../src/server/algorithm/scoringEntries";
 import { projectEntryRatingForViewer, projectPublicFeedRating } from '../src/server/entries/publicFeed';
 import { expect, test } from "@playwright/test";
 import { signPhotoPaths } from "../packages/shared/src/storage";
@@ -60,15 +61,16 @@ for (const canonicalColumnsPresent of [true, false]) {
             filters.push(where);
             const query = {
               eq(column: string, value: unknown) { where[column] = value; return query; },
-              maybeSingle: async () => {
+              in: async (column: string, values: string[]) => {
+                where[column] = values[0];
                 if (!canonicalColumnsPresent && columns.includes("canonical_region")) {
                   return { data: null, error: { code: "42703", message: 'column "canonical_region" does not exist' } };
                 }
                 return {
-                  data: {
-                    wine_type: "red", classification: "Reserve", vintage: "2020",
+                  data: [{
+                    id: "entry", user_id: "owner", wine_type: "red", classification: "Reserve", vintage: "2020",
                     canonical_region: "Bordeaux", region: "Bordeaux",
-                  },
+                  }],
                   error: null,
                 };
               },
@@ -109,4 +111,44 @@ test('entry rating projection uses row ownership, preserving every owner input a
     expect(taggedViewer.public_rating_label).toBe(owner.public_rating_label);
     expect(row.rating).toBe(rating);
   }
+});
+
+test("fifty entry score inputs use one owner-filtered entry query and one ordered grape query", async () => {
+  let entryReads = 0, grapeReads = 0;
+  const ids = Array.from({ length: 50 }, (_, n) => `entry-${n}`);
+  const client = { from(table: string) {
+    if (table === "entry_primary_grapes") return { select: () => ({ in: (_key: string, allowed: string[]) => {
+      grapeReads++; expect(allowed).toEqual(ids.slice(0, 49));
+      return { order: async () => ({ data: allowed.map(entry_id => ({ entry_id, position: 0, grape_varieties: { id: "grape", name: "Merlot" } })), error: null }) };
+    } }) };
+    expect(table).toBe("wine_entries_with_ratings");
+    return { select: () => ({ eq: (key: string, owner: string) => { expect([key, owner]).toEqual(["user_id", "owner"]);
+      return { in: async (_key: string, requested: string[]) => { entryReads++; expect(requested).toEqual(ids);
+        return { data: ids.slice(0, 49).map(id => ({ id, user_id: "owner", wine_type: "red", vintage: "2020", classification: "Reserve" })), error: null }; } };
+    } }) };
+  } };
+  const result = await defaultLoadEntriesForScoring(client as never, "owner", [...ids, ids[0]]);
+  expect(result.size).toBe(49); expect(result.has(ids[49])).toBe(false);
+  expect(result.get(ids[0])).toMatchObject({ primary_grapes: "Merlot", vintage: 2020, quality_tier: "Reserve" });
+  expect([entryReads, grapeReads]).toEqual([1, 1]);
+  await expect(defaultLoadEntriesForScoring(client as never, "owner", [...ids, "extra"])).rejects.toThrow("50");
+  expect(await defaultLoadEntriesForScoring(client as never, "owner", [])).toEqual(new Map());
+  expect([entryReads, grapeReads]).toEqual([1, 1]);
+});
+
+test("bulk score hydration does not query grapes for inaccessible rows or treat grape outages as empty grapes", async () => {
+  let grapeReads = 0;
+  let rows: Array<{ id: string; user_id: string; wine_type: string }> = [];
+  const client = { from(table: string) {
+    if (table === "entry_primary_grapes") { grapeReads++; return { select: () => ({ in: () => ({ order: async () => ({ data: null, error: { message: "grape read unavailable" } }) }) }) }; }
+    return { select: () => ({ eq: () => ({ in: async () => ({ data: rows, error: null }) }) }) };
+  } };
+  expect(await defaultLoadEntriesForScoring(client as never, "owner", ["entry"])).toEqual(new Map());
+  expect(grapeReads).toBe(0);
+  rows = [{ id: "entry", user_id: "foreign", wine_type: "red" }];
+  expect(await defaultLoadEntriesForScoring(client as never, "owner", ["entry"])).toEqual(new Map());
+  expect(grapeReads).toBe(0);
+  rows = [{ id: "entry", user_id: "owner", wine_type: "red" }];
+  await expect(defaultLoadEntriesForScoring(client as never, "owner", ["entry"])).rejects.toThrow("grape read unavailable");
+  expect(grapeReads).toBe(1);
 });
