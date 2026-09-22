@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import { once } from 'node:events';
 import {privacyCutoverRaces} from './privacy-cutover-races.mjs';
 import { rekeyRaces } from './photo-rekey-races.mjs';
+import { archiveRaces } from './photo-archive-races.mjs';
 import { baselineFile, canonical, differences, expectedCatalog, forwardSql } from './contract.mjs';
 
 const bin=resolve(process.argv[2] ?? '');
@@ -140,7 +141,8 @@ try {
   assert.deepEqual(JSON.parse(await readFile(inventoryPath,'utf8')),snapshot);
   const photoRekey=await rekeyRaces({sql,session,waitForLock,env,bin});
   const privacyCutover=await privacyCutoverRaces({sql,session});
-  console.log(JSON.stringify({privacyCutover,photoRekey,postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
+  const photoArchive=await archiveRaces({sql,session,waitForLock,env,bin});
+  console.log(JSON.stringify({photoArchive,privacyCutover,photoRekey,postgres:run('postgres',['--version']).trim(),catalogMatches:true,ownerAndStrangerAccess:true,concurrencyChecks,editConcurrencyChecks,inventoryCli:true,productionWrites:0}));
 } finally {
   if(started) run('pg_ctl',['-D',join(scratch,'data'),'-m','immediate','-w','stop']);
   await rm(scratch,{recursive:true,force:true});

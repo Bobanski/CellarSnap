@@ -1,0 +1,160 @@
+{
+  "date": "2026-09-22",
+  "release": {
+    "pullRequest": 164,
+    "mergedAt": "2026-09-22T06:35:11Z",
+    "mergeCommit": "421f244bb3c973e9c7f635306419fcc44f48da76",
+    "treeMatchesTestedHead": true,
+    "primaryDeployment": "dpl_VXF5RzR7TAGT8WYZzqTc3dEn4aV5",
+    "primaryOrigin": "https://cellarsnap.app",
+    "status": "Ready",
+    "buildLogCommit": "421f244",
+    "sqlChanges": 0,
+    "closedFindings": [
+      "AUD-11",
+      "AUD-28"
+    ],
+    "closedTotal": 15
+  },
+  "browser": {
+    "environment": "final primary production, designated accounts and disposable fixtures",
+    "viewports": [
+      [
+        1440,
+        1000
+      ],
+      [
+        390,
+        844
+      ]
+    ],
+    "checks": [
+      {
+        "viewport": "desktop",
+        "score": 66,
+        "ownerEdit": true,
+        "refreshParity": true,
+        "overflow": false
+      },
+      {
+        "viewport": "phone",
+        "score": 66,
+        "ownerEdit": true,
+        "refreshParity": true,
+        "overflow": false
+      },
+      {
+        "viewport": "desktop",
+        "scoreFailureAndKeyboardRetry": true
+      },
+      {
+        "viewport": "phone",
+        "scoreFailureAndKeyboardRetry": true
+      },
+      {
+        "coldBatchFullParity": true,
+        "duplicateIds": true,
+        "foreignOverrideDenied": true,
+        "warmScoreParity": true
+      },
+      {
+        "listScanWines": 48,
+        "scoreSummary": {
+          "mode": "personalized",
+          "based_on_entry_count": 6,
+          "warning": null
+        }
+      },
+      {
+        "bearerSingleBatchParity": true,
+        "bearerForeignDenied": true
+      },
+      {
+        "listScanWines": 48,
+        "scoreSummary": {
+          "mode": "personalized",
+          "based_on_entry_count": 6,
+          "warning": null
+        }
+      }
+    ],
+    "pageExceptions": 0,
+    "intentionalBrowser503s": 2,
+    "unexpectedHttpErrors": 0,
+    "consoleErrors": "two deliberate 503 resource diagnostics; none in supplemental scan/bearer flow",
+    "serverLogTail": "20-second tail overlapped successful scoring smoke; zero emitted runtime error records; not a comprehensive historical log audit",
+    "native": "simctl unavailable; adb/emulator absent; responsive web only; no native changes"
+  },
+  "archive": {
+    "pullRequest": 165,
+    "branch": "codex/b02y-protected-photo-archive",
+    "testedSourceCommit": "225c0ee9a79cd17f4d88b8d24990dc7d54dc6e61",
+    "migration": "20260922063629_protected_photo_archive.sql",
+    "migrationApplied": false,
+    "productionCopies": 0,
+    "productionDeletes": 0,
+    "retirementAuthorized": false,
+    "receiptPreflight": {
+      "verifiedAt": "2026-09-22T06:47:43.848Z",
+      "eligibleReceipts": 189,
+      "verifiedBytes": 559574950,
+      "heldOriginals": 9,
+      "storageMutations": 0
+    },
+    "productionReadOnlyRecheck": {
+      "objects": 921,
+      "missingReferencedPaths": 12,
+      "legacyCutoffActive": true,
+      "verifiedRekeyOperations": 487,
+      "archiveBucketExists": false
+    },
+    "automated": {
+      "isolatedTests": 568,
+      "schemaToolTests": 47,
+      "webLint": "pass",
+      "publicDatabaseTypeContract": "pass",
+      "postgres": {
+        "photoArchive": {
+          "referenceSourceDestinationBucketRaces": 4,
+          "operatorCli": true,
+          "productionWrites": 0
+        },
+        "privacyCutover": {
+          "oldSnapshotRatingInsertIsolated": true,
+          "stalePhotoWriterAborted": true
+        },
+        "photoRekey": {
+          "sourceEditAndReferenceAndStorageRaces": 3,
+          "operatorCli": true,
+          "retirementRequiresExplicitConfiguration": true
+        },
+        "postgres": "postgres (PostgreSQL) 17.6",
+        "catalogMatches": true,
+        "ownerAndStrangerAccess": true,
+        "concurrencyChecks": 4,
+        "editConcurrencyChecks": 2,
+        "inventoryCli": true,
+        "productionWrites": 0
+      },
+      "sourceCI": {
+        "commit": "225c0ee9a79cd17f4d88b8d24990dc7d54dc6e61",
+        "run": "https://github.com/Bobanski/CellarSnap/actions/runs/35696729681",
+        "web": "pass",
+        "mobile": "pass",
+        "primaryPreview": "Ready",
+        "duplicatePreview": "failed: missing Supabase environment variables (OPS-01)"
+      }
+    },
+    "limits": [
+      "Hosted cross-bucket Storage copy and archive-role acceptance pending migration release; HTTP adapter covered with fixtures and official SDK request contract.",
+      "Copied records are timestamped evidence; future retirement requires fresh source/destination/access checks and durable fencing.",
+      "Nine missing-base originals remain held; three missing paths have no known bytes."
+    ]
+  },
+  "cleanup": {
+    "remainingSessionEntries": 0,
+    "verifiedAt": "2026-09-22T06:49:20.040Z",
+    "remainingSessionScans": 0,
+    "scoringSmoke": 200
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "columns": [
+    {
+      "default_expression": "'planned'::text",
+      "generated": "",
+      "identity": "",
+      "name": "state",
+      "not_null": true,
+      "position": 6,
+      "table_name": "photo_archive_operations",
+      "type": "text"
+    },
+    {
+      "default_expression": "now()",
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "position": 8,
+      "table_name": "photo_archive_operations",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "archive_path",
+      "not_null": true,
+      "position": 3,
+      "table_name": "photo_archive_operations",
+      "type": "text"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "expected",
+      "not_null": true,
+      "position": 5,
+      "table_name": "photo_archive_operations",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "position": 1,
+      "table_name": "photo_archive_operations",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "proof",
+      "not_null": false,
+      "position": 7,
+      "table_name": "photo_archive_operations",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "receipt",
+      "not_null": true,
+      "position": 4,
+      "table_name": "photo_archive_operations",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "source_path",
+      "not_null": true,
+      "position": 2,
+      "table_name": "photo_archive_operations",
+      "type": "text"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "verified_at",
+      "not_null": false,
+      "position": 9,
+      "table_name": "photo_archive_operations",
+      "type": "timestamp with time zone"
+    }
+  ],
+  "constraints": [
+    {
+      "definition": "CHECK ((state = 'copied'::text) = (verified_at IS NOT NULL AND proof IS NOT NULL))",
+      "name": "photo_archive_operations_check",
+      "table_name": "photo_archive_operations",
+      "validated": true
+    },
+    {
+      "definition": "CHECK (state = ANY (ARRAY['planned'::text, 'copied'::text, 'abandoned'::text]))",
+      "name": "photo_archive_operations_state_check",
+      "table_name": "photo_archive_operations",
+      "validated": true
+    },
+    {
+      "definition": "PRIMARY KEY (id)",
+      "name": "photo_archive_operations_pkey",
+      "table_name": "photo_archive_operations",
+      "validated": true
+    },
+    {
+      "definition": "UNIQUE (archive_path)",
+      "name": "photo_archive_operations_archive_path_key",
+      "table_name": "photo_archive_operations",
+      "validated": true
+    }
+  ],
+  "function_grants": [
+    {
+      "args": "operation_id uuid, copy_proof jsonb",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "commit_photo_archive",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    },
+    {
+      "args": "operation_id uuid, old_path text, recovery_receipt jsonb",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "plan_photo_archive",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    },
+    {
+      "args": "operation_id uuid",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "abandon_photo_archive",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    },
+    {
+      "args": "source_path text, archive_path text",
+      "grantee": "postgres",
+      "is_grantable": false,
+      "name": "photo_archive_snapshot",
+      "privilege_type": "EXECUTE",
+      "schema_name": "private"
+    }
+  ],
+  "functions": [
+    {
+      "args": "operation_id uuid, copy_proof jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION private.commit_photo_archive(operation_id uuid, copy_proof jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_archive_operations; snap jsonb; meta jsonb;\nbegin\n if current_setting('transaction_isolation')<>'read committed' then\n  raise exception 'Archive verification requires READ COMMITTED' using errcode='22023'; end if;\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.state='abandoned' then raise exception 'Archive operation abandoned' using errcode='22023'; end if;\n -- Network/hash work happens outside this short transaction. Table locks cover\n -- phantom references as well as changed/deleted objects during the final CAS.\n lock table public.wine_entries,public.entry_photos,public.entry_group_slides,\n  public.profiles,public.user_collection_items,public.user_collections in share mode;\n lock table storage.buckets,storage.objects in share mode;\n snap:=private.photo_archive_snapshot(op.source_path,op.archive_path);\n if snap->'source' is distinct from op.expected or jsonb_array_length(snap->'source'->'refs')<>0 then\n  raise exception 'Archive source changed; abandon and replan' using errcode='PT409'; end if;\n meta:=snap->'archive'->'metadata';\n if not coalesce((snap->>'protected')::boolean and jsonb_typeof(copy_proof)='object' and octet_length(copy_proof::text)<8192\n  and copy_proof->'object'=snap->'archive' and snap->'archive'<>'null'::jsonb\n  and copy_proof->>'sha256'=op.receipt->>'sha256' and copy_proof->'size'=op.receipt->'size'\n  and meta->>'size'=op.receipt->>'size' and meta->>'mimetype'=copy_proof->>'mimetype'\n  and copy_proof->>'mimetype' ~ '^image/(jpeg|png|webp|gif|avif|heic|heif)$',false)\n then raise exception 'Archive byte proof or destination changed' using errcode='PT409'; end if;\n update private.photo_archive_operations set state='copied',proof=copy_proof,verified_at=clock_timestamp()\n where id=op.id returning * into op;\n return to_jsonb(op);\nend $function$\n",
+      "name": "commit_photo_archive",
+      "owner": "postgres",
+      "schema_name": "private"
+    },
+    {
+      "args": "operation_id uuid, old_path text, recovery_receipt jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION private.plan_photo_archive(operation_id uuid, old_path text, recovery_receipt jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_archive_operations; snap jsonb; source_object jsonb; dest text;\nbegin\n if operation_id is null or not coalesce(jsonb_typeof(recovery_receipt)='object'\n  and recovery_receipt ?& array['backup_id','size','sha256','inventory_sha256','backup_index_sha256']\n  and recovery_receipt->>'backup_id' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'\n  and recovery_receipt->>'sha256' ~ '^[a-f0-9]{64}$'\n  and recovery_receipt->>'inventory_sha256' ~ '^[a-f0-9]{64}$'\n  and recovery_receipt->>'backup_index_sha256' ~ '^[a-f0-9]{64}$'\n  and jsonb_typeof(recovery_receipt->'size')='number'\n  and recovery_receipt->>'size' ~ '^[0-9]+$'\n  and (recovery_receipt->>'size')::numeric between 1 and 26214400\n  and octet_length(recovery_receipt::text)<2048,false)\n then raise exception 'Invalid verified recovery receipt' using errcode='22023'; end if;\n perform pg_advisory_xact_lock(hashtextextended(old_path,9282));\n select * into op from private.photo_archive_operations where id=operation_id;\n if found then\n  if op.source_path is distinct from old_path or op.receipt is distinct from recovery_receipt then\n   raise exception 'Archive operation identity mismatch' using errcode='22023'; end if;\n  return to_jsonb(op);\n end if;\n dest:=operation_id::text||'/preserved';\n snap:=private.photo_archive_snapshot(old_path,dest);\n select o->'object' into source_object from jsonb_array_elements(snap->'source'->'objects') o where o->>'path'=old_path;\n if jsonb_array_length(snap->'source'->'refs')<>0 then raise exception 'Referenced cohort requires recovery review' using errcode='PT409'; end if;\n if source_object is null or source_object='null'::jsonb\n  or source_object->>'id' is distinct from recovery_receipt->>'backup_id'\n  or source_object->'metadata'->>'size' is distinct from recovery_receipt->>'size'\n then raise exception 'Historical source changed or missing' using errcode='PT409'; end if;\n if not (snap->>'protected')::boolean then raise exception 'Archive bucket protection changed' using errcode='PT409'; end if;\n if snap->'archive'<>'null'::jsonb then raise exception 'Archive destination already exists' using errcode='23505'; end if;\n insert into private.photo_archive_operations(id,source_path,archive_path,receipt,expected)\n values(operation_id,old_path,dest,recovery_receipt,snap->'source') returning * into op;\n return to_jsonb(op);\nend $function$\n",
+      "name": "plan_photo_archive",
+      "owner": "postgres",
+      "schema_name": "private"
+    },
+    {
+      "args": "operation_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION private.abandon_photo_archive(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_archive_operations;\nbegin\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.state='copied' then raise exception 'Preserved archive record must remain durable' using errcode='22023'; end if;\n update private.photo_archive_operations set state='abandoned' where id=op.id returning * into op;\n -- Keep any uncommitted destination bytes; no cleanup/deletion authority here.\n return to_jsonb(op);\nend $function$\n",
+      "name": "abandon_photo_archive",
+      "owner": "postgres",
+      "schema_name": "private"
+    },
+    {
+      "args": "source_path text, archive_path text",
+      "definition": "CREATE OR REPLACE FUNCTION private.photo_archive_snapshot(source_path text, archive_path text)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare base text; sibling text; archive_object jsonb;\nbegin\n if source_path is null or length(source_path) not between 1 and 1024\n  or source_path ~ '[\\\\[:cntrl:]]' or source_path ~ '(^|/)\\.{1,2}(/|$)'\n  or source_path ~ '(^/|/$|//)' then raise exception 'Invalid archive source path' using errcode='22023'; end if;\n base:=regexp_replace(source_path,'__original(\\.[a-zA-Z0-9]+)?$','\\1');\n sibling:=case when base ~ '\\.[a-zA-Z0-9]+$' then regexp_replace(base,'(\\.[a-zA-Z0-9]+)$','__original\\1') else base||'__original' end;\n select jsonb_build_object('id',id,'version',version,'updated_at',updated_at,'metadata',metadata) into archive_object\n from storage.objects where bucket_id='photo-recovery-archive' and name=archive_path;\n return jsonb_build_object('source',private.photo_rekey_snapshot(array[base,sibling]),'archive',archive_object,\n  'protected',exists(select from storage.buckets where id='photo-recovery-archive' and public=false));\nend $function$\n",
+      "name": "photo_archive_snapshot",
+      "owner": "postgres",
+      "schema_name": "private"
+    }
+  ],
+  "grants": [
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "DELETE"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "INSERT"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "MAINTAIN"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "REFERENCES"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "SELECT"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "TRIGGER"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "TRUNCATE"
+    },
+    {
+      "grantee": "postgres",
+      "is_grantable": false,
+      "object": "photo_archive_operations",
+      "privilege_type": "UPDATE"
+    }
+  ],
+  "indexes": [
+    {
+      "indexdef": "CREATE UNIQUE INDEX photo_archive_active_source ON private.photo_archive_operations USING btree (source_path) WHERE (state <> 'abandoned'::text)",
+      "indexname": "photo_archive_active_source",
+      "tablename": "photo_archive_operations"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX photo_archive_operations_archive_path_key ON private.photo_archive_operations USING btree (archive_path)",
+      "indexname": "photo_archive_operations_archive_path_key",
+      "tablename": "photo_archive_operations"
+    },
+    {
+      "indexdef": "CREATE UNIQUE INDEX photo_archive_operations_pkey ON private.photo_archive_operations USING btree (id)",
+      "indexname": "photo_archive_operations_pkey",
+      "tablename": "photo_archive_operations"
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "ALL",
+      "permissive": "RESTRICTIVE",
+      "policyname": "Recovery archive denies client bucket",
+      "qual": "(id <> 'photo-recovery-archive'::text)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "schemaname": "storage",
+      "tablename": "buckets",
+      "with_check": "(id <> 'photo-recovery-archive'::text)"
+    },
+    {
+      "cmd": "ALL",
+      "permissive": "RESTRICTIVE",
+      "policyname": "Recovery archive denies client objects",
+      "qual": "(bucket_id <> 'photo-recovery-archive'::text)",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "schemaname": "storage",
+      "tablename": "objects",
+      "with_check": "(bucket_id <> 'photo-recovery-archive'::text)"
+    }
+  ],
+  "relations": [
+    {
+      "force_rls": false,
+      "kind": "r",
+      "name": "photo_archive_operations",
+      "options": null,
+      "owner": "postgres",
+      "replica_identity": "d",
+      "rls": true,
+      "schema_name": "private"
+    }
+  ]
+}
