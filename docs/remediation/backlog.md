@@ -662,3 +662,7 @@ Added QC-20 as a separate pre-existing mobile auth defect; it was not added to t
 
 ### B11 merge review — September 22
 - Reconciled detailed QC-21/QC-23/OPS-03 statuses with their canonical rows following PR review. Protocol/browser QC and export results remain as recorded; installed-native Apple login and release acceptance are still pending. No runtime change in this correction.
+
+### OPS-01 / B04f merge-review checkpoint — September 22
+- Reviewed #165/#167/#168, resolved the two addressed review threads, corrected detailed statuses and integrated the correction into the privacy stack. Fresh application CI/primary previews pass. Duplicate `cellarsnap` deployment logs for all three confirm missing Supabase environment; owner’s explicit green-check condition awaits an exception decision before merging. No closure or release claimed.
+- Fresh validation: 47 archive schema tests/PostgreSQL replay, desktop/phone hosted-preview permission failure/retry/persistence/revocation and exact tester metadata restoration pass. [Review handover](handovers/ios-pr-merge-review.md).

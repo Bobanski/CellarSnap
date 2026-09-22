@@ -1,5 +1,7 @@
 # Remediation hub
 
+- **Latest review checkpoint:** [#165/#167/#168 merge review](handovers/ios-pr-merge-review.md). No code blockers; review comments addressed, corrected-head Web/Mobile CI and primary previews pass, fresh hosted-preview browser and archive replay pass. No merges yet: owner’s green-check condition awaits a decision on the known failing duplicate Vercel check (OPS-01). Design draft #75 remains separate.
+
 - **Latest handover / iOS privacy:** [B04f–B04g](handovers/b04f-b04g-ios-privacy.md), [sanitized evidence](evidence/b04f-b04g-ios-privacy.json). #168 adds account-wide AI permission/enforcement and shared disclosures; patches a fresh ExifReader advisory. 597 isolated tests, production build and desktop/phone web + Expo QC pass. Stacked on #167; deployment, Apple signing, native acceptance and actual store metadata remain pending. Queue **76 / 15 Closed**.
 
 - **Previous handover / iOS launch push:** [B11d–B11f / B04e](handovers/b11d-b11f-ios-launch.md), [sanitized evidence](evidence/b11d-b11f-ios-launch.json), [submission gates](ios-launch-readiness.md). #167 repairs six mobile issues and prepares build 3; browser/Expo QC passes. Apple production signing/2FA, installed-native acceptance and release remain pending. Queue **76 / 15 Closed**. Prior #164 release closures reconciled; #165 historical archive remains separate/open.
@@ -35,6 +37,8 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**PR review completed; conditional merge remains pending.** #167 `c00448c` reconciles finding statuses; #168 `148ba4b` includes that documentation correction with unchanged tested runtime. #165 archival schema/replay passes afresh. All three primary application checks pass; duplicate hosting still fails from missing env, verified from logs. No production/SQL/native release occurred. [Review checkpoint](handovers/ios-pr-merge-review.md).
 
 **B04f–B04g is implemented and locally verified in #168, source `2fd2c00`, stacked on #167.** Personal AI now requires explicit account-wide permission; fresh server-owned checks honor revocation with old tokens. Shared privacy disclosures and the App Privacy draft match current processors and record unresolved operational facts. ExifReader is patched to 4.41.1; root/mobile audits zero. 597 tests and desktop/phone production web + Expo browser acceptance pass; no native runtime/store binary or production deployment. QC-22/AUD-08 remain Partial. [Current handover](handovers/b04f-b04g-ios-privacy.md).
 
