@@ -1,6 +1,10 @@
 # Remediation hub
 
-- **Latest handover / iOS launch push:** [B11d–B11f / B04e](handovers/b11d-b11f-ios-launch.md), [sanitized evidence](evidence/b11d-b11f-ios-launch.json), [submission gates](ios-launch-readiness.md). #167 repairs six mobile issues and prepares build 3; browser/Expo QC passes. Apple production signing/2FA, installed-native acceptance and release remain pending. Queue **76 / 15 Closed**. Prior #164 release closures reconciled; #165 historical archive remains separate/open.
+- **Latest review checkpoint:** [#165/#167/#168 merge review](handovers/ios-pr-merge-review.md). No code blockers; review comments addressed, corrected-head Web/Mobile CI and primary previews pass, fresh hosted-preview browser and archive replay pass. No merges yet: owner’s green-check condition awaits a decision on the known failing duplicate Vercel check (OPS-01). Design draft #75 remains separate.
+
+- **Latest handover / iOS privacy:** [B04f–B04g](handovers/b04f-b04g-ios-privacy.md), [sanitized evidence](evidence/b04f-b04g-ios-privacy.json). #168 adds account-wide AI permission/enforcement and shared disclosures; patches a fresh ExifReader advisory. 597 isolated tests, production build and desktop/phone web + Expo QC pass. Stacked on #167; deployment, Apple signing, native acceptance and actual store metadata remain pending. Queue **76 / 15 Closed**.
+
+- **Previous handover / iOS launch push:** [B11d–B11f / B04e](handovers/b11d-b11f-ios-launch.md), [sanitized evidence](evidence/b11d-b11f-ios-launch.json), [submission gates](ios-launch-readiness.md). #167 repairs six mobile issues and prepares build 3; browser/Expo QC passes. Apple production signing/2FA, installed-native acceptance and release remain pending. Queue **76 / 15 Closed**. Prior #164 release closures reconciled; #165 historical archive remains separate/open.
 
 - **Latest handover / larger release candidate:** [B02x/B07b/B09a](handovers/b02x-b07b-b09a.md), [sanitized evidence](evidence/b02x-b07b-b09a-qc.json). #164 source `f504e4e`: seeded scoring/refresh correctness, bounded batch reads and score retry pass local QC; historical photo preservation/reconciliation verified read-only. Merge, production deployment and live acceptance pending.
 
@@ -33,6 +37,10 @@ This is the starting point for continuing the September 2026 audit. The plan pre
 The backlog is the source of truth for work status. Original reports remain dated evidence. Handovers describe a particular stopping point; always recheck Git, PR, and deployment state before continuing. No existing chat, local screenshot, or untracked file is required to understand the queue.
 
 ## Where we are now
+
+**PR review completed; conditional merge remains pending.** #167 `c00448c` reconciles finding statuses; #168 `148ba4b` includes that documentation correction with unchanged tested runtime. #165 archival schema/replay passes afresh. All three primary application checks pass; duplicate hosting still fails from missing env, verified from logs. No production/SQL/native release occurred. [Review checkpoint](handovers/ios-pr-merge-review.md).
+
+**B04f–B04g is implemented and locally verified in #168, source `2fd2c00`, stacked on #167.** Personal AI now requires explicit account-wide permission; fresh server-owned checks honor revocation with old tokens. Shared privacy disclosures and the App Privacy draft match current processors and record unresolved operational facts. ExifReader is patched to 4.41.1; root/mobile audits zero. 597 tests and desktop/phone production web + Expo browser acceptance pass; no native runtime/store binary or production deployment. QC-22/AUD-08 remain Partial. [Current handover](handovers/b04f-b04g-ios-privacy.md).
 
 **iOS is now an explicit launch target.** #167 implements notes auth/retry, Apple nonce exchange, nested-header/viewport/photo repairs, scan contrast and a matching SDK56 prebuild template. 582 isolated tests and desktop/phone Expo flows pass; native unavailable. EAS production build was blocked before upload by missing credentials and Apple 2FA. No App Store submission. [Current handover](handovers/b11d-b11f-ios-launch.md). The previous web-only native deferral does not certify this launch. #164 is already live (`421f244`), AUD-11/28 Closed; #165 archive code/SQL remain unmerged/unhosted.
 

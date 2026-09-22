@@ -27,6 +27,7 @@ export default defineConfig({
     "storage-access.spec.ts",
     "knowledge-access.spec.ts",
     "auth-privacy.spec.ts",
+    "ai-consent.spec.ts",
     "public-profile-access.spec.ts",
     "private-policy-helpers.spec.ts",
     "share-image-delivery.spec.ts",

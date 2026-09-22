@@ -1,0 +1,115 @@
+{
+  "date": "2026-09-22",
+  "reviewedPrs": [
+    165,
+    167,
+    168
+  ],
+  "archiveSchemaTests": 47,
+  "archivePostgresReplay": "17.6; catalog equality and all concurrency checks pass; productionWrites=0",
+  "runtimeSourceUnchanged": true,
+  "hostedPreviewCommit": "45db8f9",
+  "browser": {
+    "checks": [
+      "web desktop: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "web phone: disclosure fits; failure retains off; keyboard retry allows; reload persists; revoke denies unchanged JWT",
+      "web: manual entry editor reachable while AI disabled"
+    ],
+    "errors": [],
+    "http": [
+      {
+        "platform": "web",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      },
+      {
+        "platform": "web",
+        "path": "/api/privacy/ai-consent",
+        "status": 503
+      }
+    ],
+    "consoleErrors": [
+      {
+        "platform": "web",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      },
+      {
+        "platform": "web",
+        "message": "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      }
+    ],
+    "requests": [
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": false
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": false
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "GET",
+        "bearer": false,
+        "cookie": true
+      },
+      {
+        "platform": "web",
+        "method": "PUT",
+        "bearer": false,
+        "cookie": true
+      }
+    ]
+  },
+  "cleanup": {
+    "fixtureEntriesCreated": 0,
+    "fixturePhotosCreated": 0,
+    "metadataRestoredExactly": true,
+    "generatedSessionSignedOut": true,
+    "finalFixtureEntryRecheck": 0
+  },
+  "nativeAcceptance": false,
+  "sqlApplied": false,
+  "merged": false,
+  "duplicateHostingFailure": "Missing Supabase environment variables, OPS-01; current merge exception unanswered"
+}

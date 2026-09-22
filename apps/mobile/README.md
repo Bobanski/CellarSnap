@@ -99,3 +99,5 @@ Current release metadata is defined in `app.json`:
 - Verify `EXPO_PUBLIC_WEB_API_BASE_URL` points to the deployed environment before submitting.
 
 For the current candidate, release gates and device acceptance, see [iOS release readiness](../../docs/remediation/ios-launch-readiness.md). An internal preview IPA cannot be submitted to App Store Connect; use the production store profile. EAS Submit uploads to App Store Connect/TestFlight; App Review submission is a separate step.
+
+AI features require an explicit account-wide choice in Privacy & AI. Declining keeps manual logging, cellar and social features available. Deploy the matching consent API/backend before distributing this candidate. See [submission runbook](../../docs/IOS_SUBMISSION_RUNBOOK.md).
