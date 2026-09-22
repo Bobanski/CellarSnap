@@ -15,12 +15,12 @@ const validMime = mime => /^image\/(jpeg|png|webp|gif|avif|heic|heif)$/.test(mim
 
 // DB adapter exposes only fixed operator commands, with values supplied as SQL
 // literals over stdin (never shell interpolation or command-line credentials).
-export function psqlAdapter(env = process.env) {
+export const operatorLiteral = value => `convert_from(decode('${Buffer.from(JSON.stringify(value)).toString('hex')}','hex'),'UTF8')::jsonb`;
+export function operatorQuery(env = process.env) {
   if (!env.PGHOST || !env.PGUSER || !env.PGDATABASE) throw new Error('Explicit PGHOST/PGUSER/PGDATABASE required');
   if (!['127.0.0.1','localhost','::1'].includes(env.PGHOST) && !env.PGHOST.startsWith('/') && env.PGSSLMODE !== 'verify-full') {
     throw new Error('Remote operator database requires PGSSLMODE=verify-full');
   }
-  const literal = value => `convert_from(decode('${Buffer.from(JSON.stringify(value)).toString('hex')}','hex'),'UTF8')::jsonb`;
   const query = async sql => {
     const child = spawn(env.CELLARSNAP_PSQL ?? 'psql', ['-X','-q','-A','-t','-v','ON_ERROR_STOP=1'], {
       env: {...env, PGOPTIONS: '-c statement_timeout=30000 -c lock_timeout=2000 -c idle_in_transaction_session_timeout=30000'}, stdio:['pipe','pipe','pipe'],
@@ -40,6 +40,10 @@ export function psqlAdapter(env = process.env) {
       return JSON.parse(out.trim());
     }finally{clearTimeout(timer);}
   };
+  return query;
+}
+export function psqlAdapter(env = process.env) {
+  const query = operatorQuery(env), literal = operatorLiteral;
   return {
     plan: (id,path)=>query(`select private.plan_photo_rekey((${literal(id)}#>>'{}')::uuid,${literal(path)}#>>'{}');`),
     get: id=>query(`select to_jsonb(o) from private.photo_rekey_operations o where id=(${literal(id)}#>>'{}')::uuid;`),

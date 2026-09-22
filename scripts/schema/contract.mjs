@@ -112,6 +112,8 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  const archiveDelta = JSON.parse(await readFile(new URL('./b02y-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, rows] of Object.entries(archiveDelta)) expected[key].push(...rows);
   return canonical(expected);
 }
 export function differences(expected, actual) {

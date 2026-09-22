@@ -92,3 +92,4 @@
 20260913234035_photo_rekey_operations.sql
 20260914134821_private_rating_source.sql
 20260914135415_photo_authority_fence.sql
+20260922063629_protected_photo_archive.sql
