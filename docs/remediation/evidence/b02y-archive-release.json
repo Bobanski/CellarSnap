@@ -1,0 +1,80 @@
+{
+  "date": "2026-09-23",
+  "application": {
+    "pullRequest": 170,
+    "mergeCommit": "5e992af8cc80f1cbd50bcf2d8aeb9500009c0c22",
+    "primaryDeployment": "ready",
+    "duplicateDeployment": "failed_known_ops_01",
+    "independentChecks": {
+      "applicationTests": 597,
+      "schemaToolChecks": 47,
+      "mobileDependencyContracts": 7,
+      "mobileToolingContracts": 3,
+      "iosReleaseContracts": 4,
+      "expoDoctor": "21/21"
+    }
+  },
+  "ios": {
+    "candidate": "1.0.1/build 3",
+    "productionEnvironmentResolved": true,
+    "storeBuildAttempt": "stopped_before_job",
+    "reason": "interactive Apple credential validation required",
+    "buildId": null,
+    "ipa": false,
+    "submission": false,
+    "nativeRuntime": "unavailable on this host"
+  },
+  "archive": {
+    "migration": {
+      "source": "20260922063629_protected_photo_archive.sql",
+      "hostedVersion": "20260923140757",
+      "bucketPrivate": true,
+      "clientLedgerGrants": false,
+      "functionSecurity": "invoker_only"
+    },
+    "hostedFixture": {
+      "crossBucketCopy": true,
+      "byteMatch": true,
+      "anonymousAndAuthenticatedDenials": 16,
+      "cleanup": {
+        "fixturePaths": 0,
+        "archiveObjects": 0,
+        "ledgerRows": 0,
+        "sourceObjects": 927
+      }
+    },
+    "freshInventory": {
+      "objects": 927,
+      "paths": 939,
+      "references": 699,
+      "missingReferencedObjects": 12,
+      "inventorySha256": "3cea4527ca15ee85ec40267c25340216b6a83bb578f5f7e552bf4882d57487db"
+    },
+    "reconciliation": {
+      "verifiedBackupObjects": 882,
+      "verifiedBackupBytes": 2320713813,
+      "eligibleArchiveObjects": 189,
+      "eligibleArchiveBytes": 559574950,
+      "heldOriginals": 9,
+      "missingWithNoKnownBytes": 3
+    },
+    "preservation": {
+      "copiedOperations": 189,
+      "archiveObjects": 189,
+      "receiptBytes": 559574950,
+      "proofMismatch": 0,
+      "destinationMismatch": 0,
+      "sourceMismatchAtFinalVerification": 0,
+      "expectedReferences": 0,
+      "sourceObjectsAfter": 927,
+      "retirementAuthorized": false,
+      "sourceDeletes": 0
+    }
+  },
+  "residual": {
+    "aud01": "partial_pending_retirement_fence_deletion_and_regional_revocation",
+    "aud22": "open_for_held_originals_and_three_missing_paths",
+    "ops03": "partial_pending_apple_credentials_native_acceptance_and_submission",
+    "ops04": "open_database_password_rotation_required"
+  }
+}
