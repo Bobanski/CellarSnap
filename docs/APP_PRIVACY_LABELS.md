@@ -1,7 +1,7 @@
 # Cluster — App Privacy source review
 
 Updated September 22, 2026, QC-22 / B04f. Bundle: `com.cellarsnap.mobile`.
-This is a source-grounded draft for the final App Store Connect questionnaire, **not a receipt that its answers have been entered or verified**. The previous March guide contained unsupported claims about diagnostics, AI recipients and age ratings and is superseded here.
+This is a source-grounded draft for the final App Store Connect questionnaire, **not a receipt that its answers have been entered or verified**. The SDK 57/build 3 candidate now generates a matching app-level `PrivacyInfo.xcprivacy`; App Store Connect answers and final-binary inspection are still separate gates. The previous March guide contained unsupported claims about diagnostics, AI recipients and age ratings and is superseded here.
 
 ## Data and evidence
 
@@ -20,6 +20,8 @@ Purpose is App Functionality unless the final production configuration establish
 | Crash Data / Performance Data | No dedicated crash-analytics SDK or runtime Expo crash collection was established by source review. EAS build logs are not evidence that user crash data is collected. Inspect the final binary, service settings and Apple reporting separately; do not copy the old automatic Yes/Not Linked answers. |
 
 No advertising/IDFA, cross-app tracking, payments/IAP, device contacts, audio recording, or native GPS permission was found in this source review. This does not replace the final dependency/native-manifest inspection. App Privacy's Location category cannot be ruled out solely because GPS permission is absent: inspect structured venue/place-ID storage and any provider enrichment against Apple's definitions. Free-form location text is Other User Content; source inspection found no mobile latitude/longitude API. Uploaded originals may retain EXIF location: inspect final native picker/upload bytes before answering Location. Web explicitly reads EXIF GPS and requests optional browser geolocation for Google Maps venue bias (`src/lib/exifGps.ts`, `src/components/LocationAutocomplete.tsx`); the shared public policy discloses this. Saved sommelier prompts and scan URLs/content are user content; do not describe them as unpersisted searches. Confirm with the current questionnaire whether any structured search-history collection warrants a separate selection.
+
+The SDK 57 candidate declares Name, Email Address, Phone Number, User ID, Photos or Videos, Other User Content, Customer Support, Product Interaction and Other Diagnostic Data as linked, non-tracking data used for App Functionality; Photos or Videos, Other User Content and Product Interaction also declare Product Personalization. Its required-reason API union covers file timestamps, system boot time, disk space and user defaults based on the generated dependency manifests. Regenerated native configuration contains camera/photo-library descriptions but no microphone, Face ID or Android audio-recording permission. Reconcile these declarations with the signed archive and App Store Connect instead of treating source configuration as the final receipt.
 
 ## Processors and permission
 
