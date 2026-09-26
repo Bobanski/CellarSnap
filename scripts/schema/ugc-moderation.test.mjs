@@ -92,6 +92,106 @@ test('private cellar notes are not screened until the same entry becomes shared'
   }
 });
 
+test('group publication screens its title and hidden member metadata, including later edits', async () => {
+  const db = await fixture();
+  const groupId = '00000000-0000-4000-8000-000000000073';
+  const memberId = '00000000-0000-4000-8000-000000000074';
+  try {
+    await authenticate(db, owner);
+    await db.query(`update public.wine_entries set is_feed_visible=false where id=$1`, [publicEntry]);
+    await db.query(
+      `insert into public.entry_groups(id,user_id,title) values($1,$2,'Friday tasting')`,
+      [groupId, owner]
+    );
+    await db.query(
+      `insert into public.wine_entries
+        (id,user_id,wine_name,notes,entry_privacy,is_feed_visible,entry_group_id)
+       values($1,$2,'Hidden member','Clean member note','public',false,$3)`,
+      [memberId, owner, groupId]
+    );
+    await db.query(`update public.wine_entries set entry_group_id=$1 where id=$2`, [groupId, publicEntry]);
+    await db.query(`update public.entry_groups set anchor_entry_id=$1 where id=$2`, [publicEntry, groupId]);
+
+    await db.query(`update public.wine_entries set notes='Go kill yourself' where id=$1`, [memberId]);
+    await assert.rejects(
+      db.query(`update public.wine_entries set is_feed_visible=true where id=$1`, [publicEntry]),
+      /cannot be shared/i
+    );
+
+    await db.query(`update public.wine_entries set notes='Clean member note' where id=$1`, [memberId]);
+    await db.query(`update public.wine_entries set is_feed_visible=true where id=$1`, [publicEntry]);
+    await assert.rejects(
+      db.query(`update public.wine_entries set producer='I will shoot you' where id=$1`, [memberId]),
+      /cannot be shared/i
+    );
+    await assert.rejects(
+      db.query(`update public.entry_groups set title='Go kill yourself' where id=$1`, [groupId]),
+      /cannot be shared/i
+    );
+
+    await authenticate(db, reporter);
+    await db.query(
+      `insert into public.content_reports
+        (reporter_id,target_type,entry_id,target_user_id,reason)
+       values($1,'entry',$2,$3,'other')`,
+      [reporter, publicEntry, owner]
+    );
+    await db.exec('reset role');
+    const snapshot = (await db.query(
+      `select content_snapshot->>'groupTitle' as group_title,
+        content_snapshot->'groupEntries' @> $1::jsonb as includes_member
+       from private.content_report_reviews where entry_id=$2`,
+      [JSON.stringify([{ id: memberId, wineName: 'Hidden member', notes: 'Clean member note' }]), publicEntry]
+    )).rows[0];
+    assert.deepEqual(snapshot, { group_title: 'Friday tasting', includes_member: true });
+
+    await authenticate(db, reporter);
+    await db.query(
+      `insert into public.content_reports
+        (reporter_id,target_type,entry_id,target_user_id,reason)
+       values($1,'entry',$2,$3,'other')`,
+      [reporter, memberId, owner]
+    );
+    await db.exec('reset role');
+    const memberReportId = (await db.query(
+      `select id from public.content_reports where reporter_id=$1 and entry_id=$2`,
+      [reporter, memberId]
+    )).rows[0].id;
+    await db.exec(resolveSql(memberReportId, 'resolved', 'moderation-on-call', 'Confirmed member violation.'));
+    assert.deepEqual((await db.query(
+      `select member.entry_privacy::text as member_privacy,member.is_feed_visible as member_visible,
+        anchor.is_feed_visible as anchor_visible
+       from public.wine_entries member
+       join public.wine_entries anchor on anchor.id=$2
+       where member.id=$1`,
+      [memberId, publicEntry]
+    )).rows[0], {
+      member_privacy: 'private',
+      member_visible: false,
+      anchor_visible: true,
+    });
+    await authenticate(db, owner);
+    await assert.rejects(
+      db.query(`update public.wine_entries set entry_privacy='public' where id=$1`, [memberId]),
+      /removed for a community-guidelines violation cannot be restored/i
+    );
+
+    await db.exec('reset role');
+    const anchorReportId = (await db.query(
+      `select id from public.content_reports where reporter_id=$1 and entry_id=$2`,
+      [reporter, publicEntry]
+    )).rows[0].id;
+    await db.exec(resolveSql(anchorReportId, 'resolved', 'moderation-on-call', 'Confirmed group violation.'));
+    await authenticate(db, owner);
+    await assert.rejects(
+      db.query(`update public.entry_groups set title='Renamed tasting' where id=$1`, [groupId]),
+      /removed for a community-guidelines violation cannot be restored/i
+    );
+  } finally {
+    await db.close();
+  }
+});
+
 test('reports derive the target owner, reset workflow fields, and receive risk-based deadlines', async () => {
   const db = await fixture();
   try {
@@ -125,9 +225,32 @@ test('reports derive the target owner, reset workflow fields, and receive risk-b
       due_seconds: 14400,
     });
 
+    const reportId = (await db.query(
+      `select id from public.content_reports where reporter_id=$1 and entry_id=$2`,
+      [reporter, publicEntry]
+    )).rows[0].id;
+    await db.exec(resolveSql(reportId, 'resolved', 'moderation-on-call', 'Confirmed policy violation.'));
+    assert.equal(Number((await db.query(
+      `select count(*) as count from private.content_moderation_enforcements
+       where entry_id=$1 and active`,
+      [publicEntry]
+    )).rows[0].count), 1);
+    await authenticate(db, owner);
+    await assert.rejects(
+      db.query(
+        `update public.wine_entries set entry_privacy='public',is_feed_visible=true where id=$1`,
+        [publicEntry]
+      ),
+      /removed for a community-guidelines violation cannot be restored/i
+    );
+
     await authenticate(db, reporter);
     await assert.rejects(
       db.query(`select assigned_to from private.content_report_reviews`),
+      /permission denied/i
+    );
+    await assert.rejects(
+      db.query(`select * from private.content_moderation_enforcements`),
       /permission denied/i
     );
   } finally {
@@ -208,6 +331,15 @@ test('comment reports bind the canonical entry/author and unavailable targets fa
       body: '[deleted]',
       deleted: true,
     });
+
+    await authenticate(db, owner);
+    await assert.rejects(
+      db.query(
+        `update public.entry_comments set body='Restored comment',deleted_at=null where id=$1`,
+        [commentId]
+      ),
+      /removed for a community-guidelines violation cannot be restored/i
+    );
   } finally {
     await db.close();
   }

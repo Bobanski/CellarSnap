@@ -19,6 +19,8 @@
     "canonicalReportTargets": true,
     "clientWorkflowForgeryReset": true,
     "privateDurableEvidenceQueue": true,
+    "groupedRenderedTextScreened": true,
+    "authorRestorationBlockedAfterResolution": true,
     "urgentDeadlineHours": 4,
     "standardDeadlineHours": 24,
     "urgentClaimAlertMinutes": 15,
@@ -29,7 +31,7 @@
   },
   "checks": {
     "isolatedTests": {"passed": 599, "failed": 0},
-    "schemaAndToolTests": {"passed": 56, "failed": 0},
+    "schemaAndToolTests": {"passed": 57, "failed": 0},
     "databaseTypes": "passed",
     "webTypecheck": "passed",
     "mobileTypecheck": "passed",

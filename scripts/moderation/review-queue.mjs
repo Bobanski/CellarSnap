@@ -137,13 +137,25 @@ with completed as (
   where (q.report_id=(${id}#>>'{}')::uuid or q.id=(${id}#>>'{}')::uuid)
     and q.status in ('open','reviewing') and q.reviewed_at is null
   returning q.id,q.report_id,q.target_type,q.entry_id,q.comment_id,q.status,q.assigned_to,q.reviewed_at
+), enforced as (
+  insert into private.content_moderation_enforcements(review_id,target_type,entry_id,comment_id,group_id)
+  select done.id,done.target_type,done.entry_id,done.comment_id,groups.id
+  from completed done
+  left join public.entry_groups groups
+    on done.target_type='entry' and groups.anchor_entry_id=done.entry_id
+  where ${status}#>>'{}'='resolved'
+  returning review_id,target_type
 ), hidden_entry as (
   update public.wine_entries e set is_feed_visible=false,entry_privacy='private'
-  from completed c where ${status}#>>'{}'='resolved' and c.target_type='entry' and e.id=c.entry_id
+  from completed c
+  join enforced enforcement on enforcement.review_id=c.id and enforcement.target_type='entry'
+  where e.id=c.entry_id
   returning e.id
 ), hidden_comment as (
   update public.entry_comments c set body='[deleted]',deleted_at=clock_timestamp(),updated_at=clock_timestamp()
-  from completed done where ${status}#>>'{}'='resolved' and done.target_type='comment' and c.id=done.comment_id
+  from completed done
+  join enforced enforcement on enforcement.review_id=done.id and enforcement.target_type='comment'
+  where c.id=done.comment_id
   returning c.id
 ), closed as (
   update public.content_reports r set status=${status}#>>'{}'

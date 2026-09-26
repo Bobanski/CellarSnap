@@ -41,7 +41,9 @@ post or comment and can block another account. Report intake derives the actual 
 owner and canonical entry/comment server-side, resets client-supplied workflow state,
 captures a private evidence snapshot, and assigns the four- or 24-hour deadline.
 
-The private snapshot can include reported text and Storage paths. Retain resolved or
+Grouped feed publication screens the group title and every rendered member field;
+later title/member edits are screened while the anchor remains shared. The private
+snapshot can include grouped text and Storage paths. Retain resolved or
 dismissed review rows for 90 days for appeals and incident review, then delete them
 under an approved retention job. Legal holds and safety reports supersede that normal
 deletion window. Never export queue contents to ordinary analytics or ticket systems.
@@ -88,14 +90,22 @@ record the alert receipt before App Review.
    node scripts/moderation/review-queue.mjs resolve REPORT_UUID dismissed OPERATOR_LABEL /private/path/notes.txt
    ```
 
-   `resolved` atomically removes an entry from the feed and makes it private, or
-   soft-hides a comment as `[deleted]`. `dismissed` leaves content visible. Both record
-   operator, timestamps, and rationale. Re-running a completed decision fails closed.
+   `resolved` atomically records a private enforcement, removes an entry from the feed
+   and makes it private, or soft-hides a comment as `[deleted]`. Ordinary author writes
+   cannot republish or restore enforced content. `dismissed` leaves content visible.
+   Both record operator, timestamps, and rationale. Re-running a completed decision
+   fails closed.
 5. For warnings, suspensions, legal escalation, or account deletion, use the approved
    company procedure and record only the minimum needed in the private resolution
    note. Those account-level actions are not automated by this tool.
 6. Re-run `summary` and confirm the case left the open queue. Reply through the
    monitored support channel when the reporter or affected user requested follow-up.
+
+Appeals require a second authorized operator to review the original evidence and
+resolution. There is intentionally no ordinary-user or one-command restoration path.
+Until an approved database-owner procedure records the appeal rationale, deactivates
+every enforcement for the target, and re-screens the content, it remains hidden. Do
+not edit the public content row alone; the private enforcement is authoritative.
 
 ## Release and acceptance gate
 

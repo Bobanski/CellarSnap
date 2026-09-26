@@ -25,6 +25,7 @@ test('moderation operator SQL keeps values encoded and exposes only bounded queu
   assert.doesNotMatch(resolve, /Reviewed; no violation|select secret|operator'/);
   assert.match(claim, /status='reviewing'/);
   assert.match(resolve, /resolution_notes=/);
+  assert.match(resolve, /content_moderation_enforcements/);
   assert.match(listSql, /limit 100/i);
   assert.doesNotMatch(listSql, /details|target_user_id|reporter_id/i);
   assert.match(summarySql, /urgentUnclaimed/);

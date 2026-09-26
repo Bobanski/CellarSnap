@@ -34,8 +34,9 @@ Work is isolated on `codex/ugc-moderation-readiness`, based on merged B11h main
   mobile entries can write directly through Supabase. API-only validation would be
   bypassable.
 - All comment bodies are screened. Feed-visible non-private posts screen the displayed
-  structured fields, location, notes and advanced notes; private cellar notes are not
-  screened until the record is shared.
+  structured fields, location, notes and advanced notes; grouped publication also
+  screens its title and every rendered member, including later edits while shared.
+  Private cellar notes are not screened until the record is shared.
 - Patterns are private/configurable and deliberately high-confidence. Tests cover
   leetspeak/punctuation evasions and wine-language false positives. This is not a
   claim of exhaustive automated detection or image pre-screening.
@@ -46,8 +47,9 @@ Work is isolated on `codex/ugc-moderation-readiness`, based on merged B11h main
   backfilled into the private queue; invalid historical self-reports are dismissed.
 - The database-owner CLI exposes sanitized counts/bounded metadata only. Claim and
   resolve values are encoded through stdin, not shell interpolation. Confirmed
-  violations atomically hide the post or soft-delete the comment; dismissed reports
-  preserve content.
+  violations atomically create private enforcement state and hide the post or
+  soft-delete the comment. Author writes cannot republish or restore enforced content;
+  dismissed reports preserve content.
 - A monitor contract is implemented, not configured. `assert-sla` exits `2` for an
   overdue case or an urgent case unclaimed for 15 minutes. Submission remains blocked
   until a tested alert reaches named primary and backup owners.
@@ -57,10 +59,11 @@ Work is isolated on `codex/ugc-moderation-readiness`, based on merged B11h main
 Verified on the B11i working tree:
 
 - 599/599 isolated application tests passed.
-- 56/56 schema/tool checks passed, including catalog drift, direct authenticated
+- 57/57 schema/tool checks passed, including catalog drift, direct authenticated
   entry/comment writes, private-to-shared transitions, adversarial/false-positive
-  filtering, target/status forgery, private access denial, report evidence persistence,
-  operator encoding and atomic resolution.
+  and grouped-post filtering, target/status forgery, private access denial, grouped
+  report evidence persistence, operator encoding, atomic resolution, and blocked
+  author restoration.
 - Database type contract, web/mobile typechecks, and web/mobile lints passed.
 - Mobile release 7/7, dependency 7/7, and tooling 3/3 contracts passed.
 - Next production build passed all 94 routes.

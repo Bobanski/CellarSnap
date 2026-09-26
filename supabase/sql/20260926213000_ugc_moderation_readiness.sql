@@ -72,6 +72,16 @@ security definer
 set search_path = ''
 as $$
 begin
+  if exists (
+    select 1
+    from private.content_moderation_enforcements enforcement
+    where enforcement.active
+      and enforcement.target_type = 'comment'
+      and enforcement.comment_id = new.id
+  ) and (new.body is distinct from '[deleted]' or new.deleted_at is null) then
+    raise exception 'Content removed for a community-guidelines violation cannot be restored.'
+      using errcode = 'PT422';
+  end if;
   if new.body is distinct from '[deleted]' then
     perform private.assert_shareable_text(new.body);
   end if;
@@ -83,7 +93,7 @@ revoke all on function private.moderate_entry_comment() from public, anon, authe
 
 drop trigger if exists moderate_entry_comment on public.entry_comments;
 create trigger moderate_entry_comment
-  before insert or update of body
+  before insert or update of body, deleted_at
   on public.entry_comments
   for each row
   execute function private.moderate_entry_comment();
@@ -94,11 +104,60 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  group_is_shared boolean := false;
+  group_is_enforced boolean := false;
+  group_text text;
+  is_enforced boolean := false;
 begin
+  if new.entry_group_id is not null then
+    select exists (
+      select 1
+      from public.entry_groups g
+      join public.wine_entries anchor on anchor.id = g.anchor_entry_id
+      where g.id = new.entry_group_id
+        and anchor.entry_group_id = g.id
+        and coalesce(anchor.is_feed_visible, false)
+        and coalesce(anchor.entry_privacy::text, 'public') <> 'private'
+    ) into group_is_shared;
+    select exists (
+      select 1
+      from private.content_moderation_enforcements enforcement
+      where enforcement.active and enforcement.group_id = new.entry_group_id
+    ) into group_is_enforced;
+  end if;
+
+  if group_is_enforced and coalesce(new.is_feed_visible, false) then
+    raise exception 'Content removed for a community-guidelines violation cannot be restored.'
+      using errcode = 'PT422';
+  end if;
+
+  select exists (
+    select 1
+    from private.content_moderation_enforcements enforcement
+    where enforcement.active
+      and enforcement.target_type = 'entry'
+      and enforcement.entry_id = new.id
+  ) into is_enforced;
+
+  if is_enforced and (
+    coalesce(new.is_feed_visible, false)
+    or coalesce(new.entry_privacy::text, 'public') <> 'private'
+  ) then
+    raise exception 'Content removed for a community-guidelines violation cannot be restored.'
+      using errcode = 'PT422';
+  end if;
+  if is_enforced then
+    return new;
+  end if;
+
   -- Private cellar records remain private working notes. The same row is checked
-  -- if it is later made feed-visible to any audience.
-  if coalesce(new.is_feed_visible, false)
-     and coalesce(new.entry_privacy::text, 'public') <> 'private' then
+  -- if it is later made feed-visible to any audience. A non-anchor group member
+  -- is also screened whenever its anchor is already shared.
+  if (
+    coalesce(new.is_feed_visible, false)
+    and coalesce(new.entry_privacy::text, 'public') <> 'private'
+  ) or group_is_shared then
     perform private.assert_shareable_text(concat_ws(
       ' ',
       new.wine_name,
@@ -111,6 +170,32 @@ begin
       new.location_text,
       new.advanced_notes::text
     ));
+  end if;
+
+  -- Publishing an anchor screens the group title and every member rendered on
+  -- the grouped feed card, even though non-anchor members remain individually hidden.
+  if coalesce(new.is_feed_visible, false)
+     and coalesce(new.entry_privacy::text, 'public') <> 'private'
+     and new.entry_group_id is not null then
+    select concat_ws(' ',
+      g.title,
+      string_agg(concat_ws(' ',
+        member.wine_name,
+        member.producer,
+        member.country,
+        member.region,
+        member.appellation,
+        member.classification,
+        member.notes,
+        member.location_text,
+        member.advanced_notes::text
+      ), ' ')
+    ) into group_text
+    from public.entry_groups g
+    left join public.wine_entries member on member.entry_group_id = g.id
+    where g.id = new.entry_group_id
+    group by g.id, g.title;
+    perform private.assert_shareable_text(group_text);
   end if;
   return new;
 end;
@@ -125,6 +210,43 @@ create trigger moderate_shared_wine_entry
   on public.wine_entries
   for each row
   execute function private.moderate_shared_wine_entry();
+
+create or replace function private.moderate_entry_group()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (
+    select 1 from private.content_moderation_enforcements enforcement
+    where enforcement.active and enforcement.group_id = new.id
+  ) then
+    raise exception 'Content removed for a community-guidelines violation cannot be restored.'
+      using errcode = 'PT422';
+  end if;
+  if exists (
+    select 1
+    from public.wine_entries anchor
+    where anchor.id = new.anchor_entry_id
+      and anchor.entry_group_id = new.id
+      and coalesce(anchor.is_feed_visible, false)
+      and coalesce(anchor.entry_privacy::text, 'public') <> 'private'
+  ) then
+    perform private.assert_shareable_text(new.title);
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function private.moderate_entry_group() from public, anon, authenticated, service_role;
+
+drop trigger if exists moderate_entry_group on public.entry_groups;
+create trigger moderate_entry_group
+  before insert or update of title, anchor_entry_id
+  on public.entry_groups
+  for each row
+  execute function private.moderate_entry_group();
 
 create table if not exists private.content_report_reviews (
   id uuid primary key default gen_random_uuid(),
@@ -160,6 +282,37 @@ create index if not exists content_report_reviews_target_idx
 
 revoke all on private.content_report_reviews from public, anon, authenticated, service_role;
 
+-- This server-owned state keeps confirmed removals from being reversed through
+-- ordinary author update privileges. An appeal can lift every active row for a
+-- target only through a reviewed database-owner operation.
+create table if not exists private.content_moderation_enforcements (
+  id uuid primary key default gen_random_uuid(),
+  review_id uuid not null unique references private.content_report_reviews(id) on delete restrict,
+  target_type text not null check (target_type in ('entry', 'comment')),
+  entry_id uuid,
+  comment_id uuid,
+  group_id uuid,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  lifted_at timestamptz,
+  lifted_reason text check (lifted_reason is null or char_length(lifted_reason) <= 2000),
+  check (
+    (target_type = 'entry' and entry_id is not null and comment_id is null)
+    or (target_type = 'comment' and entry_id is not null and comment_id is not null)
+  )
+);
+
+create index if not exists content_moderation_enforcements_entry_idx
+  on private.content_moderation_enforcements (entry_id) where active;
+
+create index if not exists content_moderation_enforcements_comment_idx
+  on private.content_moderation_enforcements (comment_id) where active;
+
+create index if not exists content_moderation_enforcements_group_idx
+  on private.content_moderation_enforcements (group_id) where active and group_id is not null;
+
+revoke all on private.content_moderation_enforcements from public, anon, authenticated, service_role;
+
 create or replace function private.content_report_snapshot(
   report_target_type text,
   report_entry_id uuid,
@@ -185,6 +338,24 @@ begin
       'notes',e.notes,
       'locationText',e.location_text,
       'advancedNotes',e.advanced_notes,
+      'groupTitle',(
+        select g.title from public.entry_groups g where g.id=e.entry_group_id
+      ),
+      'groupEntries',(
+        select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+          'id',member.id,
+          'wineName',member.wine_name,
+          'producer',member.producer,
+          'country',member.country,
+          'region',member.region,
+          'appellation',member.appellation,
+          'classification',member.classification,
+          'notes',member.notes,
+          'locationText',member.location_text,
+          'advancedNotes',member.advanced_notes
+        )) order by member.id),'[]'::jsonb)
+        from public.wine_entries member where member.entry_group_id=e.entry_group_id
+      ),
       'labelImagePath',e.label_image_path,
       'placeImagePath',e.place_image_path,
       'pairingImagePath',e.pairing_image_path,
