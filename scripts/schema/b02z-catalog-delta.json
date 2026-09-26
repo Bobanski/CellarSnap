@@ -1,0 +1,209 @@
+{
+  "columns": {
+    "add": [
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "archive_operation_id",
+        "not_null": false,
+        "position": 4,
+        "table_name": "photo_retired_paths",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "deleted_at",
+        "not_null": false,
+        "position": 12,
+        "table_name": "photo_archive_operations",
+        "type": "timestamp with time zone"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "operation_id",
+        "not_null": false,
+        "position": 2,
+        "table_name": "photo_retired_paths",
+        "type": "uuid"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "retirement_evidence",
+        "not_null": false,
+        "position": 11,
+        "table_name": "photo_archive_operations",
+        "type": "jsonb"
+      },
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "retirement_phase",
+        "not_null": false,
+        "position": 10,
+        "table_name": "photo_archive_operations",
+        "type": "text"
+      }
+    ],
+    "remove": [
+      {
+        "default_expression": null,
+        "generated": "",
+        "identity": "",
+        "name": "operation_id",
+        "not_null": true,
+        "position": 2,
+        "table_name": "photo_retired_paths",
+        "type": "uuid"
+      }
+    ]
+  },
+  "constraints": {
+    "add": [
+      {
+        "definition": "CHECK (((operation_id IS NOT NULL)::integer + (archive_operation_id IS NOT NULL)::integer) = 1)",
+        "name": "photo_retired_paths_one_operation",
+        "table_name": "photo_retired_paths",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (COALESCE(retirement_phase = 'verified'::text, false) = (retirement_evidence IS NOT NULL))",
+        "name": "photo_archive_evidence_state",
+        "table_name": "photo_archive_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (COALESCE(retirement_phase = ANY (ARRAY['deleted_pending_cdn'::text, 'verified'::text]), false) = (deleted_at IS NOT NULL))",
+        "name": "photo_archive_deleted_timestamp",
+        "table_name": "photo_archive_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (retirement_phase = ANY (ARRAY['fenced'::text, 'deleting'::text, 'deleted_pending_cdn'::text, 'verified'::text]))",
+        "name": "photo_archive_operations_retirement_phase_check",
+        "table_name": "photo_archive_operations",
+        "validated": true
+      },
+      {
+        "definition": "CHECK (retirement_phase IS NULL OR state = 'copied'::text)",
+        "name": "photo_archive_retirement_state",
+        "table_name": "photo_archive_operations",
+        "validated": true
+      },
+      {
+        "definition": "FOREIGN KEY (archive_operation_id) REFERENCES private.photo_archive_operations(id)",
+        "name": "photo_retired_paths_archive_operation_id_fkey",
+        "table_name": "photo_retired_paths",
+        "validated": true
+      }
+    ],
+    "remove": []
+  },
+  "function_grants": {
+    "add": [
+      {
+        "args": "current_snapshot jsonb, expected_snapshot jsonb, source_path text, require_source boolean",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "photo_archive_source_snapshot_valid",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, observations jsonb",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "record_photo_archive_revocation_evidence",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "begin_photo_archive_deletion",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "confirm_photo_archive_deletion",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "grantee": "postgres",
+        "is_grantable": false,
+        "name": "prepare_photo_archive_retirement",
+        "privilege_type": "EXECUTE",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "functions": {
+    "add": [
+      {
+        "args": "current_snapshot jsonb, expected_snapshot jsonb, source_path text, require_source boolean",
+        "definition": "CREATE OR REPLACE FUNCTION private.photo_archive_source_snapshot_valid(current_snapshot jsonb, expected_snapshot jsonb, source_path text, require_source boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\ndeclare current_object jsonb; expected_object jsonb; object_path text;\nbegin\n if current_snapshot is null or expected_snapshot is null\n  or current_snapshot->'refs'<>'[]'::jsonb\n  or current_snapshot->'sources' is distinct from expected_snapshot->'sources'\n  or jsonb_array_length(current_snapshot->'objects')<>jsonb_array_length(expected_snapshot->'objects') then return false; end if;\n for current_object in select * from jsonb_array_elements(current_snapshot->'objects') loop\n  object_path:=current_object->>'path';\n  select value into expected_object from jsonb_array_elements(expected_snapshot->'objects') where value->>'path'=object_path;\n  if expected_object is null then return false; end if;\n  if object_path=source_path then\n   if require_source<>(current_object->'object'<>'null'::jsonb)\n    or (require_source and current_object is distinct from expected_object) then return false; end if;\n  elsif current_object is distinct from expected_object then\n   if current_object->'object'<>'null'::jsonb or not exists(\n    select from private.photo_retired_paths retired join private.photo_archive_operations sibling\n     on sibling.id=retired.archive_operation_id\n    where retired.path=object_path and sibling.source_path=object_path and sibling.state='copied'\n     and sibling.retirement_phase in ('deleting','deleted_pending_cdn','verified')) then return false; end if;\n  end if;\n end loop;\n return true;\nend $function$\n",
+        "name": "photo_archive_source_snapshot_valid",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid, observations jsonb",
+        "definition": "CREATE OR REPLACE FUNCTION private.record_photo_archive_revocation_evidence(operation_id uuid, observations jsonb)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare op private.photo_archive_operations; region text; regions text[];\nbegin\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.retirement_phase not in ('deleted_pending_cdn','verified') or op.deleted_at is null then\n  raise exception 'Archive source deletion not confirmed' using errcode='22023'; end if;\n if observations is null or jsonb_typeof(observations)<>'array' or jsonb_array_length(observations)>40\n  or octet_length(observations::text)>32768 then\n  raise exception 'Invalid denial observations' using errcode='22023'; end if;\n if exists(select from jsonb_array_elements(observations) o where not coalesce(\n  jsonb_typeof(o)='object'\n  and o ?& array['region','path','surface','status','observed_at','capability_sha256','source_sha256','warm_sha256','warmed_at','warm_status']\n  and o->>'region' ~ '^[a-zA-Z0-9_-]{2,64}$' and o->>'path'=op.source_path\n  and o->>'surface' in ('raw','transformed') and o->>'status' in ('400','403','404')\n  and o->>'capability_sha256' ~ '^[a-f0-9]{64}$' and o->>'source_sha256'=op.receipt->>'sha256'\n  and o->>'warm_sha256' ~ '^[a-f0-9]{64}$' and o->>'warm_status'='200'\n  and (o->>'warmed_at')::timestamptz<=op.deleted_at\n  and (o->>'observed_at')::timestamptz>=op.deleted_at and (o->>'observed_at')::timestamptz<=clock_timestamp(),false)) then\n  raise exception 'Invalid or unrelated denial observation' using errcode='22023'; end if;\n select array_agg(distinct o->>'region') into regions from jsonb_array_elements(observations) o;\n if coalesce(cardinality(regions),0)<2 then raise exception 'Two independently observed regions required' using errcode='22023'; end if;\n foreach region in array regions loop\n  if (select count(distinct o->>'surface') from jsonb_array_elements(observations) o\n    where o->>'region'=region and o->>'path'=op.source_path)<>2 then\n   raise exception 'Raw and transformed denials required in every region' using errcode='22023'; end if;\n end loop;\n update private.photo_archive_operations set retirement_phase='verified',retirement_evidence=observations\n where id=op.id returning * into op;\n return to_jsonb(op);\nend $function$\n",
+        "name": "record_photo_archive_revocation_evidence",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.begin_photo_archive_deletion(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_archive_operations; snap jsonb;\nbegin\n perform 1 from private.photo_delivery_state for update;\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.retirement_phase not in ('fenced','deleting') then\n  raise exception 'Archive retirement is not fenced' using errcode='22023'; end if;\n lock table public.wine_entries,public.entry_photos,public.entry_group_slides,\n  public.profiles,public.user_collection_items,public.user_collections in share mode;\n lock table storage.buckets,storage.objects in share mode;\n if not exists(select from private.photo_retired_paths where path=op.source_path and archive_operation_id=op.id) then\n  raise exception 'Durable archive fence required' using errcode='22023'; end if;\n snap:=private.photo_archive_snapshot(op.source_path,op.archive_path);\n if not private.photo_archive_source_snapshot_valid(snap->'source',op.expected,op.source_path,true) then\n  raise exception 'Historical source changed or gained references' using errcode='PT409'; end if;\n if not coalesce((snap->>'protected')::boolean and snap->'archive'=op.proof->'object',false) then\n  raise exception 'Protected archive proof changed' using errcode='PT409'; end if;\n if op.retirement_phase='fenced' then\n  update private.photo_archive_operations set retirement_phase='deleting' where id=op.id returning * into op;\n end if;\n return to_jsonb(op);\nend $function$\n",
+        "name": "begin_photo_archive_deletion",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.confirm_photo_archive_deletion(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_archive_operations; snap jsonb;\nbegin\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.retirement_phase in ('deleted_pending_cdn','verified') then return to_jsonb(op); end if;\n if op.retirement_phase<>'deleting' then raise exception 'Archive deletion was not begun' using errcode='22023'; end if;\n lock table public.wine_entries,public.entry_photos,public.entry_group_slides,\n  public.profiles,public.user_collection_items,public.user_collections in share mode;\n lock table storage.buckets,storage.objects in share mode;\n if not exists(select from private.photo_retired_paths where path=op.source_path and archive_operation_id=op.id) then\n  raise exception 'Durable archive fence required' using errcode='22023'; end if;\n snap:=private.photo_archive_snapshot(op.source_path,op.archive_path);\n if not private.photo_archive_source_snapshot_valid(snap->'source',op.expected,op.source_path,false) then\n  raise exception 'Historical source cohort changed or source still exists' using errcode='PT409'; end if;\n if not coalesce((snap->>'protected')::boolean and snap->'archive'=op.proof->'object',false) then\n  raise exception 'Protected archive proof changed' using errcode='PT409'; end if;\n update private.photo_archive_operations set retirement_phase='deleted_pending_cdn',deleted_at=clock_timestamp()\n where id=op.id returning * into op;\n return to_jsonb(op);\nend $function$\n",
+        "name": "confirm_photo_archive_deletion",
+        "owner": "postgres",
+        "schema_name": "private"
+      },
+      {
+        "args": "operation_id uuid",
+        "definition": "CREATE OR REPLACE FUNCTION private.prepare_photo_archive_retirement(operation_id uuid)\n RETURNS jsonb\n LANGUAGE plpgsql\n SET search_path TO ''\n SET lock_timeout TO '2s'\nAS $function$\ndeclare op private.photo_archive_operations; snap jsonb; retired private.photo_retired_paths;\nbegin\n update private.photo_delivery_state set fence_epoch=fence_epoch+1;\n if not (select legacy_disabled from private.photo_delivery_state) then\n  raise exception 'Legacy signing cutoff required' using errcode='22023';\n end if;\n select * into strict op from private.photo_archive_operations where id=operation_id for update;\n if op.state<>'copied' then raise exception 'Verified archive copy required' using errcode='22023'; end if;\n if op.retirement_phase is not null then\n  if not exists(select from private.photo_retired_paths where path=op.source_path and archive_operation_id=op.id) then\n   raise exception 'Durable archive fence required' using errcode='22023'; end if;\n  return to_jsonb(op);\n end if;\n lock table public.wine_entries,public.entry_photos,public.entry_group_slides,\n  public.profiles,public.user_collection_items,public.user_collections in share mode;\n lock table storage.buckets,storage.objects in share mode;\n snap:=private.photo_archive_snapshot(op.source_path,op.archive_path);\n if not private.photo_archive_source_snapshot_valid(snap->'source',op.expected,op.source_path,true) then\n  raise exception 'Historical source changed or gained references' using errcode='PT409'; end if;\n if not coalesce((snap->>'protected')::boolean and snap->'archive'=op.proof->'object'\n  and op.proof->>'sha256'=op.receipt->>'sha256' and op.proof->'size'=op.receipt->'size',false) then\n  raise exception 'Protected archive proof changed' using errcode='PT409'; end if;\n select * into retired from private.photo_retired_paths where path=op.source_path;\n if found and retired.archive_operation_id is distinct from op.id then\n  raise exception 'Source path is fenced by another operation' using errcode='PT409'; end if;\n insert into private.photo_retired_paths(path,archive_operation_id) values(op.source_path,op.id)\n on conflict(path) do nothing;\n update private.photo_archive_operations set retirement_phase='fenced' where id=op.id returning * into op;\n return to_jsonb(op);\nend $function$\n",
+        "name": "prepare_photo_archive_retirement",
+        "owner": "postgres",
+        "schema_name": "private"
+      }
+    ],
+    "remove": []
+  },
+  "indexes": {
+    "add": [
+      {
+        "indexdef": "CREATE INDEX photo_retired_paths_archive_operation_idx ON private.photo_retired_paths USING btree (archive_operation_id) WHERE (archive_operation_id IS NOT NULL)",
+        "indexname": "photo_retired_paths_archive_operation_idx",
+        "tablename": "photo_retired_paths"
+      },
+      {
+        "indexdef": "CREATE INDEX photo_retired_paths_rekey_operation_idx ON private.photo_retired_paths USING btree (operation_id) WHERE (operation_id IS NOT NULL)",
+        "indexname": "photo_retired_paths_rekey_operation_idx",
+        "tablename": "photo_retired_paths"
+      }
+    ],
+    "remove": []
+  }
+}
