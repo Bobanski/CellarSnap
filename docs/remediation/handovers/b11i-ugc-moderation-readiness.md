@@ -73,8 +73,8 @@ Verified on the B11i working tree:
 
 ## Release state
 
-- Implementation: local on `codex/ugc-moderation-readiness`; commit/PR pending at
-  this checkpoint.
+- Implementation: source `68c73a8` on `codex/ugc-moderation-readiness`; PR #174
+  is open and awaiting independent checks/review.
 - Merge/application deployment: pending.
 - Database migration: pending; zero production DDL/DML.
 - Alert/inbox staffing and drill: pending.

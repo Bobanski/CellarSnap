@@ -5,8 +5,8 @@
   "implementation": {
     "branch": "codex/ugc-moderation-readiness",
     "base": "9163bf727de858272b9999e9cecac8a1fea8cffe",
-    "commit": null,
-    "pullRequest": null,
+    "commit": "68c73a8",
+    "pullRequest": 174,
     "merged": false,
     "applicationDeployed": false,
     "migrationApplied": false,
