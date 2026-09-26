@@ -21,10 +21,10 @@ async function fixture() {
   );
   await db.query(
     `insert into public.wine_entries
-      (id,user_id,wine_name,notes,entry_privacy,is_feed_visible)
+      (id,user_id,wine_name,vintage,notes,entry_privacy,is_feed_visible)
      values
-      ($1,$3,'Clean shared wine','Black cherry, killer acidity, and a die-cut label.','public',true),
-      ($2,$3,'Private cellar wine','Private working note.','private',true)`,
+      ($1,$3,'Clean shared wine','2020','Black cherry, killer acidity, and a die-cut label.','public',true),
+      ($2,$3,'Private cellar wine','2021','Private working note.','private',true)`,
     [publicEntry, privateEntry, owner]
   );
   return db;
@@ -69,6 +69,10 @@ test('UGC moderation rejects high-confidence evasions but preserves wine-languag
       db.query(`update public.wine_entries set wine_name='Go kill yourself' where id=$1`, [publicEntry]),
       /cannot be shared/i
     );
+    await assert.rejects(
+      db.query(`update public.wine_entries set vintage='I will shoot you' where id=$1`, [publicEntry]),
+      /cannot be shared/i
+    );
   } finally {
     await db.close();
   }
@@ -96,8 +100,19 @@ test('group publication screens its title and hidden member metadata, including 
   const db = await fixture();
   const groupId = '00000000-0000-4000-8000-000000000073';
   const memberId = '00000000-0000-4000-8000-000000000074';
+  const transitionGroupId = '00000000-0000-4000-8000-000000000075';
   try {
     await authenticate(db, owner);
+    await db.query(
+      `insert into public.entry_groups(id,user_id,title,anchor_entry_id)
+       values($1,$2,'Go kill yourself',$3)`,
+      [transitionGroupId, owner, publicEntry]
+    );
+    await assert.rejects(
+      db.query(`update public.wine_entries set entry_group_id=$1 where id=$2`, [transitionGroupId, publicEntry]),
+      /cannot be shared/i
+    );
+    await db.query(`delete from public.entry_groups where id=$1`, [transitionGroupId]);
     await db.query(`update public.wine_entries set is_feed_visible=false where id=$1`, [publicEntry]);
     await db.query(
       `insert into public.entry_groups(id,user_id,title) values($1,$2,'Friday tasting')`,
@@ -105,8 +120,8 @@ test('group publication screens its title and hidden member metadata, including 
     );
     await db.query(
       `insert into public.wine_entries
-        (id,user_id,wine_name,notes,entry_privacy,is_feed_visible,entry_group_id)
-       values($1,$2,'Hidden member','Clean member note','public',false,$3)`,
+        (id,user_id,wine_name,vintage,notes,entry_privacy,is_feed_visible,entry_group_id)
+       values($1,$2,'Hidden member','2021','Clean member note','public',false,$3)`,
       [memberId, owner, groupId]
     );
     await db.query(`update public.wine_entries set entry_group_id=$1 where id=$2`, [groupId, publicEntry]);
@@ -141,7 +156,7 @@ test('group publication screens its title and hidden member metadata, including 
       `select content_snapshot->>'groupTitle' as group_title,
         content_snapshot->'groupEntries' @> $1::jsonb as includes_member
        from private.content_report_reviews where entry_id=$2`,
-      [JSON.stringify([{ id: memberId, wineName: 'Hidden member', notes: 'Clean member note' }]), publicEntry]
+      [JSON.stringify([{ id: memberId, wineName: 'Hidden member', vintage: '2021', notes: 'Clean member note' }]), publicEntry]
     )).rows[0];
     assert.deepEqual(snapshot, { group_title: 'Friday tasting', includes_member: true });
 
@@ -387,11 +402,16 @@ test('migration backfill canonicalizes and queues active pre-trigger reports', a
     await db.exec(`alter table public.content_reports disable trigger prepare_content_report;
       alter table public.content_reports disable trigger enqueue_content_report_review;`);
     const oldReport = '00000000-0000-4000-8000-000000000099';
+    const orphanReport = '00000000-0000-4000-8000-000000000098';
+    const missingEntry = '00000000-0000-4000-8000-000000000097';
+    await db.exec(`alter table public.content_reports drop constraint content_reports_entry_id_fkey`);
     await db.query(
       `insert into public.content_reports
         (id,reporter_id,target_type,entry_id,target_user_id,reason,status,created_at)
-       values($1,$2,'entry',$3,$4,'violence','open','2026-09-25T00:00:00Z')`,
-      [oldReport, reporter, publicEntry, thirdParty]
+       values
+        ($1,$3,'entry',$4,$5,'violence','open','2026-09-25T00:00:00Z'),
+        ($2,$3,'entry',$6,$5,'other','open','2026-09-24T00:00:00Z')`,
+      [oldReport, orphanReport, reporter, publicEntry, thirdParty, missingEntry]
     );
     await db.exec(`alter table public.content_reports enable trigger prepare_content_report;
       alter table public.content_reports enable trigger enqueue_content_report_review;`);
@@ -420,6 +440,13 @@ test('migration backfill canonicalizes and queues active pre-trigger reports', a
       status: 'open',
       notes: 'Black cherry, killer acidity, and a die-cut label.',
     });
+    assert.deepEqual((await db.query(
+      `select r.status,count(q.id)::int as queued
+       from public.content_reports r
+       left join private.content_report_reviews q on q.report_id=r.id
+       where r.id=$1 group by r.status`,
+      [orphanReport]
+    )).rows[0], { status: 'dismissed', queued: 0 });
   } finally {
     await db.close();
   }

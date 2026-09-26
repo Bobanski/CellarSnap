@@ -35,8 +35,9 @@ Work is isolated on `codex/ugc-moderation-readiness`, based on merged B11h main
   bypassable.
 - All comment bodies are screened. Feed-visible non-private posts screen the displayed
   structured fields, location, notes and advanced notes; grouped publication also
-  screens its title and every rendered member, including later edits while shared.
-  Private cellar notes are not screened until the record is shared.
+  screens its title and every rendered member, including vintage, attachment
+  transitions, and later edits while shared. Private cellar notes are not screened
+  until the record is shared.
 - Patterns are private/configurable and deliberately high-confidence. Tests cover
   leetspeak/punctuation evasions and wine-language false positives. This is not a
   claim of exhaustive automated detection or image pre-screening.
@@ -44,7 +45,8 @@ Work is isolated on `codex/ugc-moderation-readiness`, based on merged B11h main
   checks visibility, snapshots reported text and photo paths privately, and assigns
   urgent four-hour or standard 24-hour deadlines. The private queue survives deletion
   of the public report receipt. Active historical receipts are canonicalized and
-  backfilled into the private queue; invalid historical self-reports are dismissed.
+  backfilled into the private queue; invalid historical self-reports and orphaned
+  targets are dismissed without aborting the migration.
 - The database-owner CLI exposes sanitized counts/bounded metadata only. Claim and
   resolve values are encoded through stdin, not shell interpolation. Confirmed
   violations atomically create private enforcement state and hide the post or
@@ -61,9 +63,10 @@ Verified on the B11i working tree:
 - 599/599 isolated application tests passed.
 - 57/57 schema/tool checks passed, including catalog drift, direct authenticated
   entry/comment writes, private-to-shared transitions, adversarial/false-positive
-  and grouped-post filtering, target/status forgery, private access denial, grouped
-  report evidence persistence, operator encoding, atomic resolution, and blocked
-  author restoration.
+  and grouped-post filtering (including vintage and attachment transitions),
+  target/status forgery, orphan-safe backfill, private access denial, grouped report
+  evidence persistence, operator encoding, atomic resolution, and blocked author
+  restoration.
 - Database type contract, web/mobile typechecks, and web/mobile lints passed.
 - Mobile release 7/7, dependency 7/7, and tooling 3/3 contracts passed.
 - Next production build passed all 94 routes.

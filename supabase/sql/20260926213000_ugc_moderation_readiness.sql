@@ -162,6 +162,7 @@ begin
       ' ',
       new.wine_name,
       new.producer,
+      new.vintage,
       new.country,
       new.region,
       new.appellation,
@@ -182,6 +183,7 @@ begin
       string_agg(concat_ws(' ',
         member.wine_name,
         member.producer,
+        member.vintage,
         member.country,
         member.region,
         member.appellation,
@@ -205,8 +207,9 @@ revoke all on function private.moderate_shared_wine_entry() from public, anon, a
 
 drop trigger if exists moderate_shared_wine_entry on public.wine_entries;
 create trigger moderate_shared_wine_entry
-  before insert or update of wine_name, producer, country, region, appellation,
-    classification, notes, location_text, advanced_notes, entry_privacy, is_feed_visible
+  before insert or update of wine_name, producer, vintage, country, region, appellation,
+    classification, notes, location_text, advanced_notes, entry_privacy, is_feed_visible,
+    entry_group_id
   on public.wine_entries
   for each row
   execute function private.moderate_shared_wine_entry();
@@ -331,6 +334,7 @@ begin
     select jsonb_strip_nulls(jsonb_build_object(
       'wineName',e.wine_name,
       'producer',e.producer,
+      'vintage',e.vintage,
       'country',e.country,
       'region',e.region,
       'appellation',e.appellation,
@@ -346,6 +350,7 @@ begin
           'id',member.id,
           'wineName',member.wine_name,
           'producer',member.producer,
+          'vintage',member.vintage,
           'country',member.country,
           'region',member.region,
           'appellation',member.appellation,
@@ -510,6 +515,20 @@ create trigger enqueue_content_report_review
 
 -- Canonicalize active historical receipts before queueing them. Prior clients
 -- supplied target_user_id and could also supply the wrong entry for a comment.
+update public.content_reports r
+set status='dismissed'
+where r.status in ('open','reviewing')
+  and (
+    (r.target_type='entry' and (
+      r.entry_id is null
+      or not exists (select 1 from public.wine_entries e where e.id=r.entry_id)
+    ))
+    or (r.target_type='comment' and (
+      r.comment_id is null
+      or not exists (select 1 from public.entry_comments c where c.id=r.comment_id)
+    ))
+  );
+
 update public.content_reports r
 set status='dismissed'
 from public.wine_entries e

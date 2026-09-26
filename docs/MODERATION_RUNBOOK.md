@@ -41,9 +41,10 @@ post or comment and can block another account. Report intake derives the actual 
 owner and canonical entry/comment server-side, resets client-supplied workflow state,
 captures a private evidence snapshot, and assigns the four- or 24-hour deadline.
 
-Grouped feed publication screens the group title and every rendered member field;
-later title/member edits are screened while the anchor remains shared. The private
-snapshot can include grouped text and Storage paths. Retain resolved or
+Grouped feed publication screens the group title and every rendered member field,
+including vintage; attachment transitions and later title/member edits are screened
+while the anchor remains shared. The private snapshot can include grouped text and
+Storage paths. Retain resolved or
 dismissed review rows for 90 days for appeals and incident review, then delete them
 under an approved retention job. Legal holds and safety reports supersede that normal
 deletion window. Never export queue contents to ordinary analytics or ticket systems.
