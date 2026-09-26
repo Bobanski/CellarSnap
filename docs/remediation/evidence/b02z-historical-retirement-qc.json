@@ -1,0 +1,46 @@
+{
+  "batch": "B02z",
+  "date": "2026-09-26",
+  "scope": ["AUD-01", "OPS-03", "OPS-04"],
+  "implementation": {
+    "branch": "codex/b02z-historical-photo-retirement",
+    "base": "ea88d83",
+    "migration": "20260926160328_historical_photo_retirement.sql",
+    "productionApplied": false,
+    "productionDeletes": 0,
+    "storeBuildCreated": false,
+    "appStoreUpload": false,
+    "appReviewSubmitted": false
+  },
+  "checks": {
+    "isolatedTests": {"passed": 597, "failed": 0},
+    "schemaAndToolTests": {"passed": 49, "failed": 0},
+    "postgres": {
+      "version": "17.6",
+      "catalogMatches": true,
+      "preservationRaces": 4,
+      "retirementFenceRaces": 4,
+      "productionWrites": 0
+    },
+    "databaseTypes": "passed",
+    "webLint": "passed",
+    "webTypecheck": "passed",
+    "supabaseAdvisors": "reviewed live; only pre-existing findings because the new migration is not deployed",
+    "browser": "not rerun; this batch changes only private operator SQL/CLI and no app route, component or client API",
+    "native": "unavailable: xcrun simctl, adb and emulator are not installed"
+  },
+  "retirementContract": {
+    "phases": ["fenced", "deleting", "deleted_pending_cdn", "verified"],
+    "exactPathDelete": true,
+    "archiveRetained": true,
+    "twoRegionRawAndTransformedEvidence": true,
+    "verifiedEvidenceImmutable": true,
+    "heldObjectsAuthorized": false
+  },
+  "releaseBlocks": [
+    "Cluster Wine, LLC enrollment/invitation, company bundle ownership and company distribution credentials",
+    "Rotate the exposed production database password and verify protected consumers",
+    "Independent migration review, hosted apply, canary retirement and regional denial collection",
+    "Signed iPhone/TestFlight acceptance, listing metadata, reviewer account and explicit review submission"
+  ]
+}

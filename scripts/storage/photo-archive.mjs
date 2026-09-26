@@ -1,5 +1,6 @@
-// Operator-only preservation. This tool cannot delete sources or authorize
-// retirement. "copied" is a timestamped observation, never a perpetual lease.
+// Operator-only preservation and checkpointed retirement. A copied operation
+// cannot delete until the database installs a durable path fence. CDN evidence
+// is supplied separately; this tool never creates or prints capability URLs.
 import { readFile, lstat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { isDeepStrictEqual as same } from 'node:util';
@@ -20,6 +21,10 @@ export function archiveDatabase(env = process.env) {
   snapshot: (path,dest) => query(`select private.photo_archive_snapshot(${literal(path)}#>>'{}',${literal(dest)}#>>'{}');`),
   commit: (id,proof) => query(`select private.commit_photo_archive((${literal(id)}#>>'{}')::uuid,${literal(proof)});`),
   abandon: id => query(`select private.abandon_photo_archive((${literal(id)}#>>'{}')::uuid);`),
+  prepareRetirement: id => query(`select private.prepare_photo_archive_retirement((${literal(id)}#>>'{}')::uuid);`),
+  beginDeletion: id => query(`select private.begin_photo_archive_deletion((${literal(id)}#>>'{}')::uuid);`),
+  confirmDeletion: id => query(`select private.confirm_photo_archive_deletion((${literal(id)}#>>'{}')::uuid);`),
+  recordEvidence: (id,evidence) => query(`select private.record_photo_archive_revocation_evidence((${literal(id)}#>>'{}')::uuid,${literal(evidence)});`),
  };
 }
 
@@ -51,6 +56,11 @@ export function archiveStorage(url,key,fetcher=fetch) {
    finally{await reader.cancel();reader.releaseLock();}
    if(!size)throw Error('Empty archive photo');
    return {bytes:Buffer.concat(chunks),mimetype};
+  },
+  remove:async path=>{
+   const r=await request('/storage/v1/object/wine-photos',{method:'DELETE',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prefixes:[path]})});
+   await r.body?.cancel();
   },
  };
 }
@@ -88,9 +98,45 @@ export async function resumeArchive(db,storage,id) {
  return db.commit(id,{object:after.archive,sha256:digest(copy.bytes),size:copy.bytes.length,mimetype:copy.mimetype});
 }
 
+async function verifyRetirementPair(db,storage,op) {
+ if(!op||op.state!=='copied')throw Error('Verified archive copy required');
+ const before=await db.snapshot(op.source_path,op.archive_path);
+ const sourceMatches=snapshot=>!snapshot.source.refs.length&&same(snapshot.source.sources,op.expected.sources)&&
+  snapshot.source.objects.every(current=>{const expected=op.expected.objects.find(row=>row.path===current.path);
+   return current.path===op.source_path?same(current,expected):same(current,expected)||current.object===null;});
+ if(!before.protected||!sourceMatches(before)||!same(before.archive,op.proof.object))
+  throw Error('Archive source, protection or proof changed');
+ const source=await storage.read('wine-photos',op.source_path),copy=await storage.read(ARCHIVE_BUCKET,op.archive_path);
+ if(source.bytes.length!==op.receipt.size||source.mimetype!==op.proof.mimetype||copy.mimetype!==op.proof.mimetype||
+  !source.bytes.equals(copy.bytes)||digest(source.bytes)!==op.receipt.sha256)throw Error('Retirement byte proof mismatch');
+ const after=await db.snapshot(op.source_path,op.archive_path);
+ if(!after.protected||!sourceMatches(after)||!same(after,before))throw Error('Archive objects changed during retirement verification');
+}
+
+export async function prepareArchiveRetirement(db,storage,id) {
+ const op=await db.get(id);
+ if(op?.retirement_phase)return db.prepareRetirement(id);
+ await verifyRetirementPair(db,storage,op);
+ return db.prepareRetirement(id);
+}
+
+export async function retireArchiveSource(db,storage,id) {
+ let op=await db.get(id);
+ if(!op||op.state!=='copied'||!['fenced','deleting','deleted_pending_cdn','verified'].includes(op.retirement_phase))
+  throw Error('Prepare the archive retirement fence first');
+ if(['deleted_pending_cdn','verified'].includes(op.retirement_phase))return op;
+ if(op.retirement_phase==='fenced'){
+  await verifyRetirementPair(db,storage,op);
+  op=await db.beginDeletion(id);
+ }
+ await storage.remove(op.source_path);
+ return db.confirmDeletion(id);
+}
+
 export function archiveSummary(op) {
  if(!op)throw Error('Archive operation not found');
- return {operationId:op.id,state:op.state,bytes:op.receipt.size,verifiedAt:op.verified_at,retirementAuthorized:false};
+ return {operationId:op.id,state:op.state,bytes:op.receipt.size,verifiedAt:op.verified_at,
+  retirementPhase:op.retirement_phase??null,deletedAt:op.deleted_at??null,retirementAuthorized:op.retirement_phase==='verified'};
 }
 async function boundedFile(path,max) {
  const info=await lstat(path);
@@ -99,8 +145,9 @@ async function boundedFile(path,max) {
 }
 async function main() {
  const [command,id,...args]=process.argv.slice(2);
- if(!['plan','resume','status','abandon'].includes(command)||!uuid.test(id??'')||args.length!==(command==='plan'?3:0))
-  throw Error('Usage: photo-archive.mjs plan UUID RECONCILIATION_JSON BACKUP_DIRECTORY SOURCE_PATH | resume UUID | status UUID | abandon UUID');
+ const expectedArgs=command==='plan'?3:command==='observe'?1:0;
+ if(!['plan','resume','status','abandon','prepare-retirement','retire','observe'].includes(command)||!uuid.test(id??'')||args.length!==expectedArgs)
+  throw Error('Usage: photo-archive.mjs plan UUID RECONCILIATION_JSON BACKUP_DIRECTORY SOURCE_PATH | resume UUID | status UUID | abandon UUID | prepare-retirement UUID | retire UUID | observe UUID EVIDENCE_JSON');
  const db=archiveDatabase();let op;
  if(command==='plan'){
   const [report,backup,path]=args;
@@ -108,9 +155,12 @@ async function main() {
    id=>boundedFile(join(backup,'objects',id),MAX_PHOTO_BYTES));
   op=await db.plan(id,path,receipt);
  }else if(command==='resume')op=await resumeArchive(db,archiveStorage(process.env.CELLARSNAP_ARCHIVE_STORAGE_URL,process.env.CELLARSNAP_ARCHIVE_SERVICE_KEY),id);
+ else if(command==='prepare-retirement')op=await prepareArchiveRetirement(db,archiveStorage(process.env.CELLARSNAP_ARCHIVE_STORAGE_URL,process.env.CELLARSNAP_ARCHIVE_SERVICE_KEY),id);
+ else if(command==='retire')op=await retireArchiveSource(db,archiveStorage(process.env.CELLARSNAP_ARCHIVE_STORAGE_URL,process.env.CELLARSNAP_ARCHIVE_SERVICE_KEY),id);
+ else if(command==='observe')op=await db.recordEvidence(id,JSON.parse(await boundedFile(args[0],64*1024)));
  else op=await db[command==='status'?'get':'abandon'](id);
  console.log(JSON.stringify(archiveSummary(op)));
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(()=>{
- console.error('Photo archival did not complete. Inspect status using the same operation ID; all source bytes remain untouched.');process.exitCode=1;
+ console.error('Photo archive operation did not complete. Inspect status using the same operation ID before resuming.');process.exitCode=1;
 });

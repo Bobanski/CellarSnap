@@ -35,10 +35,42 @@ export async function archiveRaces({sql,session,waitForLock,env,bin}) {
    const status=spawnSync(process.execPath,[resolve('scripts/storage/photo-archive.mjs'),'status',id],{
     env:{...process.env,...env,CELLARSNAP_PSQL:resolve(bin,'psql')},encoding:'utf8'});
    assert.equal(status.status,0,status.stderr);
-   assert.deepEqual(JSON.parse(status.stdout),{operationId:id,state:'planned',bytes:1,verifiedAt:null,retirementAuthorized:false});
+   assert.deepEqual(JSON.parse(status.stdout),{operationId:id,state:'planned',bytes:1,verifiedAt:null,retirementPhase:null,deletedAt:null,retirementAuthorized:false});
    if(kind==='bucket')sql("update storage.buckets set public=false where id='photo-recovery-archive'");
    races++;
   }finally{first.child.kill();second.child.kill();}
  }
- return {referenceSourceDestinationBucketRaces:races,operatorCli:true,productionWrites:0};
+ sql('select private.activate_photo_cutoff();');
+ let retirementRaces=0;
+ for(const kind of ['reference','source','archive','bucket']){
+  const id=`00000000-0000-4000-8000-00000000200${retirementRaces}`;
+  const objectId=`00000000-0000-4000-8000-00000000201${retirementRaces}`;
+  const path=`${owner}/archive-retirement-race-${retirementRaces}.jpg`;
+  sql(`insert into storage.objects(id,bucket_id,name,metadata) values('${objectId}','wine-photos','${path}','{"size":1,"mimetype":"image/jpeg"}');`);
+  const receipt={backup_id:objectId,size:1,sha256:'d'.repeat(64),inventory_sha256:'e'.repeat(64),backup_index_sha256:'f'.repeat(64)};
+  const op=value(`select private.plan_photo_archive('${id}','${path}',${literal(receipt)});`);
+  sql(`insert into storage.objects(bucket_id,name,metadata) values('photo-recovery-archive','${op.archive_path}','{"size":1,"mimetype":"image/jpeg"}');`);
+  const snapshot=value(`select private.photo_archive_snapshot('${path}','${op.archive_path}');`);
+  const proof={object:snapshot.archive,size:1,sha256:'d'.repeat(64),mimetype:'image/jpeg'};
+  sql(`select private.commit_photo_archive('${id}',${literal(proof)});`);
+  const mutations={reference:`update profiles set avatar_path='${path}' where id='${owner}'`,
+   source:`update storage.objects set version='retirement-changed' where id='${objectId}'`,
+   archive:`update storage.objects set version='retirement-changed' where bucket_id='photo-recovery-archive' and name='${op.archive_path}'`,
+   bucket:"update storage.buckets set public=true where id='photo-recovery-archive'"};
+  const first=session(),second=session();
+  try{
+   const ready=new Promise((ok,no)=>{let out='';const timer=setTimeout(()=>no(Error('Archive retirement writer did not become ready')),5000);
+    first.child.stdout.on('data',chunk=>{out+=chunk;if(out.includes('retirement-ready')){clearTimeout(timer);ok();}});});
+   first.child.stdin.write(`begin; ${mutations[kind]}; select 'retirement-ready';\n`);await ready;
+   second.child.stdin.end(`set application_name='photo-archive-retirement-waiter'; select private.prepare_photo_archive_retirement('${id}');`);
+   await waitForLock('photo-archive-retirement-waiter');first.child.stdin.end('commit;');assert.equal((await first.done).code,0);
+   const result=await second.done;assert.notEqual(result.code,0);
+   assert.match(result.error,/Historical source changed or gained references|Protected archive proof changed/);
+   assert.equal(sql(`select retirement_phase is null from private.photo_archive_operations where id='${id}'`).trim(),'t');
+   assert.equal(sql(`select count(*) from private.photo_retired_paths where path='${path}'`).trim(),'0');
+   if(kind==='bucket')sql("update storage.buckets set public=false where id='photo-recovery-archive'");
+   retirementRaces++;
+  }finally{first.child.kill();second.child.kill();}
+ }
+ return {referenceSourceDestinationBucketRaces:races,retirementFenceRaces:retirementRaces,operatorCli:true,productionWrites:0};
 }

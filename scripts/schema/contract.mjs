@@ -114,6 +114,15 @@ export async function expectedCatalog() {
   }
   const archiveDelta = JSON.parse(await readFile(new URL('./b02y-catalog-delta.json', import.meta.url), 'utf8'));
   for (const [key, rows] of Object.entries(archiveDelta)) expected[key].push(...rows);
+  const retirementDelta = JSON.parse(await readFile(new URL('./b02z-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(retirementDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error('Missing reviewed B02z predecessor');
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

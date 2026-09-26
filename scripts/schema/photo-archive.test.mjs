@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {replay} from './contract.mjs';
-import {ARCHIVE_BUCKET,archiveStorage,recoveryReceipt,resumeArchive} from '../storage/photo-archive.mjs';
+import {ARCHIVE_BUCKET,archiveStorage,recoveryReceipt,resumeArchive,prepareArchiveRetirement,retireArchiveSource} from '../storage/photo-archive.mjs';
 const uid=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const owner=uid(1),entry=uid(2),id=uid(3),objectId=uid(4),path=`${owner}/${entry}/label/é.jpg`;
 const bytes=Buffer.from('preserved historical image'),sha=createHash('sha256').update(bytes).digest('hex');
@@ -16,6 +16,10 @@ async function fixture(){
   plan:async(id,p=path,r=receipt)=>value('select private.plan_photo_archive($1,$2,$3) v',[id,p,r]),
   snapshot:async(p,d)=>value('select private.photo_archive_snapshot($1,$2) v',[p,d]),
   commit:async(id,p)=>value('select private.commit_photo_archive($1,$2) v',[id,p]),
+  prepareRetirement:async id=>value('select private.prepare_photo_archive_retirement($1) v',[id]),
+  beginDeletion:async id=>value('select private.begin_photo_archive_deletion($1) v',[id]),
+  confirmDeletion:async id=>value('select private.confirm_photo_archive_deletion($1) v',[id]),
+  recordEvidence:async(id,evidence)=>value('select private.record_photo_archive_revocation_evidence($1,$2) v',[id,evidence]),
  };
  await db.query('insert into auth.users(id,email) values($1,$2)',[owner,'archive@example.invalid']);
  await db.query('insert into wine_entries(id,user_id) values($1,$2)',[entry,owner]);
@@ -26,7 +30,8 @@ async function fixture(){
   copies++;const source=blobs.get('wine-photos/'+s);
   await db.query('insert into storage.objects(bucket_id,name,metadata) values($1,$2,$3)',[ARCHIVE_BUCKET,d,{size:source.bytes.length,mimetype:source.mimetype}]);
   blobs.set(ARCHIVE_BUCKET+'/'+d,source);
- }};
+ },remove:async p=>{await db.query("select set_config('storage.allow_delete_query','true',false)");
+  await db.query("delete from storage.objects where bucket_id='wine-photos' and name=$1",[p]);blobs.delete('wine-photos/'+p);}};
  return {db,api,storage,blobs,copies:()=>copies};
 }
 test('archival preserves source, verifies historical bytes, resumes lost copy/commit and rechecks copied operations',async()=>{
@@ -43,6 +48,52 @@ test('archival preserves source, verifies historical bytes, resumes lost copy/co
   await assert.rejects(f.db.query('select private.abandon_photo_archive($1)',[id]),/remain durable/);
   f.blobs.set(ARCHIVE_BUCKET+'/'+done.archive_path,{bytes:Buffer.from('corrupt'),mimetype:'image/jpeg'});
   await assert.rejects(resumeArchive(f.api,f.storage,id),/hash, size or type mismatch/);assert.equal(f.copies(),1);
+ }finally{await f.db.close();}
+});
+test('archive retirement fences one source, confirms exact deletion and requires two-region CDN denial',async()=>{
+ const f=await fixture();try{
+  const planned=await f.api.plan(id);await f.storage.copy(path,planned.archive_path);
+  await f.api.commit(id,{object:(await f.api.snapshot(path,planned.archive_path)).archive,sha256:sha,size:bytes.length,mimetype:'image/jpeg'});
+  await assert.rejects(f.db.query('update private.photo_archive_operations set deleted_at=now() where id=$1',[id]),/photo_archive_deleted_timestamp/);
+  await assert.rejects(f.db.query("update private.photo_archive_operations set retirement_evidence='[]' where id=$1",[id]),/photo_archive_evidence_state/);
+  await assert.rejects(prepareArchiveRetirement(f.api,f.storage,id),/Legacy signing cutoff required/);
+  await f.db.query('select private.activate_photo_cutoff()');
+  const fenced=await prepareArchiveRetirement(f.api,f.storage,id);assert.equal(fenced.retirement_phase,'fenced');
+  const retired=(await f.db.query('select operation_id,archive_operation_id from private.photo_retired_paths where path=$1',[path])).rows[0];
+  assert.equal(retired.operation_id,null);assert.equal(retired.archive_operation_id,id);
+  await assert.rejects(f.db.query('update profiles set avatar_path=$1 where id=$2',[path,owner]),/Photo moved/);
+  const deleted=await retireArchiveSource(f.api,f.storage,id);assert.equal(deleted.retirement_phase,'deleted_pending_cdn');assert(deleted.deleted_at);
+  assert.equal((await f.api.snapshot(path,planned.archive_path)).archive.id,planned.proof?.object?.id??deleted.proof.object.id);
+  const warmed=new Date(Date.parse(deleted.deleted_at)-1000).toISOString(),observed=deleted.deleted_at;
+  const observation=(region,surface)=>({region,path,surface,status:404,observed_at:observed,
+   capability_sha256:'c'.repeat(64),source_sha256:sha,warm_sha256:'d'.repeat(64),warmed_at:warmed,warm_status:200});
+  await assert.rejects(f.api.recordEvidence(id,[observation('us-east','raw'),observation('us-east','transformed')]),/Two independently/);
+  const evidence=['us-east','eu-west'].flatMap(region=>['raw','transformed'].map(surface=>observation(region,surface)));
+  const verified=await f.api.recordEvidence(id,evidence);
+  assert.equal(verified.retirement_phase,'verified');
+  assert.deepEqual((await f.api.recordEvidence(id,evidence)).retirement_evidence,evidence);
+  await assert.rejects(f.api.recordEvidence(id,evidence.map((row,index)=>index?row:{...row,status:403})),/evidence is immutable/);
+  assert.deepEqual((await f.api.get(id)).retirement_evidence,evidence);
+ }finally{await f.db.close();}
+});
+test('separately preserved base and original siblings can retire sequentially without weakening missing-object checks',async()=>{
+ const f=await fixture();try{
+  const original=path.replace('.jpg','__original.jpg'),originalId=uid(5),originalOp=uid(6);
+  await f.db.query("insert into storage.objects(id,bucket_id,name,metadata) values($1,'wine-photos',$2,$3)",[originalId,original,{size:bytes.length,mimetype:'image/jpeg'}]);
+  f.blobs.set('wine-photos/'+original,{bytes,mimetype:'image/jpeg'});
+  const basePlan=await f.api.plan(id),originalPlan=await f.api.plan(originalOp,original,{...receipt,backup_id:originalId});
+  for(const [operation,source] of [[basePlan,path],[originalPlan,original]]){
+   await f.storage.copy(source,operation.archive_path);
+   await f.api.commit(operation.id,{object:(await f.api.snapshot(source,operation.archive_path)).archive,sha256:sha,size:bytes.length,mimetype:'image/jpeg'});
+  }
+  await f.db.query('select private.activate_photo_cutoff()');
+  await f.db.exec('begin');await f.db.query("select set_config('storage.allow_delete_query','true',false)");
+  await f.db.query("delete from storage.objects where bucket_id='wine-photos' and name=$1",[path]);
+  await assert.rejects(prepareArchiveRetirement(f.api,f.storage,originalOp),/Historical source changed/);await f.db.exec('rollback');
+  await prepareArchiveRetirement(f.api,f.storage,id);await retireArchiveSource(f.api,f.storage,id);
+  assert.equal((await prepareArchiveRetirement(f.api,f.storage,originalOp)).retirement_phase,'fenced');
+  assert.equal((await retireArchiveSource(f.api,f.storage,originalOp)).retirement_phase,'deleted_pending_cdn');
+  assert.equal((await f.db.query("select count(*)::int n from storage.objects where bucket_id='wine-photos' and name=any($1)",[[path,original]])).rows[0].n,0);
  }finally{await f.db.close();}
 });
 test('archive planning holds referenced cohorts, missing-base originals, changed historical identities and malformed receipts',async()=>{
@@ -96,8 +147,10 @@ test('private ledger/functions and restrictive archive policies deny every clien
    grant select,insert,update,delete on storage.objects,storage.buckets to anon,authenticated;`);
   for(const role of ['anon','authenticated','service_role']){
    const grants=(await f.db.query("select has_table_privilege($1,'private.photo_archive_operations','select') allowed",[role])).rows[0];assert.equal(grants.allowed,false);
-   for(const name of ['private.plan_photo_archive(uuid,text,jsonb)','private.commit_photo_archive(uuid,jsonb)','private.photo_archive_snapshot(text,text)','private.abandon_photo_archive(uuid)'])
+   for(const name of ['private.plan_photo_archive(uuid,text,jsonb)','private.commit_photo_archive(uuid,jsonb)','private.photo_archive_snapshot(text,text)','private.abandon_photo_archive(uuid)',
+    'private.prepare_photo_archive_retirement(uuid)','private.begin_photo_archive_deletion(uuid)','private.confirm_photo_archive_deletion(uuid)','private.record_photo_archive_revocation_evidence(uuid,jsonb)'])
     assert.equal((await f.db.query('select has_function_privilege($1,$2,\'execute\') allowed',[role,name])).rows[0].allowed,false);
+   assert.equal((await f.db.query("select has_function_privilege($1,'private.photo_archive_source_snapshot_valid(jsonb,jsonb,text,boolean)','execute') allowed",[role])).rows[0].allowed,false);
   }
   for(const role of ['anon','authenticated']){
    await f.db.query("select set_config('request.jwt.claim.sub',$1,false)",[owner]);await f.db.exec(`set role ${role}`);
@@ -145,6 +198,9 @@ test('archive HTTP adapter uses fixed cross-bucket no-upsert copy and bounded pr
  assert.deepEqual(JSON.parse(requests[0].body),{bucketId:'wine-photos',sourceKey:'owner/é.jpg',destinationBucket:ARCHIVE_BUCKET,destinationKey:'uuid/preserved'});
  assert.equal(requests[0].headers['x-upsert'],'false');assert.equal(requests[0].redirect,'error');
  assert.deepEqual((await adapter.read(ARCHIVE_BUCKET,'uuid/preserved')).bytes,bytes);
+ await adapter.remove('owner/é.jpg');
+ assert.equal(requests[2].url,'https://example.invalid/storage/v1/object/wine-photos');
+ assert.equal(requests[2].method,'DELETE');assert.deepEqual(JSON.parse(requests[2].body),{prefixes:['owner/é.jpg']});
  await assert.rejects(adapter.read('public','bad'),/Unsupported/);
  for(const response of [new Response('bad',{status:403}),new Response(bytes,{headers:{'content-type':'text/html'}}),new Response(bytes,{headers:{'content-type':'image/jpeg','content-length':String(26*1024*1024)}})])
   await assert.rejects(archiveStorage('https://example.invalid','secret',async()=>response).read(ARCHIVE_BUCKET,'uuid/preserved'));
