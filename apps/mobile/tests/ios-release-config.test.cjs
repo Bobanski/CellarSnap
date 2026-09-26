@@ -135,4 +135,14 @@ test('every native picker upload path re-encodes images before transmission', ()
   const listScan = readRepo('apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx');
   assert.match(listScan, /selectionLimit: remainingSlots/);
   assert.match(listScan, /result\.assets\.slice\(0, remainingSlots\)/);
+  for (const relativePath of [
+    'apps/mobile/src/screens/entries/NewEntryScreenContainer.tsx',
+    'apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx',
+  ]) {
+    assert.doesNotMatch(
+      readRepo(relativePath),
+      /Promise\.all\([\s\S]{0,240}sanitizePickedImage/,
+      `${relativePath} must not decode several full-resolution photos concurrently`,
+    );
+  }
 });

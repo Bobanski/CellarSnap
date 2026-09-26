@@ -1785,12 +1785,15 @@ export default function NewEntryScreen() {
     const createdAt = Date.now();
     let sanitizedAssets: Awaited<ReturnType<typeof sanitizePickedImage>>[];
     try {
-      sanitizedAssets = await Promise.all(assets.map((asset, index) => sanitizePickedImage({
-        uri: asset.uri,
-        fileName: asset.fileName,
-        fallbackBaseName: `entry-photo-${createdAt}-${index + 1}`,
-        quality: 0.8,
-      })));
+      sanitizedAssets = [];
+      for (const [index, asset] of assets.entries()) {
+        sanitizedAssets.push(await sanitizePickedImage({
+          uri: asset.uri,
+          fileName: asset.fileName,
+          fallbackBaseName: `entry-photo-${createdAt}-${index + 1}`,
+          quality: 0.8,
+        }));
+      }
     } catch {
       setUploadMessage("Unable to prepare that photo. Choose another image and try again.");
       return;

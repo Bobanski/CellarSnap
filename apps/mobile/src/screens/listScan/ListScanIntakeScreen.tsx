@@ -200,12 +200,15 @@ export default function ListScanIntakeScreen() {
 
     let images: Awaited<ReturnType<typeof sanitizePickedImage>>[];
     try {
-      images = await Promise.all(assets.map((asset, index) => sanitizePickedImage({
-        uri: asset.uri,
-        fileName: asset.fileName,
-        fallbackBaseName: `wine-list-${index + 1}`,
-        quality: 0.7,
-      })));
+      images = [];
+      for (const [index, asset] of assets.entries()) {
+        images.push(await sanitizePickedImage({
+          uri: asset.uri,
+          fileName: asset.fileName,
+          fallbackBaseName: `wine-list-${index + 1}`,
+          quality: 0.7,
+        }));
+      }
     } catch {
       setErrorMessage("Unable to prepare that image. Choose another photo and try again.");
       return;
