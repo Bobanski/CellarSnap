@@ -20,6 +20,7 @@ import { requestListScan, type MobileListScanUpload } from "@/src/lib/api/listSc
 import { saveListScanResult } from "@/src/lib/listScan/storage";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 
 type SelectedImage = {
   uri: string;
@@ -32,11 +33,6 @@ type SelectedPdf = {
   name: string;
   mimeType: string;
 };
-
-function toUploadName(name: string | null | undefined, fallback: string) {
-  const trimmed = name?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallback;
-}
 
 function getFileNameFromUri(uri: string, fallback: string) {
   const segment = uri.split("/").pop()?.trim();
@@ -172,6 +168,11 @@ export default function ListScanIntakeScreen() {
 
   const pickPhotoFromLibrary = async () => {
     setErrorMessage(null);
+    const remainingSlots = Math.max(0, LIST_SCAN_MAX_IMAGE_COUNT - selectedImages.length);
+    if (remainingSlots === 0) {
+      setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
+      return;
+    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setErrorMessage("Allow photo access to choose a wine-list image.");
@@ -182,6 +183,7 @@ export default function ListScanIntakeScreen() {
       mediaTypes: ["images"],
       quality: 0.7,
       allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
       ...(Platform.OS === "ios"
         ? {
             preferredAssetRepresentationMode:
@@ -193,13 +195,32 @@ export default function ListScanIntakeScreen() {
       return;
     }
 
-    appendImages(
-      result.assets.map((asset, index) => ({
-        uri: asset.uri,
-        name: toUploadName(asset.fileName, `wine-list-${index + 1}.jpg`),
-        mimeType: asset.mimeType ?? "image/jpeg",
-      }))
-    );
+    const assets = result.assets.slice(0, remainingSlots);
+    const exceededLimit = result.assets.length > remainingSlots;
+
+    let images: Awaited<ReturnType<typeof sanitizePickedImage>>[];
+    try {
+      images = [];
+      for (const [index, asset] of assets.entries()) {
+        images.push(await sanitizePickedImage({
+          uri: asset.uri,
+          fileName: asset.fileName,
+          fallbackBaseName: `wine-list-${index + 1}`,
+          quality: 0.7,
+        }));
+      }
+    } catch {
+      setErrorMessage("Unable to prepare that image. Choose another photo and try again.");
+      return;
+    }
+    appendImages(images.map((image) => ({
+      uri: image.uri,
+      name: image.fileName,
+      mimeType: image.mimeType,
+    })));
+    if (exceededLimit) {
+      setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
+    }
   };
 
   const takePhoto = async () => {
@@ -218,12 +239,23 @@ export default function ListScanIntakeScreen() {
       return;
     }
 
-    const asset = result.assets[0];
+    let asset: Awaited<ReturnType<typeof sanitizePickedImage>>;
+    try {
+      asset = await sanitizePickedImage({
+        uri: result.assets[0].uri,
+        fileName: result.assets[0].fileName,
+        fallbackBaseName: "wine-list",
+        quality: 0.7,
+      });
+    } catch {
+      setErrorMessage("Unable to prepare that image. Take another photo and try again.");
+      return;
+    }
     appendImages([
       {
         uri: asset.uri,
-        name: toUploadName(asset.fileName, "wine-list.jpg"),
-        mimeType: asset.mimeType ?? "image/jpeg",
+        name: asset.fileName,
+        mimeType: asset.mimeType,
       },
     ]);
   };

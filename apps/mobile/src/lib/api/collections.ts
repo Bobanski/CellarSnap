@@ -5,12 +5,11 @@ import type {
   UserCollectionItemSummary,
   UserCollectionSummary,
 } from "@cellarsnap/shared";
-import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 import { getAccessTokenForApi, getWebApiBaseUrl } from "@/src/lib/api/webApi";
 import {
-  ensurePhotoMimeType,
   extensionForMimeType,
 } from "@/src/lib/entryFlow/photoIO";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 
 type ApiErrorResponse = {
   error?: string;
@@ -50,8 +49,6 @@ type EntryCollectionsResponse = {
   error?: string;
 };
 
-const COLLECTION_COVER_REENCODE_MIME_TYPES = new Set(["image/heic", "image/heif"]);
-
 function buildCollectionCoverFileName(
   fileName: string | null | undefined,
   mimeType: string
@@ -63,41 +60,20 @@ function buildCollectionCoverFileName(
 async function prepareCollectionCoverUpload({
   uri,
   fileName,
-  mimeType,
 }: {
   uri: string;
   fileName?: string | null;
-  mimeType?: string | null;
 }) {
-  const resolvedMimeType = ensurePhotoMimeType(mimeType, fileName, uri);
-  if (COLLECTION_COVER_REENCODE_MIME_TYPES.has(resolvedMimeType)) {
-    const converted = await manipulateAsync(uri, [], {
-      compress: 0.9,
-      format: SaveFormat.JPEG,
-    });
-
-    return {
-      uri: converted.uri,
-      mimeType: "image/jpeg",
-      fileName: buildCollectionCoverFileName(fileName, "image/jpeg"),
-    };
-  }
-
-  if (
-    ![
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-    ].includes(resolvedMimeType)
-  ) {
-    throw new Error("Image must be JPEG, PNG, WebP, or GIF.");
-  }
-
-  return {
+  const sanitized = await sanitizePickedImage({
     uri,
-    mimeType: resolvedMimeType,
-    fileName: buildCollectionCoverFileName(fileName, resolvedMimeType),
+    fileName,
+    fallbackBaseName: "collection-cover",
+    quality: 0.9,
+    maxBytes: 5 * 1024 * 1024,
+  });
+  return {
+    ...sanitized,
+    fileName: buildCollectionCoverFileName(sanitized.fileName, sanitized.mimeType),
   };
 }
 
@@ -369,12 +345,10 @@ export async function uploadUserCollectionCover({
   collectionId,
   uri,
   fileName,
-  mimeType,
 }: {
   collectionId: string;
   uri: string;
   fileName?: string | null;
-  mimeType?: string | null;
 }): Promise<
   | {
       ok: true;
@@ -386,7 +360,6 @@ export async function uploadUserCollectionCover({
     const preparedUpload = await prepareCollectionCoverUpload({
       uri,
       fileName,
-      mimeType,
     });
 
     const formData = new FormData();

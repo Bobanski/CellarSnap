@@ -74,6 +74,7 @@ import {
   extensionForMimeType,
   readPhotoBytes,
 } from "@/src/lib/entryFlow/photoIO";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 import { requestPhotoContext } from "@/src/lib/entryFlow/photoAnalysisClient";
 import { supabase, supabaseDatabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
@@ -2241,15 +2242,22 @@ export default function EntryDetailScreen() {
     try {
       const nextPositionByType = new Map<EntryPhotoType, number>();
       for (const asset of assets) {
-        const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
+        const sanitizedAsset = await sanitizePickedImage({
+          uri: asset.uri,
+          fileName: asset.fileName,
+          fallbackBaseName: `entry-photo-${Date.now()}`,
+          quality: 0.8,
+        });
+        const mimeType = ensurePhotoMimeType(
+          sanitizedAsset.mimeType,
+          sanitizedAsset.fileName,
+          sanitizedAsset.uri
+        );
         const extension = extensionForMimeType(mimeType);
-        const fileName =
-          asset.fileName && asset.fileName.trim().length > 0
-            ? asset.fileName
-            : `entry-photo-${Date.now()}.${extension}`;
+        const fileName = sanitizedAsset.fileName;
         const targetType = await inferPhotoTypeFromAi({
           fallbackType,
-          uri: asset.uri,
+          uri: sanitizedAsset.uri,
           name: fileName,
           mimeType,
         });
@@ -2301,7 +2309,7 @@ export default function EntryDetailScreen() {
             throw new Error(updateResult.error.message);
           }
 
-          const fileBytes = await readPhotoBytes(asset.uri);
+          const fileBytes = await readPhotoBytes(sanitizedAsset.uri);
           const uploadResult = await supabase.storage
             .from("wine-photos")
             .upload(storagePath, fileBytes, {

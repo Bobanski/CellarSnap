@@ -1,0 +1,63 @@
+{
+  "batch": "B11h",
+  "date": "2026-09-26",
+  "scope": ["QC-22", "QC-25", "OPS-03", "AUD-08"],
+  "implementation": {
+    "branch": "codex/ios-submission-readiness",
+    "base": "966bc25",
+    "commit": "3d042de",
+    "pullRequest": 173,
+    "merged": false,
+    "webDeployed": false,
+    "staticSiteDeployed": false,
+    "databaseWrites": 0,
+    "storeBuildCreated": false,
+    "appStoreUpload": false,
+    "appReviewSubmitted": false
+  },
+  "changes": {
+    "submissionPacket": true,
+    "sharedTerms": true,
+    "publicPrivacyAligned": true,
+    "companySupportChannel": "support@clusterwine.app",
+    "mobileFeedbackLink": "https://clusterwine.app/support",
+    "nativePickerPathsReencoded": 5,
+    "releaseArtworkHashesPinned": true,
+    "ugcModerationReady": false
+  },
+  "checks": {
+    "isolatedTests": {"passed": 597, "failed": 0},
+    "schemaAndToolTests": {"passed": 49, "failed": 0},
+    "databaseTypes": "passed",
+    "webTypecheck": "passed",
+    "webLint": "passed",
+    "mobileTypecheck": "passed",
+    "mobileLint": "passed",
+    "mobileReleaseContracts": {"passed": 7, "failed": 0},
+    "mobileDependencyContracts": {"passed": 7, "failed": 0},
+    "mobileToolingContracts": {"passed": 3, "failed": 0},
+    "rootAudit": "0 vulnerabilities after clean install",
+    "mobileAudit": "0 vulnerabilities after clean install",
+    "webBuild": "passed with existing ignored environment injected; 94 routes",
+    "iosExport": "passed; 1778 modules; Hermes bundle",
+    "expoInstallCheck": "advisory failure: five compatible SDK 57 patch updates available",
+    "browser": {
+      "webTerms": ["390x844", "1440x900"],
+      "staticPages": ["privacy", "terms", "support"],
+      "staticViewports": ["390x844", "1440x900"],
+      "mobileTerms": "390x844 passed",
+      "signedInFeedback": "opened https://clusterwine.app/support",
+      "consoleOrPageErrors": 0
+    },
+    "native": "unavailable: no installed iOS simulator runtime or Android emulator"
+  },
+  "remainingBlocks": [
+    "QC-25 server-authoritative UGC filtering and owned moderation response operation",
+    "Review and test five available Expo SDK 57 patch updates",
+    "Merge and deploy web plus separate static legal site, then live verify",
+    "Cluster Wine, LLC Apple enrollment/invitation, agreements, bundle/app ownership and credentials",
+    "Installed iPhone/TestFlight acceptance including real GPS-tagged photo, Sign in with Apple and account deletion",
+    "Non-expiring synthetic reviewer account, exact-build screenshots and explicit App Review submission",
+    "OPS-04 production database password rotation before historical retirement operations"
+  ]
+}

@@ -2,8 +2,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { Link } from "expo-router";
 import { AppText } from "@/src/components/AppText";
 import { colors } from "@/src/lib/theme";
-
-const LAST_UPDATED = "February 12, 2026";
+import { TERMS_CONTACT, TERMS_PARAGRAPHS, TERMS_UPDATED } from "@cellarsnap/shared";
 
 export default function TermsScreen() {
   return (
@@ -12,31 +11,14 @@ export default function TermsScreen() {
         <View style={styles.head}>
           <AppText style={styles.eyebrow}>Legal</AppText>
           <AppText style={styles.title}>Terms of Use</AppText>
-          <AppText style={styles.updated}>Last updated: {LAST_UPDATED}</AppText>
+          <AppText style={styles.updated}>Last updated: {TERMS_UPDATED}</AppText>
         </View>
 
         <View style={styles.section}>
-          <AppText style={styles.paragraph}>
-            CellarSnap is currently provided as a friends-and-family test product.
-            Features may change quickly, and service availability is not guaranteed.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            You are responsible for the content you upload and share. Do not upload
-            unlawful content, private data you do not have permission to share, or
-            anything that violates others&apos; rights.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            AI-assisted outputs are suggestions and may be wrong. Please verify wine
-            details before relying on them.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            We may suspend accounts or remove content to protect users, data integrity,
-            or platform security during testing.
-          </AppText>
-          <AppText style={styles.paragraph}>
-            By using CellarSnap, you agree to these terms and the accompanying privacy
-            policy.
-          </AppText>
+          {TERMS_PARAGRAPHS.map((paragraph) => (
+            <AppText key={paragraph} style={styles.paragraph}>{paragraph}</AppText>
+          ))}
+          <AppText style={styles.paragraph}>Questions about these terms: {TERMS_CONTACT}.</AppText>
         </View>
 
         <View style={styles.footerRow}>

@@ -200,7 +200,6 @@ export default function CollectionDetailScreen() {
       collectionId,
       uri: asset.uri,
       fileName: asset.fileName,
-      mimeType: asset.mimeType,
     });
     setIsUploadingCover(false);
 

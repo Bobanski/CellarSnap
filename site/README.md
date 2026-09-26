@@ -26,9 +26,11 @@ palette from `cluster-brand-guide-v4` / the app's Warm Noir tokens.
 2. Add the custom domain in Vercel → Domains, then set DNS at the registrar (see PR description).
 3. `vercel.json` gives clean URLs (`/privacy` serves `privacy.html`).
 
-## Things to update later
+## Release maintenance
 
 - App links point at `https://cellarsnap.app` (search for it in the HTML). Change if the app moves to the public domain.
-- Contact email is `cellarsnap@gmail.com` everywhere. Swap for a domain address once one exists.
+- Keep privacy and terms content aligned with `packages/shared/src/privacyPolicy.ts` and
+  `packages/shared/src/termsPolicy.ts`; the static marketing site cannot import them.
 - `assets/og.png` is the social share image (generated from `assets/og.html` with Playwright).
-- Footer legal line says "© 2026 Cluster" — add the LLC's legal name once confirmed; Apple's check looks for the domain to be associated with the legal entity.
+- Footer legal identity and support contact are Cluster Wine, LLC and
+  `support@clusterwine.app`.
