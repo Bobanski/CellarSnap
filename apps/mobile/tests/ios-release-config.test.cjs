@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 const { test } = require('node:test');
@@ -7,6 +8,15 @@ const mobileRoot = path.resolve(__dirname, '..');
 const app = JSON.parse(fs.readFileSync(path.join(mobileRoot, 'app.json'), 'utf8')).expo;
 const eas = JSON.parse(fs.readFileSync(path.join(mobileRoot, 'eas.json'), 'utf8'));
 const pkg = JSON.parse(fs.readFileSync(path.join(mobileRoot, 'package.json'), 'utf8'));
+const repoRoot = path.resolve(mobileRoot, '../..');
+
+function readRepo(relativePath) {
+  return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+}
+
+function sha256(relativePath) {
+  return createHash('sha256').update(fs.readFileSync(path.join(repoRoot, relativePath))).digest('hex');
+}
 
 test('production iOS profile is a store build on the reviewed SDK family', () => {
   assert.match(pkg.dependencies.expo, /^~57\./);
@@ -84,5 +94,42 @@ test('app manifest aggregates required-reason APIs used by installed native pack
   assert.deepEqual([...accessed.keys()].sort(), Object.keys(expected).sort());
   for (const [category, reasons] of Object.entries(expected)) {
     assert.deepEqual(accessed.get(category), new Set(reasons));
+  }
+});
+
+test('release artwork is the reproducible Cluster brand candidate', () => {
+  assert.equal(sha256('apps/mobile/assets/icon.png'),
+    '9439cb8bd13a8da024280fe76ec841ad0ada91781d2126ada7bf0e33e8f462d0');
+  assert.equal(sha256('apps/mobile/assets/splash-icon.png'),
+    '4f8f0abaeaae798c1037090ad5246f90e8e3099d4537e0d03fee29e197767598');
+  const generator = readRepo('apps/mobile/scripts/generate-icons.js');
+  assert.match(generator, /const CHAMPAGNE = "#F5EDD6"/);
+  assert.match(generator, /transparent: false/);
+});
+
+test('release legal copy uses the Cluster identity and company support channel', () => {
+  const terms = readRepo('packages/shared/src/termsPolicy.ts');
+  const privacy = readRepo('packages/shared/src/privacyPolicy.ts');
+  const topBar = readRepo('apps/mobile/src/components/AppTopBar.tsx');
+  assert.doesNotMatch(terms, /CellarSnap|friends-and-family/i);
+  assert.match(terms, /Cluster Wine, LLC/);
+  assert.match(terms, /support@clusterwine\.app/);
+  assert.doesNotMatch(privacy, /cellarsnap@gmail\.com/i);
+  assert.match(privacy, /support@clusterwine\.app/);
+  assert.match(topBar, /Linking\.openURL\("https:\/\/clusterwine\.app\/support"\)/);
+});
+
+test('every native picker upload path re-encodes images before transmission', () => {
+  const sanitizer = readRepo('apps/mobile/src/lib/entryFlow/sanitizePickedImage.ts');
+  assert.match(sanitizer, /manipulateAsync/);
+  assert.match(sanitizer, /format: SaveFormat\.JPEG/);
+  for (const relativePath of [
+    'apps/mobile/src/screens/entries/NewEntryScreenContainer.tsx',
+    'apps/mobile/app/(app)/entries/[id].tsx',
+    'apps/mobile/app/(app)/profile/index.tsx',
+    'apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx',
+    'apps/mobile/src/lib/api/collections.ts',
+  ]) {
+    assert.match(readRepo(relativePath), /sanitizePickedImage/, relativePath);
   }
 });

@@ -2,6 +2,7 @@ import { fetchActivitySummary } from "@/src/lib/api/activitySummary";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -871,7 +872,14 @@ export function AppTopBar() {
                     </View>
                   ) : null}
                 </Pressable>
-                <Pressable style={menuStyles.menuItem}>
+                <Pressable
+                  accessibilityRole="link"
+                  style={menuStyles.menuItem}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    void Linking.openURL("https://clusterwine.app/support");
+                  }}
+                >
                   <Feather
                     name="message-square"
                     size={16}

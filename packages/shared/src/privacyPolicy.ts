@@ -1,9 +1,9 @@
-export const PRIVACY_UPDATED = "September 22, 2026";
-export const PRIVACY_CONTACT = "cellarsnap@gmail.com";
+export const PRIVACY_UPDATED = "September 26, 2026";
+export const PRIVACY_CONTACT = "support@clusterwine.app";
 export const PRIVACY_SECTIONS = [
   { title: "What Cluster stores", paragraphs: [
     "Cluster stores account and profile details, including your email, username, display name and optional profile information. Phone numbers are used when you choose phone authentication. Sign in with Apple supplies an account identifier and any name or email you choose to share.",
-    "We store wine entries, ratings, tasting notes, photos, cellar/import records, selected or typed tasting locations, taste-survey answers, saved wine-list scans, sommelier conversations, social connections, comments, reactions, reports and feedback. This information supports your account, wine log, recommendations and social features. We do not access your device contacts. The native app does not request GPS location permission; uploaded photos may contain location metadata.",
+    "We store wine entries, ratings, tasting notes, photos, cellar/import records, selected or typed tasting locations, taste-survey answers, saved wine-list scans, sommelier conversations, social connections, comments, reactions, reports and feedback. This information supports your account, wine log, recommendations and social features. We do not access your device contacts. The native app does not request GPS location permission and re-encodes selected photos before upload to remove source metadata. Photos uploaded through the web app may contain location metadata used for optional venue suggestions.",
   ] },
   { title: "Sharing and photo privacy", paragraphs: [
     "Your entry and photo settings control visibility to other users. Public entries can appear in public or shared views; friends and private settings restrict access. Numeric ratings are private to the entry owner; shared surfaces may show a qualitative enjoyment band or a separate match score.",
@@ -20,10 +20,10 @@ export const PRIVACY_SECTIONS = [
   ] },
   { title: "Retention and deletion", paragraphs: [
     "Account content and generated results are retained to operate the service until removed or your account is deleted. You can delete entries and request account deletion from Profile settings. Account deletion removes the account and associated database records and attempts to remove its stored media. Media cleanup can be delayed if storage operations fail.",
-    "Operational records, recovery backups and historical media may persist beyond deletion while needed for security, recovery or cleanup. We do not promise a fixed deletion deadline for those copies. For help with retained media, prior AI submissions or a deletion request, contact cellarsnap@gmail.com.",
+    "Operational records, recovery backups and historical media may persist beyond deletion while needed for security, recovery or cleanup. We do not promise a fixed deletion deadline for those copies. For help with retained media, prior AI submissions or a deletion request, contact support@clusterwine.app.",
   ] },
   { title: "Your choices and contact", paragraphs: [
     "Manage entry visibility in the editor and profile settings, AI sharing in Privacy & AI, and camera/photo-library access in your device settings. Authentication messages are sent when you initiate the relevant sign-in or recovery flow.",
-    "For privacy, support or safety questions, email cellarsnap@gmail.com. Cluster is intended for people of legal drinking age in their location. The in-app age check and App Store age rating are separate from local drinking-age requirements.",
+    "For privacy, support or safety questions, email support@clusterwine.app. Cluster is intended for people of legal drinking age in their location. The in-app age check and App Store age rating are separate from local drinking-age requirements.",
   ] },
 ] as const;

@@ -20,6 +20,7 @@ import { requestListScan, type MobileListScanUpload } from "@/src/lib/api/listSc
 import { saveListScanResult } from "@/src/lib/listScan/storage";
 import { colors } from "@/src/lib/theme";
 import { fonts } from "@/src/lib/typography";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 
 type SelectedImage = {
   uri: string;
@@ -32,11 +33,6 @@ type SelectedPdf = {
   name: string;
   mimeType: string;
 };
-
-function toUploadName(name: string | null | undefined, fallback: string) {
-  const trimmed = name?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallback;
-}
 
 function getFileNameFromUri(uri: string, fallback: string) {
   const segment = uri.split("/").pop()?.trim();
@@ -193,13 +189,23 @@ export default function ListScanIntakeScreen() {
       return;
     }
 
-    appendImages(
-      result.assets.map((asset, index) => ({
+    let images: Awaited<ReturnType<typeof sanitizePickedImage>>[];
+    try {
+      images = await Promise.all(result.assets.map((asset, index) => sanitizePickedImage({
         uri: asset.uri,
-        name: toUploadName(asset.fileName, `wine-list-${index + 1}.jpg`),
-        mimeType: asset.mimeType ?? "image/jpeg",
-      }))
-    );
+        fileName: asset.fileName,
+        fallbackBaseName: `wine-list-${index + 1}`,
+        quality: 0.7,
+      })));
+    } catch {
+      setErrorMessage("Unable to prepare that image. Choose another photo and try again.");
+      return;
+    }
+    appendImages(images.map((image) => ({
+      uri: image.uri,
+      name: image.fileName,
+      mimeType: image.mimeType,
+    })));
   };
 
   const takePhoto = async () => {
@@ -218,12 +224,23 @@ export default function ListScanIntakeScreen() {
       return;
     }
 
-    const asset = result.assets[0];
+    let asset: Awaited<ReturnType<typeof sanitizePickedImage>>;
+    try {
+      asset = await sanitizePickedImage({
+        uri: result.assets[0].uri,
+        fileName: result.assets[0].fileName,
+        fallbackBaseName: "wine-list",
+        quality: 0.7,
+      });
+    } catch {
+      setErrorMessage("Unable to prepare that image. Take another photo and try again.");
+      return;
+    }
     appendImages([
       {
         uri: asset.uri,
-        name: toUploadName(asset.fileName, "wine-list.jpg"),
-        mimeType: asset.mimeType ?? "image/jpeg",
+        name: asset.fileName,
+        mimeType: asset.mimeType,
       },
     ]);
   };

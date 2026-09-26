@@ -63,6 +63,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useAuth } from "@/src/providers/AuthProvider";
 import { fetchTasteSurvey } from "@/src/lib/api/tasteSurvey";
 import { colors } from "@/src/lib/theme";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 
 type EntryTile = {
   id: string;
@@ -946,9 +947,25 @@ export default function ProfileScreen() {
     if (result.canceled || !result.assets[0]?.uri) {
       return;
     }
-    setAvatarErrorMessage(null);
-    setPendingAvatarAsset(result.assets[0]);
-    setPendingAvatarPreviewUri(result.assets[0].uri);
+    try {
+      const asset = result.assets[0];
+      const sanitized = await sanitizePickedImage({
+        uri: asset.uri,
+        fileName: asset.fileName,
+        fallbackBaseName: "profile-photo",
+        quality: 0.85,
+      });
+      const sanitizedAsset: ImagePicker.ImagePickerAsset = {
+        ...asset,
+        ...sanitized,
+        fileSize: undefined,
+      };
+      setAvatarErrorMessage(null);
+      setPendingAvatarAsset(sanitizedAsset);
+      setPendingAvatarPreviewUri(sanitizedAsset.uri);
+    } catch {
+      setAvatarErrorMessage("Unable to prepare that photo. Choose another image and try again.");
+    }
   }, []);
 
   const closeSettings = () => {
@@ -970,11 +987,6 @@ export default function ProfileScreen() {
       return { avatarPath: null as string | null, avatarUrl: null as string | null };
     }
 
-    const fileSize = pendingAvatarAsset.fileSize ?? 0;
-    if (fileSize > 5 * 1024 * 1024) {
-      throw new Error("Image must be 5 MB or smaller.");
-    }
-
     const mimeType = pendingAvatarAsset.mimeType ?? "image/jpeg";
     if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mimeType)) {
       throw new Error("Image must be JPEG, PNG, WebP, or GIF.");
@@ -992,6 +1004,9 @@ export default function ProfileScreen() {
     const avatarPath = `${user.id}/avatar-${createUuid()}.${ext}`;
     const fileResponse = await fetch(pendingAvatarAsset.uri);
     const fileBlob = await fileResponse.blob();
+    if (fileBlob.size > 5 * 1024 * 1024) {
+      throw new Error("Image must be 5 MB or smaller.");
+    }
 
     const upload = await supabase.storage
       .from("wine-photos")

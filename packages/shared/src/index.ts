@@ -37,4 +37,5 @@ export * from './entryEdit';
 export * from './photoDelivery';
 export * from './aiConsent';
 export * from './privacyPolicy';
+export * from './termsPolicy';
 export * from './aiConsentRequest';

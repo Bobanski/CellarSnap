@@ -1,6 +1,6 @@
 # Cluster — App Privacy source review
 
-Updated September 22, 2026, QC-22 / B04f. Bundle: `com.cellarsnap.mobile`.
+Updated September 26, 2026, QC-22 / B04f+B11h. Bundle: `com.cellarsnap.mobile`.
 This is a source-grounded draft for the final App Store Connect questionnaire, **not a receipt that its answers have been entered or verified**. The SDK 57/build 3 candidate now generates a matching app-level `PrivacyInfo.xcprivacy`; App Store Connect answers and final-binary inspection are still separate gates. The previous March guide contained unsupported claims about diagnostics, AI recipients and age ratings and is superseded here.
 
 ## Data and evidence
@@ -19,7 +19,7 @@ Purpose is App Functionality unless the final production configuration establish
 | Other Diagnostic Data | API/error logs may include account IDs, request metadata and network identifiers. Do not label these anonymous without proving de-identification. Confirm actual Vercel/Supabase collection and retention settings before entering the final answer. |
 | Crash Data / Performance Data | No dedicated crash-analytics SDK or runtime Expo crash collection was established by source review. EAS build logs are not evidence that user crash data is collected. Inspect the final binary, service settings and Apple reporting separately; do not copy the old automatic Yes/Not Linked answers. |
 
-No advertising/IDFA, cross-app tracking, payments/IAP, device contacts, audio recording, or native GPS permission was found in this source review. This does not replace the final dependency/native-manifest inspection. App Privacy's Location category cannot be ruled out solely because GPS permission is absent: inspect structured venue/place-ID storage and any provider enrichment against Apple's definitions. Free-form location text is Other User Content; source inspection found no mobile latitude/longitude API. Uploaded originals may retain EXIF location: inspect final native picker/upload bytes before answering Location. Web explicitly reads EXIF GPS and requests optional browser geolocation for Google Maps venue bias (`src/lib/exifGps.ts`, `src/components/LocationAutocomplete.tsx`); the shared public policy discloses this. Saved sommelier prompts and scan URLs/content are user content; do not describe them as unpersisted searches. Confirm with the current questionnaire whether any structured search-history collection warrants a separate selection.
+No advertising/IDFA, cross-app tracking, payments/IAP, device contacts, audio recording, or native GPS permission was found in this source review. This does not replace the final dependency/native-manifest inspection. App Privacy's Location category cannot be ruled out solely because GPS permission is absent: inspect structured venue/place-ID storage and any provider enrichment against Apple's definitions. Free-form location text is Other User Content; source inspection found no mobile latitude/longitude API. B11h now re-encodes every native picker image as JPEG before storage or API transmission so source EXIF/IPTC metadata is not uploaded; confirm this with a real GPS-tagged iPhone photo and the signed binary. Web explicitly reads EXIF GPS and requests optional browser geolocation for Google Maps venue bias (`src/lib/exifGps.ts`, `src/components/LocationAutocomplete.tsx`); the shared public policy discloses this. Saved sommelier prompts and scan URLs/content are user content; do not describe them as unpersisted searches. Confirm with the current questionnaire whether any structured search-history collection warrants a separate selection.
 
 The SDK 57 candidate declares Name, Email Address, Phone Number, User ID, Photos or Videos, Other User Content, Customer Support, Product Interaction and Other Diagnostic Data as linked, non-tracking data used for App Functionality; Photos or Videos, Other User Content and Product Interaction also declare Product Personalization. Its required-reason API union covers file timestamps, system boot time, disk space and user defaults based on the generated dependency manifests. Regenerated native configuration contains camera/photo-library descriptions but no microphone, Face ID or Android audio-recording permission. Reconcile these declarations with the signed archive and App Store Connect instead of treating source configuration as the final receipt.
 
@@ -32,7 +32,7 @@ The SDK 57 candidate declares Name, Email Address, Phone Number, User ID, Photos
 | OpenAI | Label/photo/bottle/lineup analysis; list parsing; import column mapping; recommendation notes fallback; sommelier messages/context and embeddings. See `src/app/api/`, `src/server/listScan/parse.ts`, `src/server/sommelier/`. |
 | Anthropic | Taste survey and tasting-history signal for palate distillation; personalized scan explanations. See `src/server/algorithm/palateDistillation.ts`, `src/app/api/list-scan/recommendation-notes/route.ts`. |
 | Google Cloud Vision | Uploaded list images for OCR when configured; OpenAI fallback also exists. See `src/server/listScan/parse.ts`. |
-| Google Maps | Web venue search text and photo/browser coordinates for location bias. Verify the final mobile implementation and uploaded EXIF metadata before final Location answers. |
+| Google Maps | Web venue search text and photo/browser coordinates for location bias. Native uses typed/selected venue search without requesting GPS; verify final production requests and the GPS-tagged-photo stripping test before final Location answers. |
 | Apple / Expo EAS | Apple sign-in and build/distribution infrastructure. Do not infer app runtime diagnostics collection from using EAS. |
 
 The candidate introduces a versioned account-wide AI permission: both platforms identify recipients, data and purpose; Allow, Continue without AI and later revocation are available through Privacy & AI. The API checks fresh server-owned account metadata before any protected AI request. Operator personal-entry embedding also checks each owner's permission per page. No existing account is opted in automatically. Public reference-only Explore generation does not use personal history and is separate from these personal-content routes.
@@ -41,9 +41,9 @@ Revocation stops subsequent requests/batches, including requests using previousl
 
 ## Public links and remaining operator checks
 
-- Intended Privacy Policy: `https://cellarsnap.app/privacy` (candidate changes must first be deployed).
+- Intended App Store Privacy Policy: `https://clusterwine.app/privacy` (publish B11h before submission).
 - Existing `/privacy/more` uses the same policy; mobile renders the same shared content.
-- Terms: `https://cellarsnap.app/terms`; support/privacy contact already published by the project: `cellarsnap@gmail.com`. Verify that inbox is monitored and provide a working public support URL in the listing.
+- Terms: `https://clusterwine.app/terms`; support: `https://clusterwine.app/support`; privacy/contact: `https://clusterwine.app/privacy` and `support@clusterwine.app`. Verify that the inbox is monitored before submission.
 - Enter and review the actual App Store Connect data-type/purpose/linkage/tracking answers, including third-party processing and optional features.
 - Verify deployed web policy, installed-native policy access, consent denial/allow/revoke, and the signed app's privacy manifests.
 - Verify retention/backups/provider settings and customer-support response ownership; this code review cannot establish those contractual or operational facts.

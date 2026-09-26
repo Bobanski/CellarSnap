@@ -70,6 +70,7 @@ import {
   ensurePhotoMimeType,
   extensionForMimeType,
 } from "@/src/lib/entryFlow/photoIO";
+import { sanitizePickedImage } from "@/src/lib/entryFlow/sanitizePickedImage";
 import {
   computeOverallConfidence,
   formatFriendName,
@@ -1782,8 +1783,20 @@ export default function NewEntryScreen() {
     }
 
     const createdAt = Date.now();
+    let sanitizedAssets: Awaited<ReturnType<typeof sanitizePickedImage>>[];
+    try {
+      sanitizedAssets = await Promise.all(assets.map((asset, index) => sanitizePickedImage({
+        uri: asset.uri,
+        fileName: asset.fileName,
+        fallbackBaseName: `entry-photo-${createdAt}-${index + 1}`,
+        quality: 0.8,
+      })));
+    } catch {
+      setUploadMessage("Unable to prepare that photo. Choose another image and try again.");
+      return;
+    }
     const hasLabelAlready = existingPhotos.some((photo) => photo.type === "label");
-    const initialPhotos: UploadPhotoItem[] = assets.map((asset, index) => {
+    const initialPhotos: UploadPhotoItem[] = sanitizedAssets.map((asset, index) => {
       const mimeType = ensurePhotoMimeType(asset.mimeType, asset.fileName, asset.uri);
       const extension = extensionForMimeType(mimeType);
       const name =
