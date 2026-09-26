@@ -68,8 +68,12 @@ test('archive retirement fences one source, confirms exact deletion and requires
   const observation=(region,surface)=>({region,path,surface,status:404,observed_at:observed,
    capability_sha256:'c'.repeat(64),source_sha256:sha,warm_sha256:'d'.repeat(64),warmed_at:warmed,warm_status:200});
   await assert.rejects(f.api.recordEvidence(id,[observation('us-east','raw'),observation('us-east','transformed')]),/Two independently/);
-  const verified=await f.api.recordEvidence(id,['us-east','eu-west'].flatMap(region=>['raw','transformed'].map(surface=>observation(region,surface))));
+  const evidence=['us-east','eu-west'].flatMap(region=>['raw','transformed'].map(surface=>observation(region,surface)));
+  const verified=await f.api.recordEvidence(id,evidence);
   assert.equal(verified.retirement_phase,'verified');
+  assert.deepEqual((await f.api.recordEvidence(id,evidence)).retirement_evidence,evidence);
+  await assert.rejects(f.api.recordEvidence(id,evidence.map((row,index)=>index?row:{...row,status:403})),/evidence is immutable/);
+  assert.deepEqual((await f.api.get(id)).retirement_evidence,evidence);
  }finally{await f.db.close();}
 });
 test('separately preserved base and original siblings can retire sequentially without weakening missing-object checks',async()=>{

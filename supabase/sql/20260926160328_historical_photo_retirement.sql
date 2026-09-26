@@ -139,7 +139,13 @@ language plpgsql security invoker set search_path='' as $$
 declare op private.photo_archive_operations; region text; regions text[];
 begin
  select * into strict op from private.photo_archive_operations where id=operation_id for update;
- if op.retirement_phase not in ('deleted_pending_cdn','verified') or op.deleted_at is null then
+ if op.retirement_phase='verified' then
+  if op.retirement_evidence is distinct from observations then
+   raise exception 'Verified retirement evidence is immutable' using errcode='PT409';
+  end if;
+  return to_jsonb(op);
+ end if;
+ if op.retirement_phase<>'deleted_pending_cdn' or op.deleted_at is null then
   raise exception 'Archive source deletion not confirmed' using errcode='22023'; end if;
  if observations is null or jsonb_typeof(observations)<>'array' or jsonb_array_length(observations)>40
   or octet_length(observations::text)>32768 then

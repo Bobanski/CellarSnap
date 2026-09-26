@@ -8,7 +8,7 @@ The additive migration extends `private.photo_archive_operations` with `fenced â
 
 All five retirement helpers are private, invoker-only and revoked from PUBLIC, anon, authenticated and service-role access. `prepare_photo_archive_retirement` increments and locks the global delivery epoch, requires the legacy signing cutoff, rechecks the copied receipt/proof, protected archive object, source identity, references and Storage metadata under table locks, then publishes the durable path fence. `begin_photo_archive_deletion` repeats the short final CAS. `confirm_photo_archive_deletion` requires the exact source to be absent while the archive and the rest of its cohort remain valid. A missing base/original sibling is accepted only when that sibling has a separate copied archive, matching durable fence and deletion checkpoint.
 
-`record_photo_archive_revocation_evidence` accepts no URLs or response bodies. It requires raw and transformed denials in at least two named regions, status 400/403/404, a pre-deletion successful warm observation, post-deletion timestamps, and SHA-256 bindings for the capability, source and warm response. This is evidence recording, not a universal CDN-expiry claim.
+`record_photo_archive_revocation_evidence` accepts no URLs or response bodies. It requires raw and transformed denials in at least two named regions, status 400/403/404, a pre-deletion successful warm observation, post-deletion timestamps, and SHA-256 bindings for the capability, source and warm response. Once verified, identical lost-response retries are idempotent and differing evidence is rejected so the original audit record cannot be replaced. This is evidence recording, not a universal CDN-expiry claim.
 
 ## Operator sequence
 

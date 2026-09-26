@@ -34,10 +34,11 @@
     "exactPathDelete": true,
     "archiveRetained": true,
     "twoRegionRawAndTransformedEvidence": true,
+    "verifiedEvidenceImmutable": true,
     "heldObjectsAuthorized": false
   },
   "releaseBlocks": [
-    "Owner must complete interactive Apple login/2FA and validate the distribution certificate",
+    "Cluster Wine, LLC enrollment/invitation, company bundle ownership and company distribution credentials",
     "Rotate the exposed production database password and verify protected consumers",
     "Independent migration review, hosted apply, canary retirement and regional denial collection",
     "Signed iPhone/TestFlight acceptance, listing metadata, reviewer account and explicit review submission"
