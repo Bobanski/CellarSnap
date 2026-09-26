@@ -954,6 +954,7 @@ export default function ProfileScreen() {
         fileName: asset.fileName,
         fallbackBaseName: "profile-photo",
         quality: 0.85,
+        maxBytes: 5 * 1024 * 1024,
       });
       const sanitizedAsset: ImagePicker.ImagePickerAsset = {
         ...asset,

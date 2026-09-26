@@ -69,6 +69,7 @@ async function prepareCollectionCoverUpload({
     fileName,
     fallbackBaseName: "collection-cover",
     quality: 0.9,
+    maxBytes: 5 * 1024 * 1024,
   });
   return {
     ...sanitized,

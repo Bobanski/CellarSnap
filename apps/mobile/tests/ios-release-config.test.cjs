@@ -123,6 +123,8 @@ test('every native picker upload path re-encodes images before transmission', ()
   const sanitizer = readRepo('apps/mobile/src/lib/entryFlow/sanitizePickedImage.ts');
   assert.match(sanitizer, /manipulateAsync/);
   assert.match(sanitizer, /format: SaveFormat\.JPEG/);
+  assert.match(sanitizer, /convertedBytes > maxBytes/);
+  assert.match(sanitizer, /resize: \{ width: nextWidth \}/);
   for (const relativePath of [
     'apps/mobile/src/screens/entries/NewEntryScreenContainer.tsx',
     'apps/mobile/app/(app)/entries/[id].tsx',
@@ -135,6 +137,8 @@ test('every native picker upload path re-encodes images before transmission', ()
   const listScan = readRepo('apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx');
   assert.match(listScan, /selectionLimit: remainingSlots/);
   assert.match(listScan, /result\.assets\.slice\(0, remainingSlots\)/);
+  assert.match(readRepo('apps/mobile/app/(app)/profile/index.tsx'), /maxBytes: 5 \* 1024 \* 1024/);
+  assert.match(readRepo('apps/mobile/src/lib/api/collections.ts'), /maxBytes: 5 \* 1024 \* 1024/);
   for (const relativePath of [
     'apps/mobile/src/screens/entries/NewEntryScreenContainer.tsx',
     'apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx',
