@@ -450,9 +450,14 @@ export async function POST(
     .single();
 
   if (createError || !created) {
+    const filtered = createError?.code === "PT422";
     return NextResponse.json(
-      { error: createError?.message ?? "Unable to create comment." },
-      { status: 500 }
+      {
+        error: filtered
+          ? "This comment cannot be shared because it may violate the community guidelines."
+          : createError?.message ?? "Unable to create comment.",
+      },
+      { status: filtered ? 422 : 500 }
     );
   }
 

@@ -30,6 +30,8 @@ export const FEED_REPORT_REASON_OPTIONS = [
   { value: "spam", label: "Spam" },
   { value: "harassment", label: "Harassment" },
   { value: "hate", label: "Hate speech" },
+  { value: "violence", label: "Violence or threat" },
+  { value: "child_safety", label: "Child safety" },
   { value: "nudity", label: "Nudity" },
   { value: "misinfo", label: "False info" },
   { value: "other", label: "Other" },

@@ -123,6 +123,17 @@ export async function expectedCatalog() {
     }
     expected[key].push(...add);
   }
+  // B11i adds private screening and durable report-review state, plus
+  // authoritative triggers on shared entries, comments, and report intake.
+  const moderationDelta = JSON.parse(await readFile(new URL('./b11i-catalog-delta.json', import.meta.url), 'utf8'));
+  for (const [key, {add, remove}] of Object.entries(moderationDelta)) {
+    for (const row of remove) {
+      const index = expected[key].findIndex(candidate => JSON.stringify(canonical(candidate)) === JSON.stringify(canonical(row)));
+      if (index < 0) throw new Error('Missing reviewed B11i predecessor');
+      expected[key].splice(index, 1);
+    }
+    expected[key].push(...add);
+  }
   return canonical(expected);
 }
 export function differences(expected, actual) {

@@ -143,9 +143,14 @@ publishing the answers:
 
 Cluster contains public user-generated content. Apple's review guideline requires
 filtering objectionable material, reporting, blocking, timely responses, and published
-contact information. Report and block flows plus public contact are implemented.
-QC-25 tracks the missing reviewed filtering/enforcement and moderation-response
-operation; resolve it before submission rather than relying on the report table alone.
+contact information. Report and block flows plus public contact are implemented. B11i
+adds database-authoritative screening for shared narrative text/comments, canonical
+report intake, a private evidence queue, four-/24-hour deadlines, an SLA checker, and
+atomic content removal for confirmed violations. Before submission, deploy and
+live-test that migration, connect and drill the five-minute primary/backup alert,
+confirm `support@clusterwine.app` ownership, and pass installed-iOS
+report/block/filter acceptance. See `docs/MODERATION_RUNBOOK.md`; do not claim image
+pre-screening or operational readiness before those gates pass.
 
 ## External account gates
 

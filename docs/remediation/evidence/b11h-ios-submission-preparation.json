@@ -5,11 +5,13 @@
   "implementation": {
     "branch": "codex/ios-submission-readiness",
     "base": "966bc25",
-    "commit": "3d042de",
+    "commit": "ad10698",
+    "mergeCommit": "9163bf727de858272b9999e9cecac8a1fea8cffe",
     "pullRequest": 173,
-    "merged": false,
-    "webDeployed": false,
-    "staticSiteDeployed": false,
+    "merged": true,
+    "webDeployed": true,
+    "staticSiteDeployed": true,
+    "staticDeploymentId": "dpl_AL1PFwmShqAvoSAtkGT3ZbqmwMoe",
     "databaseWrites": 0,
     "storeBuildCreated": false,
     "appStoreUpload": false,
@@ -52,9 +54,8 @@
     "native": "unavailable: no installed iOS simulator runtime or Android emulator"
   },
   "remainingBlocks": [
-    "QC-25 server-authoritative UGC filtering and owned moderation response operation",
+    "Deploy and operationally accept the separate B11i QC-25 moderation implementation",
     "Review and test five available Expo SDK 57 patch updates",
-    "Merge and deploy web plus separate static legal site, then live verify",
     "Cluster Wine, LLC Apple enrollment/invitation, agreements, bundle/app ownership and credentials",
     "Installed iPhone/TestFlight acceptance including real GPS-tagged photo, Sign in with Apple and account deletion",
     "Non-expiring synthetic reviewer account, exact-build screenshots and explicit App Review submission",

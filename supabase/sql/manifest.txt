@@ -94,3 +94,4 @@
 20260914135415_photo_authority_fence.sql
 20260922063629_protected_photo_archive.sql
 20260926160328_historical_photo_retirement.sql
+20260926213000_ugc_moderation_readiness.sql
