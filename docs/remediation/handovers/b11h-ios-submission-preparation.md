@@ -4,7 +4,7 @@
 
 B11h removes every review-preparation gap that can be closed without the Cluster Wine, LLC Apple team or an installed iPhone build. It advances QC-22 and OPS-03, records the newly confirmed QC-25 App Review gap, and preserves AUD-08 as Partial for native/dependency acceptance.
 
-The branch `codex/ios-submission-readiness` starts from merged main `966bc25` (PR #172). It adds source-controlled App Store listing/reviewer drafts; aligns web, mobile and public-site terms/privacy with Cluster Wine, LLC and `support@clusterwine.app`; makes the mobile Feedback control open the public support page; and re-encodes every native picker/camera image before transmission so source EXIF/IPTC metadata is not uploaded. Release icon and splash candidates are pinned to the reviewed deterministic generator output.
+The branch `codex/ios-submission-readiness` starts from merged main `966bc25` (PR #172); source `3d042de` is open as PR #173. It adds source-controlled App Store listing/reviewer drafts; aligns web, mobile and public-site terms/privacy with Cluster Wine, LLC and `support@clusterwine.app`; makes the mobile Feedback control open the public support page; and re-encodes every native picker/camera image before transmission so source EXIF/IPTC metadata is not uploaded. Release icon and splash candidates are pinned to the reviewed deterministic generator output.
 
 QC-25 remains Open/P1: report and block flows exist, but public posts/comments have no reviewed server-authoritative objectionable-content filter and `content_reports` has no owned moderation queue, monitored notification path or response SLA. Do not submit to App Review until that separate slice and its operations are accepted.
 
@@ -48,7 +48,7 @@ Hands-on browser/mobile-web QC:
 
 ## Release state
 
-- Implementation: local on `codex/ios-submission-readiness`; PR/commit pending at this checkpoint.
+- Implementation: pushed on `codex/ios-submission-readiness` as `3d042de`; PR #173 is open.
 - Merge: pending.
 - Web app deployment: pending; the primary Vercel project should deploy after merge.
 - Static marketing/legal deployment: pending and separate (`site/` project).
@@ -71,4 +71,3 @@ Local visual evidence is disposable and not required to resume:
 ## Next slice
 
 The next code blocker is QC-25, followed by the bounded SDK 57 patch review. The external Apple path is enrollment/invitation, agreements, company bundle/app ownership and protected signing credentials. Apple becomes the universal blocker only after QC-25, patch review, live policy deployment and all non-native release checks pass; installed-native acceptance necessarily remains on the Apple path.
-

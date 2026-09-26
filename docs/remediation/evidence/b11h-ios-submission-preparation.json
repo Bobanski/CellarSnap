@@ -5,8 +5,8 @@
   "implementation": {
     "branch": "codex/ios-submission-readiness",
     "base": "966bc25",
-    "commit": null,
-    "pullRequest": null,
+    "commit": "3d042de",
+    "pullRequest": 173,
     "merged": false,
     "webDeployed": false,
     "staticSiteDeployed": false,
