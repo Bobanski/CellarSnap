@@ -132,4 +132,7 @@ test('every native picker upload path re-encodes images before transmission', ()
   ]) {
     assert.match(readRepo(relativePath), /sanitizePickedImage/, relativePath);
   }
+  const listScan = readRepo('apps/mobile/src/screens/listScan/ListScanIntakeScreen.tsx');
+  assert.match(listScan, /selectionLimit: remainingSlots/);
+  assert.match(listScan, /result\.assets\.slice\(0, remainingSlots\)/);
 });

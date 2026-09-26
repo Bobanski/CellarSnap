@@ -168,6 +168,11 @@ export default function ListScanIntakeScreen() {
 
   const pickPhotoFromLibrary = async () => {
     setErrorMessage(null);
+    const remainingSlots = Math.max(0, LIST_SCAN_MAX_IMAGE_COUNT - selectedImages.length);
+    if (remainingSlots === 0) {
+      setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
+      return;
+    }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setErrorMessage("Allow photo access to choose a wine-list image.");
@@ -178,6 +183,7 @@ export default function ListScanIntakeScreen() {
       mediaTypes: ["images"],
       quality: 0.7,
       allowsMultipleSelection: true,
+      selectionLimit: remainingSlots,
       ...(Platform.OS === "ios"
         ? {
             preferredAssetRepresentationMode:
@@ -189,9 +195,12 @@ export default function ListScanIntakeScreen() {
       return;
     }
 
+    const assets = result.assets.slice(0, remainingSlots);
+    const exceededLimit = result.assets.length > remainingSlots;
+
     let images: Awaited<ReturnType<typeof sanitizePickedImage>>[];
     try {
-      images = await Promise.all(result.assets.map((asset, index) => sanitizePickedImage({
+      images = await Promise.all(assets.map((asset, index) => sanitizePickedImage({
         uri: asset.uri,
         fileName: asset.fileName,
         fallbackBaseName: `wine-list-${index + 1}`,
@@ -206,6 +215,9 @@ export default function ListScanIntakeScreen() {
       name: image.fileName,
       mimeType: image.mimeType,
     })));
+    if (exceededLimit) {
+      setErrorMessage(`Upload up to ${LIST_SCAN_MAX_IMAGE_COUNT} images at a time.`);
+    }
   };
 
   const takePhoto = async () => {
