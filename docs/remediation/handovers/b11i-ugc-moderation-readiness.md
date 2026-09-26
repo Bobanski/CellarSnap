@@ -76,8 +76,9 @@ Verified on the B11i working tree:
 
 ## Release state
 
-- Implementation: source `68c73a8` on `codex/ugc-moderation-readiness`; PR #174
-  is open and awaiting independent checks/review.
+- Implementation: source `6e36c3b` on `codex/ugc-moderation-readiness`; PR #174
+  is open. The first independent review's group-screening and author-restoration
+  findings are fixed; corrected-head checks and rereview remain pending.
 - Merge/application deployment: pending.
 - Database migration: pending; zero production DDL/DML.
 - Alert/inbox staffing and drill: pending.
