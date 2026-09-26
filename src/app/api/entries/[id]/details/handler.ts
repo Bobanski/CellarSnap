@@ -57,6 +57,9 @@ export function createOwnerEntryEditHandler(dependencies: Partial<typeof default
       });
       if (error) {
         if (error.code === 'PT409') return json({ error: 'Entry changed elsewhere', code: 'CONFLICT' }, 409);
+        if (error.code === 'PT422') {
+          return json({ error: 'This entry cannot be shared because it may violate the community guidelines.' }, 422);
+        }
         if (error.code === '42501') return json({ error: 'Entry unavailable' }, 403);
         if (['22023','23514','22P02','22007','22008','23502','23503'].includes(error.code)) {
           return json({ error: 'Invalid entry details' }, 400);

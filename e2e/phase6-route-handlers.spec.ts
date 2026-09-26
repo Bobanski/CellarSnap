@@ -909,7 +909,7 @@ test.describe("Phase 6 route handler regressions", () => {
   });
 
   test("adopted web edits use one command, preserve replay semantics and never fall back on failure", async () => {
-    for (const failure of [null, "PT409", "22023", "42501", "PGRST202"]) {
+    for (const failure of [null, "PT409", "PT422", "22023", "42501", "PGRST202"]) {
       const fixture = makeEntryPutSupabase({ viewerUserId: "owner-1", existingRating: 92 });
       const calls: unknown[] = [];
       const client = { ...fixture.client, rpc: async (name: string, args: unknown) => {
@@ -926,7 +926,7 @@ test.describe("Phase 6 route handler regressions", () => {
         method: "PUT", headers: { "content-type": "application/json", "X-CellarSnap-Entry-Edit": "atomic-v1" },
         body: JSON.stringify({ notes: "After", expected_entry: { notes: "Before" } }),
       }), { params: Promise.resolve({ id: "entry-1" }) });
-      expect(response.status).toBe(failure === "PT409" ? 409 : failure === "22023" ? 400 : failure === "42501" ? 403 : failure ? 503 : 200);
+      expect(response.status).toBe(failure === "PT409" ? 409 : failure === "PT422" ? 422 : failure === "22023" ? 400 : failure === "42501" ? 403 : failure ? 503 : 200);
       expect(calls).toEqual([{ name: "save_entry_details", args: { p_entry_id: "entry-1", p_updates: { notes: "After" }, p_expected: { notes: "Before" } } }]);
       expect(fixture.getLastUpdatePayload()).toBeNull();
     }

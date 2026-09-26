@@ -94,7 +94,14 @@ export function createBulkPublishHandler(
         .select("id");
 
       if (updateAttempt.error) {
-        return NextResponse.json({ error: updateAttempt.error.message }, { status: 500 });
+        return NextResponse.json(
+          {
+            error: updateAttempt.error.code === "PT422"
+              ? "One or more entries cannot be shared because they may violate the community guidelines."
+              : updateAttempt.error.message,
+          },
+          { status: updateAttempt.error.code === "PT422" ? 422 : 500 }
+        );
       }
 
       updatedIds.push(
@@ -147,7 +154,14 @@ export function createBulkPublishHandler(
           .select("id");
 
         if (anchorUpdateError) {
-          return NextResponse.json({ error: anchorUpdateError.message }, { status: 500 });
+          return NextResponse.json(
+            {
+              error: anchorUpdateError.code === "PT422"
+                ? "One or more entries cannot be shared because they may violate the community guidelines."
+                : anchorUpdateError.message,
+            },
+            { status: anchorUpdateError.code === "PT422" ? 422 : 500 }
+          );
         }
 
         updatedIds.push(

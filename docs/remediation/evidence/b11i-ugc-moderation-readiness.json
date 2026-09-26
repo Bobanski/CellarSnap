@@ -1,0 +1,66 @@
+{
+  "batch": "B11i",
+  "date": "2026-09-26",
+  "scope": ["QC-25", "OPS-04", "OPS-03", "AUD-08"],
+  "implementation": {
+    "branch": "codex/ugc-moderation-readiness",
+    "base": "9163bf727de858272b9999e9cecac8a1fea8cffe",
+    "commit": "665e12c",
+    "pullRequest": 174,
+    "merged": false,
+    "applicationDeployed": false,
+    "migrationApplied": false,
+    "productionWrites": 0
+  },
+  "changes": {
+    "databaseAuthoritativeSharedTextFilter": true,
+    "directMobileWritesCovered": true,
+    "privateNotesDeferredUntilSharing": true,
+    "canonicalReportTargets": true,
+    "clientWorkflowForgeryReset": true,
+    "privateDurableEvidenceQueue": true,
+    "groupedRenderedTextScreened": true,
+    "groupAttachmentTransitionsScreened": true,
+    "renderedVintageScreened": true,
+    "orphanedHistoricalReportsDismissed": true,
+    "authorRestorationBlockedAfterResolution": true,
+    "urgentDeadlineHours": 4,
+    "standardDeadlineHours": 24,
+    "urgentClaimAlertMinutes": 15,
+    "operatorClaimResolveTool": true,
+    "confirmedViolationContentRemoval": true,
+    "monitorConfigured": false,
+    "imagePrescreening": false
+  },
+  "checks": {
+    "isolatedTests": {"passed": 599, "failed": 0},
+    "schemaAndToolTests": {"passed": 57, "failed": 0},
+    "databaseTypes": "passed",
+    "webTypecheck": "passed",
+    "mobileTypecheck": "passed",
+    "webLint": "passed",
+    "mobileLint": "passed",
+    "mobileReleaseContracts": {"passed": 7, "failed": 0},
+    "mobileDependencyContracts": {"passed": 7, "failed": 0},
+    "mobileToolingContracts": {"passed": 3, "failed": 0},
+    "webBuild": "passed; 94 routes",
+    "browserTerms": {
+      "web": ["390x844", "1440x900"],
+      "static": ["390x844", "1440x900"],
+      "httpStatus": 200,
+      "horizontalOverflow": 0,
+      "consoleOrPageErrors": 0
+    },
+    "hostedModeration": "not tested; migration is not deployed",
+    "native": "unavailable: no installed iOS simulator runtime or Android emulator"
+  },
+  "remainingBlocks": [
+    "Independent migration/code review, PR merge and application deployment",
+    "OPS-04 production database password rotation before migration/operator work",
+    "Hosted migration, live catalog and disposable report/filter/resolve acceptance",
+    "Named primary/backup owners plus tested five-minute SLA alert and support inbox",
+    "Installed iPhone/TestFlight report, block and filter acceptance",
+    "Five available Expo SDK 57 patch updates",
+    "Cluster Wine, LLC Apple enrollment/invitation, bundle/app ownership, signing credentials and submission"
+  ]
+}

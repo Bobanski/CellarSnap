@@ -53,8 +53,12 @@ for(const [name,body] of Object.entries({
 test('nullable owner rating and friends-of-friends privacy remain supported',async()=>{
   expect((await harness().run({updates:{rating:null,entry_privacy:'friends_of_friends'},expected:{rating:92,entry_privacy:'public'}})).status).toBe(200);
 });
-for(const [code,status] of [['auth',401],['42501',403],['PT409',409],['23514',400],['23503',400],['22023',400],['22P02',400],['XX000',503],['throw',503]] as const)test('sanitizes '+code+' failures',async()=>{
+for(const [code,status] of [['auth',401],['42501',403],['PT409',409],['PT422',422],['23514',400],['23503',400],['22023',400],['22P02',400],['XX000',503],['throw',503]] as const)test('sanitizes '+code+' failures',async()=>{
   const r=await harness(code).run();expect(r.status).toBe(status);expect(JSON.stringify(await r.json())).not.toContain('diagnostic');expect(r.headers.get('cache-control')).toContain('no-store');
+});
+test('returns a useful message when shared text is filtered',async()=>{
+  const response=await harness('PT422').run();
+  expect(await response.json()).toEqual({error:'This entry cannot be shared because it may violate the community guidelines.'});
 });
 for(const data of [null,{}, {entry:{id,user_id:id},replayed:false},{entry:{id:owner,user_id:owner},replayed:false},{entry:{id,user_id:owner}}])test('rejects invalid owner receipt '+JSON.stringify(data),async()=>{
   expect((await harness(undefined,data).run()).status).toBe(503);

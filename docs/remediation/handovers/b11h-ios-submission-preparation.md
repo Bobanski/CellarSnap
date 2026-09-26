@@ -4,14 +4,14 @@
 
 B11h removes every review-preparation gap that can be closed without the Cluster Wine, LLC Apple team or an installed iPhone build. It advances QC-22 and OPS-03, records the newly confirmed QC-25 App Review gap, and preserves AUD-08 as Partial for native/dependency acceptance.
 
-The branch `codex/ios-submission-readiness` starts from merged main `966bc25` (PR #172); source `3d042de` is open as PR #173. It adds source-controlled App Store listing/reviewer drafts; aligns web, mobile and public-site terms/privacy with Cluster Wine, LLC and `support@clusterwine.app`; makes the mobile Feedback control open the public support page; and re-encodes every native picker/camera image before transmission so source EXIF/IPTC metadata is not uploaded. Release icon and splash candidates are pinned to the reviewed deterministic generator output.
+The branch `codex/ios-submission-readiness` started from merged main `966bc25` (PR #172); reviewed source `ad10698` merged as PR #173 / `9163bf7`. It adds source-controlled App Store listing/reviewer drafts; aligns web, mobile and public-site terms/privacy with Cluster Wine, LLC and `support@clusterwine.app`; makes the mobile Feedback control open the public support page; and re-encodes every native picker/camera image before transmission so source EXIF/IPTC metadata is not uploaded. Release icon and splash candidates are pinned to the reviewed deterministic generator output.
 
-QC-25 remains Open/P1: report and block flows exist, but public posts/comments have no reviewed server-authoritative objectionable-content filter and `content_reports` has no owned moderation queue, monitored notification path or response SLA. Do not submit to App Review until that separate slice and its operations are accepted.
+QC-25 moved to the separate B11i implementation after this release; it remains a submission gate until deployment, monitored operations and installed-native acceptance pass.
 
 ## Resume here
 
-1. Review, merge and deploy the B11h PR. Deploy the static `site/` project separately so `clusterwine.app/privacy` receives the updated policy, then live-verify `/privacy`, `/terms` and `/support` at phone and desktop widths.
-2. Start a separate QC-25 implementation batch. Inventory all public post/comment write paths; add server-authoritative filtering with adversarial and false-positive tests; create an owned report-review/notification procedure; and run installed-native report/block/filter acceptance.
+1. Continue B11i/QC-25 from its current handover: review/merge, then rotate OPS-04 before applying the moderation migration; configure/drill the primary/backup SLA alert and run installed-native report/block/filter acceptance.
+2. B11h merge and web/static releases are complete. Keep the live legal/support pages aligned with the submitted build.
 3. Review the five Expo SDK 57 patch updates reported by `npx expo install --check` (`expo`, image manipulator/picker, linking and router) as a small dependency slice. Do not update Router without rerunning its installed-consumer compatibility contract.
 4. When the company Apple team is available, recreate/verify the bundle identifier and app record on that team, configure protected EAS credentials, produce a store build, and run the installed-iPhone/TestFlight matrix. Use a real GPS-tagged photo to verify the signed app's re-encoded upload has no source location metadata.
 5. Create the non-expiring synthetic review account, capture screenshots only from the accepted build, reconcile the packet with App Store Connect, and submit explicitly.
@@ -23,7 +23,7 @@ QC-25 remains Open/P1: report and block flows exist, but public posts/comments h
 - Web and mobile terms render one shared policy source. The separate static site carries equivalent text because it is deployed independently.
 - Native images are normalized to JPEG through Expo ImageManipulator on new-entry, add-photo, avatar, wine-list and collection-cover paths before upload/AI/API transmission. PDFs and URL scans are unchanged.
 - The image-manipulator iOS implementation reads orientation then emits new JPEG bytes through `UIImage.jpegData`; installed-device verification is still required before claiming signed-build acceptance.
-- No production database, Storage, Apple account, EAS credential, App Store Connect record or reviewer account was changed in this batch.
+- No production database, Storage, Apple account, EAS credential, App Store Connect record or reviewer account was changed in this batch. The web and static legal/support changes were released after review.
 
 ## Verification
 
@@ -48,10 +48,10 @@ Hands-on browser/mobile-web QC:
 
 ## Release state
 
-- Implementation: pushed on `codex/ios-submission-readiness` as `3d042de`; PR #173 is open.
-- Merge: pending.
-- Web app deployment: pending; the primary Vercel project should deploy after merge.
-- Static marketing/legal deployment: pending and separate (`site/` project).
+- Implementation: reviewed source `ad10698`; PR #173 merged as `9163bf7`.
+- Merge: complete.
+- Web app deployment: complete on the primary project; `https://cellarsnap.app/terms` and `/privacy` passed phone/desktop live verification.
+- Static marketing/legal deployment: complete on `cluster-site` as `dpl_AL1PFwmShqAvoSAtkGT3ZbqmwMoe`; `https://clusterwine.app/privacy`, `/terms`, and `/support` passed phone/desktop live verification.
 - Database migration/data mutation: none.
 - Native/EAS build or upload: none.
 - App Store Connect metadata, TestFlight, review submission: none.
@@ -70,4 +70,4 @@ Local visual evidence is disposable and not required to resume:
 
 ## Next slice
 
-The next code blocker is QC-25, followed by the bounded SDK 57 patch review. The external Apple path is enrollment/invitation, agreements, company bundle/app ownership and protected signing credentials. Apple becomes the universal blocker only after QC-25, patch review, live policy deployment and all non-native release checks pass; installed-native acceptance necessarily remains on the Apple path.
+The next code blocker is B11i/QC-25, followed by the bounded SDK 57 patch review. The external Apple path is enrollment/invitation, agreements, company bundle/app ownership and protected signing credentials. Apple becomes the universal blocker only after QC-25, patch review and all non-native release checks pass; installed-native acceptance necessarily remains on the Apple path.

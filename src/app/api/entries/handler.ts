@@ -558,6 +558,12 @@ export function createEntryPostHandler(
   const error = insertResult.error;
 
   if (error) {
+    if (error.code === "PT422") {
+      return NextResponse.json(
+        { error: "This entry cannot be shared because it may violate the community guidelines." },
+        { status: 422 }
+      );
+    }
     if (isMissingDbColumnError(error, "advanced_notes")) {
       return NextResponse.json(
         {

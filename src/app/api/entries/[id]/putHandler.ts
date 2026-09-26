@@ -218,12 +218,14 @@ export function createEntryPutHandler(
       });
       if (error) {
         const conflict = error.code === "PT409";
+        const filtered = error.code === "PT422";
         const invalid = ["22023", "23514", "22P02", "22007", "22008"].includes(error.code);
         return NextResponse.json({ error: conflict
           ? "This entry changed elsewhere. Refresh the page before saving again. Your edits are still here."
+          : filtered ? "This entry cannot be shared because it may violate the community guidelines."
           : invalid ? "Invalid entry details. Check the fields and try again."
           : "Unable to confirm the save. Your changes are still here; please retry.", code: error.code },
-        { status: conflict ? 409 : invalid ? 400 : error.code === "42501" ? 403 : 503 });
+        { status: conflict ? 409 : filtered ? 422 : invalid ? 400 : error.code === "42501" ? 403 : 503 });
       }
       if (!data?.entry || data.entry.id !== id) {
         return NextResponse.json({ error: "Unable to confirm the save. Please retry." }, { status: 503 });
@@ -279,6 +281,12 @@ export function createEntryPutHandler(
         }
 
         if (error || !data) {
+          if (error?.code === "PT422") {
+            return NextResponse.json(
+              { error: "This entry cannot be shared because it may violate the community guidelines." },
+              { status: 422 }
+            );
+          }
           if (error && isMissingDbColumnError(error, "advanced_notes")) {
             return NextResponse.json(
               {
